@@ -432,6 +432,38 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     );
   }
 
+  void _applyAiState(ClinicalAiState state) {
+    final aiVitals = state.vitalsFrom(includePending: true);
+    final explicitVitals = _parser.parse(value.transcript).vitals;
+    value = RealtimeSpeechState(
+      status: state.hasPendingProposals
+          ? SpeechStatus.proposalReview
+          : SpeechStatus.done,
+      stage: ClinicalVoiceStage.review,
+      transcript: value.transcript,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      partialTranscript: '',
+      partialOffset: Duration.zero,
+      vitals: explicitVitals.mergePrefer(aiVitals),
+      note: state.noteFrom(includePending: true),
+      revisions: state.revisions,
+      assistantMessage: state.assistantMessage,
+      needsClarification: state.needsClarification,
+    );
+  }
+
+  Future<void> _setAwake(bool enabled) async {
+    try {
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
+    } catch (_) {
+      // Une erreur du plugin ne doit jamais invalider la transcription.
+    }
+  }
+
   String _userMessage(Object error) {
     return clinicalVoiceUserMessage(error, locale: _locale);
   }
@@ -521,26 +553,6 @@ extension ClinicalSpeechAnalysis on ClinicalSpeechService {
       _setError(error, fallbackStatus: SpeechStatus.proposalReview);
     }
   }
-
-  void _applyAiState(ClinicalAiState state) {
-    final aiVitals = state.vitalsFrom(includePending: true);
-    final explicitVitals = _parser.parse(value.transcript).vitals;
-    value = RealtimeSpeechState(
-      status: state.hasPendingProposals
-          ? SpeechStatus.proposalReview
-          : SpeechStatus.done,
-      stage: ClinicalVoiceStage.review,
-      transcript: value.transcript,
-      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
-      partialTranscript: '',
-      partialOffset: Duration.zero,
-      vitals: explicitVitals.mergePrefer(aiVitals),
-      note: state.noteFrom(includePending: true),
-      revisions: state.revisions,
-      assistantMessage: state.assistantMessage,
-      needsClarification: state.needsClarification,
-    );
-  }
 }
 
 extension ClinicalSpeechLifecycle on ClinicalSpeechService {
@@ -583,16 +595,4 @@ extension ClinicalSpeechLifecycle on ClinicalSpeechService {
   }
 
   Future<void> discardCurrentCapture() => clearTranscript();
-
-  Future<void> _setAwake(bool enabled) async {
-    try {
-      if (enabled) {
-        await WakelockPlus.enable();
-      } else {
-        await WakelockPlus.disable();
-      }
-    } catch (_) {
-      // Une erreur du plugin ne doit jamais invalider la transcription.
-    }
-  }
 }
