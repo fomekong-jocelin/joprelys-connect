@@ -31,8 +31,8 @@ class ClinicalTranscriptTimeline extends StatelessWidget {
   final String partialTranscript;
   final Duration partialOffset;
   final bool editable;
-  final void Function(String segmentId, String text) onSegmentChanged;
-  final ValueChanged<String> onSegmentDeleted;
+  final Future<bool> Function(String segmentId, String text) onSegmentChanged;
+  final Future<bool> Function(String segmentId) onSegmentDeleted;
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +56,7 @@ class ClinicalTranscriptTimeline extends StatelessWidget {
           l10n.voiceSegmentsSubtitle,
           style: theme.textTheme.bodySmall?.copyWith(
             color: colors.onSurfaceVariant,
+            height: 1.35,
           ),
         ),
         const SizedBox(height: 12),
@@ -64,43 +65,32 @@ class ClinicalTranscriptTimeline extends StatelessWidget {
             title: l10n.voiceSegmentsEmptyTitle,
             body: l10n.voiceSegmentsEmptyBody,
           )
-        else
-          Container(
-            padding: const EdgeInsets.fromLTRB(10, 12, 10, 4),
-            decoration: BoxDecoration(
-              color: colors.surfaceContainerLowest,
-              borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
-              border: Border.all(color: colors.outlineVariant),
+        else ...[
+          for (var index = 0; index < segments.length; index++)
+            _TimelineRow(
+              markerActive: false,
+              isLast:
+                  index == segments.length - 1 &&
+                  partialTranscript.trim().isEmpty,
+              child: _TranscriptSegmentCard(
+                key: ValueKey(segments[index].id),
+                segment: segments[index],
+                index: index + 1,
+                editable: editable,
+                onChanged: onSegmentChanged,
+                onDeleted: onSegmentDeleted,
+              ),
             ),
-            child: Column(
-              children: [
-                for (var index = 0; index < segments.length; index++)
-                  _TimelineRow(
-                    markerActive: false,
-                    isLast:
-                        index == segments.length - 1 &&
-                        partialTranscript.trim().isEmpty,
-                    child: _TranscriptSegmentCard(
-                      key: ValueKey(segments[index].id),
-                      segment: segments[index],
-                      index: index + 1,
-                      editable: editable,
-                      onChanged: onSegmentChanged,
-                      onDeleted: onSegmentDeleted,
-                    ),
-                  ),
-                if (partialTranscript.trim().isNotEmpty)
-                  _TimelineRow(
-                    markerActive: true,
-                    isLast: true,
-                    child: _LiveSegmentCard(
-                      text: partialTranscript,
-                      offset: partialOffset,
-                    ),
-                  ),
-              ],
+          if (partialTranscript.trim().isNotEmpty)
+            _TimelineRow(
+              markerActive: true,
+              isLast: true,
+              child: _LiveSegmentCard(
+                text: partialTranscript,
+                offset: partialOffset,
+              ),
             ),
-          ),
+        ],
       ],
     );
   }
@@ -125,34 +115,28 @@ class _TimelineRow extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           SizedBox(
-            width: 22,
+            width: 18,
             child: Column(
               children: [
+                const SizedBox(height: 16),
                 Container(
-                  width: 10,
-                  height: 10,
+                  width: 9,
+                  height: 9,
                   decoration: BoxDecoration(
                     shape: BoxShape.circle,
                     color: markerActive ? colors.primary : colors.surface,
                     border: Border.all(
-                      color: markerActive ? colors.primary : colors.outline,
+                      color: markerActive
+                          ? colors.primary
+                          : colors.outlineVariant,
                       width: 2,
                     ),
-                    boxShadow: markerActive
-                        ? [
-                            BoxShadow(
-                              color: colors.primary.withValues(alpha: 0.25),
-                              blurRadius: 8,
-                              spreadRadius: 2,
-                            ),
-                          ]
-                        : null,
                   ),
                 ),
                 if (!isLast)
                   Expanded(
                     child: Container(
-                      width: 2,
+                      width: 1.5,
                       margin: const EdgeInsets.symmetric(vertical: 4),
                       color: colors.outlineVariant,
                     ),
@@ -160,7 +144,7 @@ class _TimelineRow extends StatelessWidget {
               ],
             ),
           ),
-          const SizedBox(width: 6),
+          const SizedBox(width: 8),
           Expanded(
             child: Padding(
               padding: const EdgeInsets.only(bottom: 10),
@@ -186,8 +170,8 @@ class _TranscriptSegmentCard extends StatefulWidget {
   final ClinicalTranscriptSegment segment;
   final int index;
   final bool editable;
-  final void Function(String segmentId, String text) onChanged;
-  final ValueChanged<String> onDeleted;
+  final Future<bool> Function(String segmentId, String text) onChanged;
+  final Future<bool> Function(String segmentId) onDeleted;
 
   @override
   State<_TranscriptSegmentCard> createState() => _TranscriptSegmentCardState();
@@ -196,6 +180,7 @@ class _TranscriptSegmentCard extends StatefulWidget {
 class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
   late final TextEditingController _controller;
   bool _editing = false;
+  bool _busy = false;
 
   @override
   void initState() {
@@ -218,8 +203,27 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
     super.dispose();
   }
 
-  void _save() {
-    widget.onChanged(widget.segment.id, _controller.text);
+  Future<void> _save() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final saved = await widget.onChanged(widget.segment.id, _controller.text);
+    if (!mounted) return;
+    setState(() {
+      _busy = false;
+      if (saved) _editing = false;
+    });
+  }
+
+  Future<void> _delete() async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    final deleted = await widget.onDeleted(widget.segment.id);
+    if (!mounted || deleted) return;
+    setState(() => _busy = false);
+  }
+
+  void _cancelEditing() {
+    _controller.text = widget.segment.text;
     setState(() => _editing = false);
   }
 
@@ -231,14 +235,16 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 180),
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.fromLTRB(12, 10, 12, 12),
       decoration: BoxDecoration(
         color: _editing
-            ? colors.primaryContainer.withValues(alpha: 0.28)
-            : colors.surface,
+            ? colors.primaryContainer.withValues(alpha: 0.2)
+            : colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
         border: Border.all(
-          color: _editing ? colors.primary : colors.outlineVariant,
+          color: _editing
+              ? colors.primary.withValues(alpha: 0.65)
+              : colors.outlineVariant,
         ),
       ),
       child: Column(
@@ -270,37 +276,48 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
                   ),
                 ),
               ),
-              if (widget.editable && !_editing) ...[
-                IconButton(
+              if (_busy)
+                const SizedBox(
+                  width: 28,
+                  height: 28,
+                  child: Padding(
+                    padding: EdgeInsets.all(5),
+                    child: CircularProgressIndicator(strokeWidth: 2.5),
+                  ),
+                )
+              else if (widget.editable && !_editing) ...[
+                IconButton.filledTonal(
                   visualDensity: VisualDensity.compact,
                   tooltip: l10n.voiceEditSegment,
                   onPressed: () => setState(() => _editing = true),
-                  icon: const Icon(Icons.edit_rounded, size: 18),
+                  icon: const Icon(Icons.edit_rounded, size: 17),
                 ),
-                IconButton(
+                const SizedBox(width: 4),
+                IconButton.filledTonal(
                   visualDensity: VisualDensity.compact,
                   tooltip: l10n.voiceDeleteSegment,
-                  onPressed: () => widget.onDeleted(widget.segment.id),
-                  icon: Icon(
-                    Icons.delete_outline_rounded,
-                    size: 18,
-                    color: colors.error,
+                  onPressed: _delete,
+                  style: IconButton.styleFrom(
+                    foregroundColor: colors.error,
+                    backgroundColor: colors.errorContainer.withValues(alpha: 0.55),
                   ),
+                  icon: const Icon(Icons.delete_outline_rounded, size: 17),
                 ),
               ],
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 9),
           if (_editing)
             TextField(
               controller: _controller,
               autofocus: true,
               minLines: 2,
-              maxLines: 6,
+              maxLines: 8,
               textCapitalization: TextCapitalization.sentences,
               decoration: InputDecoration(
                 filled: true,
                 fillColor: colors.surface,
+                contentPadding: const EdgeInsets.all(12),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
                 ),
@@ -309,17 +326,30 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
           else
             SelectableText(
               widget.segment.text,
-              style: theme.textTheme.bodyMedium?.copyWith(height: 1.45),
+              style: theme.textTheme.bodyMedium?.copyWith(height: 1.48),
             ),
           if (_editing) ...[
-            const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: FilledButton.tonalIcon(
-                onPressed: _save,
-                icon: const Icon(Icons.check_rounded, size: 17),
-                label: Text(l10n.voiceSaveSegment),
-              ),
+            const SizedBox(height: 10),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _busy ? null : _cancelEditing,
+                  child: Text(l10n.voiceCancel),
+                ),
+                const SizedBox(width: 6),
+                FilledButton.tonalIcon(
+                  onPressed: _busy ? null : _save,
+                  icon: _busy
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.check_rounded, size: 17),
+                  label: Text(l10n.voiceSaveSegment),
+                ),
+              ],
             ),
           ],
         ],
@@ -342,9 +372,9 @@ class _LiveSegmentCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: colors.primaryContainer.withValues(alpha: 0.32),
+        color: colors.primaryContainer.withValues(alpha: 0.28),
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-        border: Border.all(color: colors.primary.withValues(alpha: 0.55)),
+        border: Border.all(color: colors.primary.withValues(alpha: 0.5)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -369,12 +399,9 @@ class _LiveSegmentCard extends StatelessWidget {
                   ),
                 ),
               ),
-              SizedBox(
+              const SizedBox(
                 width: 34,
-                child: LinearProgressIndicator(
-                  minHeight: 3,
-                  borderRadius: BorderRadius.circular(2),
-                ),
+                child: LinearProgressIndicator(minHeight: 3),
               ),
             ],
           ),
@@ -404,7 +431,7 @@ class _EmptyTranscriptState extends StatelessWidget {
     final colors = theme.colorScheme;
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 20),
       decoration: BoxDecoration(
         color: colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
@@ -412,7 +439,7 @@ class _EmptyTranscriptState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(Icons.format_quote_rounded, color: colors.primary, size: 28),
+          Icon(Icons.notes_rounded, color: colors.primary, size: 28),
           const SizedBox(height: 8),
           Text(
             title,
