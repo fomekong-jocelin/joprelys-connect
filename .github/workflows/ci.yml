@@ -54,6 +54,10 @@ jobs:
               'restore_pattern.subn(lambda _: restore_replacement, service, count=1)',
           )
           script = script.replace(
+              "r'  void _replaceSegmentsWithTranscript\\(String transcript\\) \\{.*?\\n  \\}\\n\\n  Future<void> startRealtimeListening'",
+              "r' *void _replaceSegmentsWithTranscript\\(String transcript\\) \\{.*?Future<void> startRealtimeListening'",
+          )
+          script = script.replace(
               'segment_pattern.subn(segment_replacement, service, count=1)',
               'segment_pattern.subn(lambda _: segment_replacement, service, count=1)',
           )
