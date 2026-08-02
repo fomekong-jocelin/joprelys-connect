@@ -193,7 +193,7 @@ class _ProfessionalWorkspaceState extends State<_ProfessionalWorkspace> {
   @override
   Widget build(BuildContext context) {
     final destinations = _destinations(context);
-    final safeIndex = _selectedIndex.clamp(0, destinations.length - 1);
+    final safeIndex = _selectedIndex.clamp(0, destinations.length - 1).toInt();
     final pages = destinations.map((item) => item.child).toList(growable: false);
     final colors = Theme.of(context).colorScheme;
 
