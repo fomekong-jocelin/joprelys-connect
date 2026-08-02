@@ -41,6 +41,23 @@ void main() {
     );
   });
 
+  test('an active clinical capture keeps its route mounted while locked', () {
+    final state = AuthState.locked(professionalSession());
+
+    expect(
+      authRedirect(
+        state,
+        AppRoutePath.foundation,
+        preserveLockedRoute: true,
+      ),
+      isNull,
+    );
+    expect(
+      authRedirect(state, AppRoutePath.unlock, preserveLockedRoute: true),
+      isNull,
+    );
+  });
+
   test(
     'authenticated users leave auth routes and keep protected locations',
     () {
