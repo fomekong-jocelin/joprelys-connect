@@ -54,7 +54,9 @@ final class ClinicalTranscriptDraft {
         segments.add(
           ClinicalTranscriptSegment(
             id: id == null || id.isEmpty ? 'restored-local-$index' : id,
-            offset: Duration(milliseconds: offsetMs.clamp(0, 359999000)),
+            offset: Duration(
+              milliseconds: offsetMs.clamp(0, 359999000).toInt(),
+            ),
             text: text,
           ),
         );
@@ -67,7 +69,7 @@ final class ClinicalTranscriptDraft {
       segments: List<ClinicalTranscriptSegment>.unmodifiable(segments),
       partialTranscript: json['partialTranscript']?.toString().trim() ?? '',
       partialOffset: Duration(
-        milliseconds: partialOffsetMs.clamp(0, 359999000),
+        milliseconds: partialOffsetMs.clamp(0, 359999000).toInt(),
       ),
       explicitlyCleared: json['explicitlyCleared'] == true,
     );
