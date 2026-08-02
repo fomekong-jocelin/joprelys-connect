@@ -104,7 +104,7 @@ class _ClinicalVoiceAssistantSheetState
       initialDraft: widget.initialDraft,
       locale: widget.locale,
     );
-    Future.microtask(_speechService.restoreOrStart);
+    Future.microtask(_speechService.initialize);
   }
 
   @override
