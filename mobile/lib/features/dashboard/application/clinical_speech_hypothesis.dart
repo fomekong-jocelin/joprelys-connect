@@ -110,7 +110,7 @@ String stripCommittedClinicalTranscriptPrefix(
 
   final incomingTokens = _tokens(incomingText);
   final committedTokens = _tokens(committedText);
-  if (incomingTokens.length <= committedTokens.length) return incomingText;
+  if (incomingTokens.length < committedTokens.length) return incomingText;
 
   for (var index = 0; index < committedTokens.length; index++) {
     if (_fold(incomingTokens[index]) != _fold(committedTokens[index])) {
