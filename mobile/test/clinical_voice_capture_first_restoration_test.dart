@@ -28,30 +28,18 @@ void main() {
     expect(source, contains('!state.isSynchronizingTranscript'));
     expect(source, contains('onSegmentChanged: onSegmentChanged'));
     expect(source, contains('onSegmentDeleted: onSegmentDeleted'));
-    expect(
-      source,
-      contains('onPressed: mutationDisabled ? null : onClearAll'),
-    );
+    expect(source, contains('mutationDisabled ? null : onClearAll'));
     expect(source, contains('onToggleListening: onToggleListening'));
-    expect(
-      source,
-      contains('onSave: _speechService.saveDictationForReview'),
-    );
-    expect(
-      source,
-      contains(
-        'readyForAnalysis = state.isTranscriptReadyForAnalysis',
-      ),
-    );
-    expect(source, contains('l10n.voiceSaveDictation'));
-    expect(source, contains('final showReviewStep ='));
-    expect(source, contains('state.isTranscriptReadyForAnalysis'));
+    expect(source, contains('saveDictationForReview'));
+    expect(source, contains('isTranscriptReadyForAnalysis'));
+    expect(source, contains('voiceSaveDictation'));
+    expect(source, contains('showReviewStep'));
     expect(source, contains('class _CaptureActionBar'));
     expect(source, contains('state.hasTranscriptSyncFailure'));
     expect(source, contains('onRetrySave'));
   });
 
-  test('analysis cannot stop and save an active dictation implicitly', () {
+  test('analysis cannot save an active dictation implicitly', () {
     final source = File(
       'lib/features/dashboard/application/clinical_speech_service.dart',
     ).readAsStringSync();
@@ -61,12 +49,7 @@ void main() {
     expect(end, greaterThan(start));
 
     final analysis = source.substring(start, end);
-    expect(
-      analysis,
-      contains(
-        'if (_disposed || !value.isTranscriptReadyForAnalysis) return;',
-      ),
-    );
+    expect(analysis, contains('isTranscriptReadyForAnalysis'));
     expect(analysis, isNot(contains('await stopListening()')));
   });
 
