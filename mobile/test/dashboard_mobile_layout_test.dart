@@ -6,6 +6,8 @@ import 'package:joprelys_mobile/app/app.dart';
 import 'package:joprelys_mobile/core/i18n/locale_controller.dart';
 import 'package:joprelys_mobile/core/theme/theme_controller.dart';
 import 'package:joprelys_mobile/features/auth/application/auth_controller.dart';
+import 'package:joprelys_mobile/features/auth/application/effective_access_controller.dart';
+import 'package:joprelys_mobile/features/auth/domain/effective_access.dart';
 import 'package:joprelys_mobile/features/auth/domain/professional_session.dart';
 import 'package:joprelys_mobile/features/dashboard/application/active_queue_controller.dart';
 import 'package:joprelys_mobile/features/dashboard/data/active_visits_api.dart';
@@ -33,6 +35,13 @@ void main() {
         ProviderScope(
           overrides: [
             platformLocaleProvider.overrideWithValue(const Locale('fr')),
+            effectiveAccessProvider.overrideWith(
+              (ref) async => const EffectiveAccess(
+                userId: 'fixture-user',
+                roles: {'CLINICAL_TEST'},
+                permissions: {'VISIT_READ'},
+              ),
+            ),
             themeModeProvider.overrideWith(_DarkThemeController.new),
             authControllerProvider.overrideWith(
               () => _FakeAuthController(AuthState.authenticated(session)),
