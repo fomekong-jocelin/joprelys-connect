@@ -94,6 +94,18 @@ ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
     return ClinicalSpeechHypothesisMerge(text: merged, startsNewSegment: false);
   }
 
+  final approximateOverlap = _approximateSuffixPrefixOverlap(
+    currentKeys,
+    incomingKeys,
+  );
+  if (approximateOverlap > 0) {
+    final merged = <String>[
+      ...currentTokens,
+      ...incomingTokens.skip(approximateOverlap),
+    ].join(' ');
+    return ClinicalSpeechHypothesisMerge(text: merged, startsNewSegment: false);
+  }
+
   if (!currentFinalized) {
     if (currentTokens.length <= 2 && incomingTokens.length <= 2) {
       return ClinicalSpeechHypothesisMerge(
@@ -115,7 +127,9 @@ ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
 
 String stripCommittedClinicalTranscriptPrefix(
   String incoming,
-  String committed,
+  String committed, {
+  bool allowRecentReplay = false,
+}
 ) {
   final incomingText = _normalizeWhitespace(incoming);
   final committedText = _normalizeWhitespace(committed);
@@ -123,15 +137,37 @@ String stripCommittedClinicalTranscriptPrefix(
 
   final incomingTokens = _tokens(incomingText);
   final committedTokens = _tokens(committedText);
-  if (incomingTokens.length < committedTokens.length) return incomingText;
+  final incomingKeys = incomingTokens.map(_fold).toList(growable: false);
+  final committedKeys = committedTokens.map(_fold).toList(growable: false);
 
-  for (var index = 0; index < committedTokens.length; index++) {
-    if (_fold(incomingTokens[index]) != _fold(committedTokens[index])) {
-      return incomingText;
+  if (incomingTokens.length >= committedTokens.length) {
+    var completePrefix = true;
+    for (var index = 0; index < committedTokens.length; index++) {
+      if (incomingKeys[index] != committedKeys[index]) {
+        completePrefix = false;
+        break;
+      }
+    }
+    if (completePrefix) {
+      return incomingTokens.skip(committedTokens.length).join(' ').trim();
     }
   }
 
-  return incomingTokens.skip(committedTokens.length).join(' ').trim();
+  if (allowRecentReplay) {
+    final exactOverlap = _suffixPrefixOverlap(committedKeys, incomingKeys);
+    if (exactOverlap >= 3) {
+      return incomingTokens.skip(exactOverlap).join(' ').trim();
+    }
+
+    final approximateOverlap = _approximateSuffixPrefixOverlap(
+      committedKeys,
+      incomingKeys,
+    );
+    if (approximateOverlap > 0) {
+      return incomingTokens.skip(approximateOverlap).join(' ').trim();
+    }
+  }
+  return incomingText;
 }
 
 String _normalizeWhitespace(String value) {
@@ -164,6 +200,18 @@ int _suffixPrefixOverlap(List<String> left, List<String> right) {
       }
     }
     if (matches) return size;
+  }
+  return 0;
+}
+
+int _approximateSuffixPrefixOverlap(List<String> left, List<String> right) {
+  final limit = left.length < right.length ? left.length : right.length;
+  for (var size = limit; size >= 5; size--) {
+    var matches = 0;
+    for (var index = 0; index < size; index++) {
+      if (left[left.length - size + index] == right[index]) matches++;
+    }
+    if (matches / size >= 0.8) return size;
   }
   return 0;
 }

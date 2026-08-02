@@ -18,6 +18,7 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -37,6 +38,7 @@ import tools.jackson.databind.ObjectMapper;
 public class AiConsultationService {
 
     private static final Logger log = LoggerFactory.getLogger(AiConsultationService.class);
+    private static final int MAX_REALTIME_EVENT_REPLAYS = 64;
 
     private final AiProvider aiProvider;
     private final AiProperties properties;
@@ -156,19 +158,42 @@ public class AiConsultationService {
             UUID organizationId,
             String transcript,
             Double confidence) {
+        return processRealtimeTranscript(
+                visitId, userId, organizationId, transcript, confidence, null);
+    }
+
+    public MessageView processRealtimeTranscript(
+            UUID visitId,
+            UUID userId,
+            UUID organizationId,
+            String transcript,
+            Double confidence,
+            String eventId) {
         AiConsultationInputValidator.validateText(transcript);
         validateRealtimeConfidence(confidence);
         AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
+        String normalizedTranscript = transcript.trim();
+        String normalizedEventId = normalizeEventId(eventId);
         synchronized (state) {
-            return processMessageLocked(
+            MessageView replay = replayRealtimeEvent(
+                    state, normalizedEventId, normalizedTranscript, confidence);
+            if (replay != null) return replay;
+
+            MessageView response = processMessageLocked(
                     state,
-                    transcript.trim(),
-                    transcript.trim(),
-                    transcript.trim(),
+                    normalizedTranscript,
+                    normalizedTranscript,
+                    normalizedTranscript,
                     "REALTIME",
                     null,
                     null,
                     true);
+            state.transcript = null;
+            state.pendingTranscript = null;
+            state.transcriptStatus = "ANALYZED";
+            rememberRealtimeEvent(
+                    state, normalizedEventId, normalizedTranscript, confidence, response);
+            return response;
         }
     }
 
@@ -285,6 +310,7 @@ public class AiConsultationService {
                     null,
                     false);
             state.pendingTranscript = null;
+            state.transcript = null;
             state.transcriptStatus = "ANALYZED";
             state.expiresAt = expiry();
             return response;
@@ -306,6 +332,7 @@ public class AiConsultationService {
         AiConsultationSessionState state = requireSession(visitId, userId, organizationId);
         synchronized (state) {
             state.pendingTranscript = null;
+            state.transcript = null;
             state.transcriptStatus = "NONE";
             state.expiresAt = expiry();
         }
@@ -515,6 +542,43 @@ public class AiConsultationService {
         if (minimum > 0.0 && confidence < minimum) {
             throw new ResponseStatusException(
                     HttpStatus.UNPROCESSABLE_ENTITY, "AI_TRANSCRIPTION_LOW_CONFIDENCE");
+        }
+    }
+
+    private String normalizeEventId(String eventId) {
+        if (eventId == null || eventId.isBlank()) return null;
+        return eventId.trim();
+    }
+
+    private MessageView replayRealtimeEvent(
+            AiConsultationSessionState state,
+            String eventId,
+            String transcript,
+            Double confidence) {
+        if (eventId == null) return null;
+        var replay = state.realtimeEventReplays.get(eventId);
+        if (replay == null) return null;
+        if (!replay.transcript().equals(transcript)
+                || !Objects.equals(replay.confidence(), confidence)) {
+            throw conflict("AI_REALTIME_EVENT_ID_REUSED");
+        }
+        return replay.response();
+    }
+
+    private void rememberRealtimeEvent(
+            AiConsultationSessionState state,
+            String eventId,
+            String transcript,
+            Double confidence,
+            MessageView response) {
+        if (eventId == null) return;
+        state.realtimeEventReplays.put(
+                eventId,
+                new AiConsultationSessionState.RealtimeEventReplay(
+                        transcript, confidence, response));
+        while (state.realtimeEventReplays.size() > MAX_REALTIME_EVENT_REPLAYS) {
+            String oldest = state.realtimeEventReplays.keySet().iterator().next();
+            state.realtimeEventReplays.remove(oldest);
         }
     }
 

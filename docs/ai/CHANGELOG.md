@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260802 — Fiabilisation end-to-end de l'assistant vocal mobile** :
+  - **Diagnostic P0** : courses entre reprise Android et recovery, déduplication insuffisante des fenêtres ASR, restauration de transcripts `ANALYZED`, marqueur d'effacement ignoré et `eventId` backend inutilisé identifiés comme causes des répétitions, retours d'anciens textes et pertes aux frontières.
+  - **Cible du correctif** : une seule écoute active, fusion bornée des replays récents, restauration limitée à `PENDING_REVIEW`, effacement durable, analyse realtime idempotente et working set Vitals filtré.
+  - **Sécurité clinique** : contrats SOAP, permissions et validation explicite du praticien inchangés ; aucun diagnostic ni constante n'est appliqué automatiquement.
+  - **SemVer** : correctif rétrocompatible candidat PATCH ; tests et recette Android encore requis avant clôture.
+
 - **PR #258 / TASK-20260801 — Fusion et réconciliation de la livraison mobile** :
   - **Historique sécurisé** : les 17 commits de `fix/mobile-dashboard-layout-overflow` sont fusionnés dans `main` au commit `e6f7a348` ; la branche est supprimée localement et sur `origin`.
   - **IDs canoniques** : annuaire `MOB-2809`, dossier/historique `MOB-2810`, constantes `MOB-2811`, assistant capture/transcription `MOB-2816` et notes SOAP `MOB-2821`. Les anciens usages restent documentés uniquement dans la table de transition d'EPIC-0028.

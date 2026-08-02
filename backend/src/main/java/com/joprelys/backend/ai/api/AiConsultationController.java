@@ -109,7 +109,8 @@ public class AiConsultationController {
                 identity.userId(),
                 identity.organizationId(),
                 request.transcript(),
-                request.confidence());
+                request.confidence(),
+                request.eventId());
     }
 
     @PostMapping("/{visitId}/clarifications/{clarificationId}/answer")

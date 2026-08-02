@@ -119,8 +119,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   bool _resumeAfterLifecycle = false;
   bool _captureCompleted = false;
   bool _speechRecoveryInProgress = false;
+  bool _listenStartInProgress = false;
+  bool _expectRecognizerReplay = false;
   bool _disposed = false;
   int _consecutiveSpeechRestarts = 0;
+  int _listeningCycle = 0;
   Timer? _restartTimer;
   Timer? _localDraftTimer;
   double _minimumSoundLevel = double.infinity;
@@ -157,10 +160,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     try {
       _speechReady = await _speech.initialize(
         onStatus: _handleSpeechStatus,
-        onError: (error) => _handleSpeechError(
-          error.errorMsg,
-          permanent: error.permanent,
-        ),
+        onError: (error) =>
+            _handleSpeechError(error.errorMsg, permanent: error.permanent),
       );
       if (!_speechReady) {
         throw StateError('SPEECH_RECOGNITION_UNAVAILABLE');
@@ -213,6 +214,23 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       final draft = await _draftStore.read(_visitId);
       if (draft == null) return;
       _hasLocalDraftSnapshot = true;
+      if (draft.explicitlyCleared) {
+        _segments.clear();
+        _currentPartial = '';
+        _currentPartialOffset = Duration.zero;
+        _currentPartialFinalized = false;
+        _captureStartedAt = null;
+        value = value.copyWith(
+          status: SpeechStatus.idle,
+          stage: ClinicalVoiceStage.capture,
+          transcript: '',
+          segments: const <ClinicalTranscriptSegment>[],
+          transcriptSyncStatus: TranscriptSyncStatus.synced,
+          clearPartial: true,
+          clearError: true,
+        );
+        return;
+      }
       _segments
         ..clear()
         ..addAll(draft.segments);
@@ -262,14 +280,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   void _restoreExistingSession(ClinicalAiState existing) {
-    final pendingWasProvided = existing.pendingTranscript != null;
-    final transcriptWasExplicitlyCleared =
-        existing.transcriptStatus.toUpperCase() == 'NONE';
-    final transcript = pendingWasProvided
-        ? existing.pendingTranscript!.trim()
-        : transcriptWasExplicitlyCleared
-        ? ''
-        : existing.transcript?.trim() ?? '';
+    final pendingReview =
+        existing.transcriptStatus.toUpperCase() == 'PENDING_REVIEW';
+    final transcript = pendingReview
+        ? (existing.pendingTranscript ?? existing.transcript ?? '').trim()
+        : '';
 
     _segments.clear();
     if (transcript.isEmpty) {
@@ -318,7 +333,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> startRealtimeListening() async {
-    if (_disposed || value.status == SpeechStatus.listening) return;
+    if (_disposed || _shouldKeepListening) return;
     if (value.stage == ClinicalVoiceStage.review) return;
     await initialize();
     if (!_speechReady || _disposed) return;
@@ -328,6 +343,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _maximumSoundLevel = -double.infinity;
     _consecutiveSpeechRestarts = 0;
     _shouldKeepListening = true;
+    _listeningCycle += 1;
+    _expectRecognizerReplay = false;
     _resumeAfterLifecycle = false;
     _appActive = true;
     value = value.copyWith(
@@ -340,22 +357,30 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       clearAssistant: true,
     );
     await _setAwake(true);
-    await _listenInternal();
+    await _listenInternal(_listeningCycle);
   }
 
-  Future<void> _listenInternal() async {
+  Future<void> _listenInternal(int cycle) async {
     if (_disposed ||
+        cycle != _listeningCycle ||
         !_shouldKeepListening ||
         !_appActive ||
         !_speechReady ||
+        _listenStartInProgress ||
         _speech.isListening) {
       return;
     }
 
+    _listenStartInProgress = true;
     try {
       await _speech.listen(
         onResult: (result) {
-          if (_disposed || !_shouldKeepListening) return;
+          if (_disposed ||
+              cycle != _listeningCycle ||
+              !_shouldKeepListening ||
+              !_appActive) {
+            return;
+          }
           _ingestRecognition(
             result.recognizedWords,
             finalResult: result.finalResult,
@@ -373,6 +398,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       );
     } catch (error) {
       _stopAfterSpeechFailure(error);
+    } finally {
+      _listenStartInProgress = false;
     }
   }
 
@@ -385,6 +412,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     final incoming = stripCommittedClinicalTranscriptPrefix(
       rawWords,
       committed,
+      allowRecentReplay: _expectRecognizerReplay,
     ).trim();
 
     if (incoming.isEmpty) {
@@ -395,6 +423,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       }
       return;
     }
+    _expectRecognizerReplay = false;
 
     if (_currentPartial.isEmpty) {
       _currentPartialOffset = _elapsedCaptureTime();
@@ -451,6 +480,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         _publishCaptureState();
         _scheduleDraftSave();
       }
+      _expectRecognizerReplay = true;
+      if (_speechRecoveryInProgress) return;
       _restartListeningLoop();
     }
   }
@@ -478,8 +509,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       return;
     }
     _speechRecoveryInProgress = true;
+    _expectRecognizerReplay = true;
     _restartTimer?.cancel();
     _consecutiveSpeechRestarts += 1;
+    final cycle = _listeningCycle;
 
     if (_consecutiveSpeechRestarts > _maximumConsecutiveSpeechRestarts) {
       _speechRecoveryInProgress = false;
@@ -499,13 +532,18 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
               _speechRestartDelay.inMilliseconds * _consecutiveSpeechRestarts,
         ),
       );
-      if (_disposed || !_shouldKeepListening || !_appActive) return;
+      if (_disposed ||
+          cycle != _listeningCycle ||
+          !_shouldKeepListening ||
+          !_appActive) {
+        return;
+      }
       value = value.copyWith(
         status: SpeechStatus.listening,
         stage: ClinicalVoiceStage.capture,
         clearError: true,
       );
-      await _listenInternal();
+      await _listenInternal(cycle);
     } finally {
       _speechRecoveryInProgress = false;
     }
@@ -514,6 +552,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void _stopAfterSpeechFailure(Object error) {
     if (_disposed) return;
     _shouldKeepListening = false;
+    _expectRecognizerReplay = false;
+    _listeningCycle += 1;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
     unawaited(_setAwake(false));
@@ -523,10 +563,17 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   void _restartListeningLoop() {
     _restartTimer?.cancel();
-    if (!_appActive || !_shouldKeepListening) return;
+    if (!_appActive || !_shouldKeepListening || _speechRecoveryInProgress) {
+      return;
+    }
+    final cycle = _listeningCycle;
     _restartTimer = Timer(_speechRestartDelay, () {
-      if (_shouldKeepListening && _appActive && !_disposed) {
-        unawaited(_listenInternal());
+      if (cycle == _listeningCycle &&
+          _shouldKeepListening &&
+          _appActive &&
+          !_speechRecoveryInProgress &&
+          !_disposed) {
+        unawaited(_listenInternal(cycle));
       }
     });
   }
@@ -693,6 +740,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       return false;
     }
     _shouldKeepListening = false;
+    _expectRecognizerReplay = false;
+    _listeningCycle += 1;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
     _localDraftTimer?.cancel();
@@ -817,6 +866,14 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       _segments.addAll(previous);
       _publishReviewedTranscript(clearError: false);
     }
+    if (saved && await _ensureSessionReady(silent: true)) {
+      try {
+        await _gateway.discardPendingTranscript(_visitId);
+      } catch (error) {
+        _setError(error, fallbackStatus: SpeechStatus.idle);
+        return false;
+      }
+    }
     return saved;
   }
 
@@ -884,11 +941,13 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   @override
   void dispose() {
     _localDraftTimer?.cancel();
-    if (!_captureCompleted) {
+    if (!_captureCompleted &&
+        (_segments.isNotEmpty || _currentPartial.trim().isNotEmpty)) {
       unawaited(_draftStore.write(_visitId, _currentDraft()));
     }
     _disposed = true;
     _shouldKeepListening = false;
+    _listeningCycle += 1;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
     unawaited(_speech.cancel());

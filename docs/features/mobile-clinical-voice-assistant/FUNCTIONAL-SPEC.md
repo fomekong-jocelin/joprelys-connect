@@ -21,3 +21,28 @@ Le praticien peut dicter ou enregistrer une phrase médicale naturelle (ex: *"Te
 - [x] Prise en charge i18n Français (`fr`) et Anglais (`en`).
 - [x] Support dynamique des thèmes Clair et Sombre.
 - [x] Détection d'erreurs et possibilité de correction manuelle avant enregistrement.
+
+## 4. Invariants de capture et de reprise
+
+- Une parole reconnue ne doit apparaître qu'une fois, y compris après trois ou
+  quatre callbacks identiques ou une reprise automatique du moteur Android.
+- Une reprise peut rejouer la fin de la fenêtre précédente : le chevauchement
+  récent est fusionné sans supprimer les nouveaux mots.
+- Un brouillon local ou serveur n'est restauré que s'il attend réellement la
+  revue du praticien (`PENDING_REVIEW`). Un transcript `ANALYZED` ne redevient
+  jamais une nouvelle dictée.
+- « Tout supprimer » est durable pour la visite courante et reste effectif après
+  fermeture puis réouverture de la modale.
+- Une erreur terminale arrête visuellement et techniquement l'écoute. L'analyse
+  reste indisponible tant que le transcript n'est pas sauvegardé et relu.
+- L'application aux constantes et à la note reste explicite et ne remplace pas
+  les données saisies par le praticien sans confirmation.
+
+## 5. Critères de recette P0
+
+- [ ] Dicter une phrase de 45 secondes avec deux silences de plus de quatre secondes : aucun passage dupliqué.
+- [ ] Provoquer trois reprises successives : le transcript reste ordonné et complet.
+- [ ] Fermer/réouvrir avant analyse : le brouillon non finalisé revient une fois.
+- [ ] Analyser puis fermer/réouvrir : aucun ancien transcript n'est restauré.
+- [ ] Tout supprimer puis fermer/réouvrir : l'écran reste vide.
+- [ ] Répéter volontairement une information clinique après un nouveau passage : la répétition volontaire reste visible.

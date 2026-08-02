@@ -3,6 +3,7 @@ package com.joprelys.backend.ai.application;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.anyMap;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -20,6 +21,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 
 class AiConsultationContinuousCaptureTest {
@@ -110,6 +112,52 @@ class AiConsultationContinuousCaptureTest {
         assertEquals("Céphalées sévères", second.draft().get("symptoms"));
         assertTrue(second.revisions().stream().allMatch(revision -> "DECIDED".equals(revision.status())));
         verify(aiProvider, times(2)).chat(anyList(), anyString());
+    }
+
+    @Test
+    void realtimeEventRetryMustReturnTheFirstResponseWithoutCallingProviderAgain() {
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(chatResponse("""
+                {
+                  "changes": [],
+                  "assistantMessage": "Transcription conservée.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """));
+
+        var first = service.processRealtimeTranscript(
+                visitId, userId, organizationId,
+                "Le patient ne présente pas de fièvre.", 0.94, "mobile-event-1");
+        var replay = service.processRealtimeTranscript(
+                visitId, userId, organizationId,
+                "Le patient ne présente pas de fièvre.", 0.94, "mobile-event-1");
+
+        assertEquals(first, replay);
+        verify(aiProvider, times(1)).chat(anyList(), anyString());
+    }
+
+    @Test
+    void realtimeEventIdMustRejectADifferentPayload() {
+        when(aiProvider.chat(anyList(), anyString())).thenReturn(chatResponse("""
+                {
+                  "changes": [],
+                  "assistantMessage": "Transcription conservée.",
+                  "needsClarification": false,
+                  "clarification": null
+                }
+                """));
+
+        service.processRealtimeTranscript(
+                visitId, userId, organizationId,
+                "Le patient ne présente pas de fièvre.", 0.94, "mobile-event-2");
+
+        var error = assertThrows(
+                ResponseStatusException.class,
+                () -> service.processRealtimeTranscript(
+                        visitId, userId, organizationId,
+                        "Le patient présente de la fièvre.", 0.94, "mobile-event-2"));
+        assertTrue(error.getMessage().contains("AI_REALTIME_EVENT_ID_REUSED"));
+        verify(aiProvider, times(1)).chat(anyList(), anyString());
     }
 
     @Test

@@ -54,6 +54,9 @@ public class RealtimeVitalsIntakeController {
             @PathVariable UUID visitId,
             Authentication authentication) {
         var identity = identityResolver.resolve(authentication);
-        return service.list(visitId, identity.organizationId(), RealtimeIntakeSource.VITALS);
+        return service.listActive(
+                visitId,
+                identity.organizationId(),
+                RealtimeIntakeSource.VITALS);
     }
 }

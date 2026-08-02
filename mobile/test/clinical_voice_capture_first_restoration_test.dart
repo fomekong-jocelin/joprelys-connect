@@ -16,8 +16,38 @@ void main() {
     expect(restoration, isNot(contains('_applyAiState(existing)')));
     expect(restoration, contains('SpeechStatus.transcriptReview'));
     expect(restoration, contains('ClinicalVoiceStage.capture'));
-    expect(restoration, contains("transcriptStatus.toUpperCase() == 'NONE'"));
+    expect(
+      restoration,
+      contains("transcriptStatus.toUpperCase() == 'PENDING_REVIEW'"),
+    );
     expect(restoration, contains("transcript: ''"));
+  });
+
+  test('an analyzed AI transcript is never restored as a new dictation', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('void _restoreExistingSession');
+    final end = source.indexOf('void _replaceSegmentsWithTranscript', start);
+    final restoration = source.substring(start, end);
+
+    expect(restoration, contains("== 'PENDING_REVIEW'"));
+    expect(restoration, isNot(contains("!= 'NONE'")));
+  });
+
+  test('an explicit local clear blocks stale draft restoration', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('Future<void> _restoreLocalDraft()');
+    final end = source.indexOf('void _leaveInitializationState', start);
+    final restoration = source.substring(start, end);
+
+    expect(restoration, contains('if (draft.explicitlyCleared)'));
+    expect(
+      restoration,
+      contains('segments: const <ClinicalTranscriptSegment>[]'),
+    );
   });
 
   test('capture screen saves before exposing clinical synthesis', () {
@@ -82,6 +112,9 @@ void main() {
       expect(source, contains('shouldRestartClinicalSpeechRecognition'));
       expect(source, contains('_recoverSpeechRecognizer'));
       expect(source, contains('_maximumConsecutiveSpeechRestarts'));
+      expect(source, contains('_listenStartInProgress'));
+      expect(source, contains('cycle != _listeningCycle'));
+      expect(source, contains('if (_speechRecoveryInProgress) return'));
     },
   );
 }

@@ -13,6 +13,39 @@
   "language": "fr"
 }
 ```
+
+## 2. Session et analyse utilisées par Flutter
+
+### `GET /api/ai/consultations/{visitId}/session`
+
+- `pendingTranscript` n'est restaurable que lorsque `transcriptStatus` vaut
+  `PENDING_REVIEW`.
+- Après analyse, `transcriptStatus=ANALYZED`, `pendingTranscript=null` et le champ
+  de capture `transcript` n'est plus exposé comme brouillon à reprendre.
+- Après effacement, `transcriptStatus=NONE` et aucun transcript n'est restaurable.
+
+### `POST /api/ai/consultations/{visitId}/messages/realtime`
+
+```json
+{
+  "transcript": "Texte clinique relu",
+  "confidence": 1.0,
+  "eventId": "mobile-reviewed-..."
+}
+```
+
+`eventId` reste optionnel pour compatibilité. Lorsqu'il est fourni :
+
+- le même identifiant avec le même payload retourne la première réponse sans
+  rappeler le fournisseur IA ;
+- le même identifiant avec un autre transcript ou une autre confiance retourne
+  `409 AI_REALTIME_EVENT_ID_REUSED`.
+
+### `GET /api/ai/realtime/vitals/{visitId}/intake`
+
+Le endpoint retourne uniquement le working set actif, ordonné par séquence. Les
+éléments `CONSUMED` et `DISCARDED` ne sont pas renvoyés lors d'une reprise.
+
 - **Response 200 OK** :
 ```json
 {

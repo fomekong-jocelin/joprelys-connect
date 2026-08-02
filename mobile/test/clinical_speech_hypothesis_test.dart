@@ -148,5 +148,51 @@ void main() {
         isEmpty,
       );
     });
+
+    test(
+      'removes a recent Android replay without requiring the full transcript',
+      () {
+        expect(
+          stripCommittedClinicalTranscriptPrefix(
+            'depuis trois semaines je suis très fatigué même quand je dors',
+            'Bonjour installez-vous. Le patient consulte depuis trois semaines je suis très fatigué',
+          ),
+          'même quand je dors',
+        );
+      },
+    );
+
+    test('removes a replay repeated four times at the latest boundary', () {
+      var committed = 'Le patient présente une fatigue depuis trois semaines';
+      const replay = 'fatigue depuis trois semaines';
+
+      for (var attempt = 0; attempt < 4; attempt++) {
+        final remaining = stripCommittedClinicalTranscriptPrefix(
+          replay,
+          committed,
+        );
+        expect(remaining, isEmpty);
+        committed = '$committed${remaining.isEmpty ? '' : ' $remaining'}';
+      }
+
+      expect(
+        committed,
+        'Le patient présente une fatigue depuis trois semaines',
+      );
+    });
+
+    test('merges a recent replay with one ASR token variation', () {
+      final result = mergeClinicalSpeechHypothesis(
+        'depuis environ trois semaines je suis très fatigué même quand je dors',
+        'depuis presque trois semaines je suis très fatigué même quand je dors neuf heures',
+        currentFinalized: false,
+      );
+
+      expect(result.startsNewSegment, isFalse);
+      expect(
+        result.text,
+        'depuis environ trois semaines je suis très fatigué même quand je dors neuf heures',
+      );
+    });
   });
 }
