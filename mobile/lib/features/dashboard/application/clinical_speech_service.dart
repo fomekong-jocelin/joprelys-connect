@@ -4,161 +4,21 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
+import 'package:wakelock_plus/wakelock_plus.dart';
 
-import '../../../core/network/api_exception.dart';
 import '../data/clinical_voice_ai_api.dart';
 import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
 import 'clinical_dictation_parser.dart';
+import 'clinical_voice_error_message.dart';
+import 'clinical_voice_state.dart';
 
-enum SpeechStatus {
-  idle,
-  listening,
-  processing,
-  transcriptReview,
-  proposalReview,
-  done,
-  error,
-}
+export 'clinical_voice_error_message.dart';
+export 'clinical_voice_state.dart';
 
-@immutable
-final class RealtimeSpeechState {
-  const RealtimeSpeechState({
-    required this.status,
-    required this.transcript,
-    required this.vitals,
-    required this.note,
-    required this.revisions,
-    this.soundLevel = 0.0,
-    this.errorMessage,
-    this.assistantMessage,
-    this.needsClarification = false,
-  });
-
-  final SpeechStatus status;
-  final String transcript;
-  final PatientVitals vitals;
-  final ConsultationNote note;
-  final List<ClinicalAiRevision> revisions;
-  final double soundLevel;
-  final String? errorMessage;
-  final String? assistantMessage;
-  final bool needsClarification;
-
-  bool get hasPendingProposals => revisions.any(
-    (revision) => revision.isPending && revision.hasPendingProposals,
-  );
-
-  bool get hasApplicableResult => !note.isEmpty || !vitals.isEmpty;
-
-  RealtimeSpeechState copyWith({
-    SpeechStatus? status,
-    String? transcript,
-    PatientVitals? vitals,
-    ConsultationNote? note,
-    List<ClinicalAiRevision>? revisions,
-    double? soundLevel,
-    String? errorMessage,
-    String? assistantMessage,
-    bool? needsClarification,
-    bool clearError = false,
-  }) {
-    return RealtimeSpeechState(
-      status: status ?? this.status,
-      transcript: transcript ?? this.transcript,
-      vitals: vitals ?? this.vitals,
-      note: note ?? this.note,
-      revisions: revisions ?? this.revisions,
-      soundLevel: soundLevel ?? this.soundLevel,
-      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
-      assistantMessage: assistantMessage ?? this.assistantMessage,
-      needsClarification: needsClarification ?? this.needsClarification,
-    );
-  }
-}
-
-String clinicalVoiceUserMessage(Object error, {required String locale}) {
-  final isFrench = locale.toLowerCase().startsWith('fr');
-
-  if (error is ApiException) {
-    return switch (error.kind) {
-      ApiFailureKind.unauthenticated => isFrench
-          ? 'Votre session a expiré. Reconnectez-vous pour reprendre la dictée.'
-          : 'Your session has expired. Sign in again to resume dictation.',
-      ApiFailureKind.forbidden => isFrench
-          ? 'Vous n’avez pas l’autorisation d’utiliser l’assistant vocal pour cette consultation.'
-          : 'You are not allowed to use the voice assistant for this consultation.',
-      ApiFailureKind.notFound => isFrench
-          ? 'La consultation ou la session vocale n’est plus disponible.'
-          : 'The consultation or voice session is no longer available.',
-      ApiFailureKind.rateLimited => isFrench
-          ? 'L’assistant vocal est momentanément très sollicité. Réessayez dans un instant.'
-          : 'The voice assistant is temporarily busy. Try again in a moment.',
-      ApiFailureKind.timeout => isFrench
-          ? 'L’assistant vocal met trop de temps à répondre. Réessayez.'
-          : 'The voice assistant is taking too long to respond. Try again.',
-      ApiFailureKind.noConnection => isFrench
-          ? 'Connexion indisponible. Vérifiez votre réseau puis réessayez.'
-          : 'No connection. Check your network and try again.',
-      ApiFailureKind.server => isFrench
-          ? 'L’assistant vocal est momentanément indisponible. Réessayez.'
-          : 'The voice assistant is temporarily unavailable. Try again.',
-      ApiFailureKind.malformedResponse => isFrench
-          ? 'La réponse de l’assistant vocal est temporairement illisible. Réessayez.'
-          : 'The voice assistant returned an unreadable response. Try again.',
-      ApiFailureKind.validation || ApiFailureKind.conflict => isFrench
-          ? 'La demande vocale n’a pas pu être traitée. Vérifiez la consultation puis réessayez.'
-          : 'The voice request could not be processed. Check the consultation and try again.',
-      ApiFailureKind.cancelled => isFrench
-          ? 'L’opération vocale a été interrompue.'
-          : 'The voice operation was interrupted.',
-      ApiFailureKind.unknown => isFrench
-          ? 'Impossible de poursuivre la dictée pour le moment. Réessayez.'
-          : 'Dictation cannot continue right now. Try again.',
-    };
-  }
-
-  if (error is FormatException) {
-    return isFrench
-        ? 'La réponse de l’assistant vocal est temporairement illisible. Réessayez.'
-        : 'The voice assistant returned an unreadable response. Try again.';
-  }
-
-  final raw = error.toString();
-  if (raw.contains('MICROPHONE_PERMISSION_DENIED') ||
-      raw.contains('error_permission')) {
-    return isFrench
-        ? 'Autorisez l’accès au microphone pour démarrer la dictée.'
-        : 'Allow microphone access to start dictation.';
-  }
-  if (raw.contains('SPEECH_RECOGNITION_UNAVAILABLE')) {
-    return isFrench
-        ? 'La reconnaissance vocale n’est pas disponible sur cet appareil.'
-        : 'Speech recognition is not available on this device.';
-  }
-  if (raw.contains('AI_AUDIO_SILENCE') ||
-      raw.contains('error_speech_timeout') ||
-      raw.contains('error_no_match')) {
-    return isFrench
-        ? 'Aucune parole exploitable n’a été détectée. Reprenez la dictée près du microphone.'
-        : 'No usable speech was detected. Resume dictation near the microphone.';
-  }
-  if (raw.contains('AI_TRANSCRIPT_REVIEW_REQUIRED')) {
-    return isFrench
-        ? 'Une transcription est déjà en attente. Relisez-la avant de reprendre le micro.'
-        : 'A transcript is already waiting. Review it before recording again.';
-  }
-
-  return isFrench
-      ? 'Impossible de poursuivre la dictée pour le moment. Réessayez.'
-      : 'Dictation cannot continue right now. Try again.';
-}
-
-/// Captation clinique instantanée.
-///
-/// La reconnaissance native fournit les mots partiels immédiatement. Chaque
-/// segment final est envoyé au moteur IA en arrière-plan afin d'en extraire et
-/// reformuler progressivement les éléments cliniques, sans interrompre l'écoute.
+/// Captation clinique instantanée en deux temps :
+/// 1. écoute et transcription segmentée ;
+/// 2. analyse IA du texte relu, puis revue des propositions cliniques.
 class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   factory ClinicalSpeechService({
     required ClinicalVoiceAiGateway gateway,
@@ -169,8 +29,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     Future<Directory> Function()? temporaryDirectoryProvider,
     stt.SpeechToText? speech,
   }) {
-    // recorder et temporaryDirectoryProvider restent acceptés pour préserver le
-    // contrat d'injection existant pendant la migration du pipeline différé.
+    // Ces paramètres restent acceptés afin de ne pas casser les anciens points
+    // d’injection pendant la migration vers la transcription native continue.
     return ClinicalSpeechService._(
       gateway,
       visitId,
@@ -191,7 +51,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
        super(
          const RealtimeSpeechState(
            status: SpeechStatus.idle,
+           stage: ClinicalVoiceStage.capture,
            transcript: '',
+           segments: <ClinicalTranscriptSegment>[],
+           partialTranscript: '',
+           partialOffset: Duration.zero,
            vitals: PatientVitals(),
            note: ConsultationNote(),
            revisions: <ClinicalAiRevision>[],
@@ -205,18 +69,23 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   final stt.SpeechToText _speech;
   final ClinicalDictationParser _parser = const ClinicalDictationParser();
 
-  final List<String> _committedTurns = <String>[];
+  final List<ClinicalTranscriptSegment> _segments =
+      <ClinicalTranscriptSegment>[];
   String _currentPartial = '';
+  Duration _currentPartialOffset = Duration.zero;
+  DateTime? _captureStartedAt;
   bool _sessionReady = false;
   bool _speechReady = false;
   bool _shouldKeepListening = false;
+  bool _appActive = true;
+  bool _resumeAfterLifecycle = false;
   bool _disposed = false;
   Timer? _restartTimer;
-  Future<void> _analysisChain = Future<void>.value();
 
   Future<void> restoreOrStart() async {
     await initialize();
-    if (!_disposed && value.status == SpeechStatus.idle) {
+    if (_disposed || value.stage != ClinicalVoiceStage.capture) return;
+    if (value.status == SpeechStatus.idle && !value.hasTranscript) {
       await startRealtimeListening();
     }
   }
@@ -233,11 +102,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
             _initialDraft,
             locale: _locale,
           );
-        } else if (existing.hasAcceptedChanges ||
-            !existing.noteFrom().isEmpty ||
-            !existing.vitalsFrom().isEmpty ||
-            existing.revisions.isNotEmpty) {
-          _applyAiState(existing, statusOverride: SpeechStatus.idle);
+        } else {
+          _restoreExistingSession(existing);
         }
         _sessionReady = true;
       } catch (error) {
@@ -247,80 +113,137 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
 
     if (_speechReady) {
-      if (value.status == SpeechStatus.processing) {
-        value = value.copyWith(status: SpeechStatus.idle, clearError: true);
-      }
+      _leaveInitializationState();
       return;
     }
 
     try {
       _speechReady = await _speech.initialize(
-        onStatus: (status) {
-          if (_disposed || !_shouldKeepListening) return;
-          if (status == 'done' || status == 'notListening') {
-            _commitCurrentPartial(analyze: true);
-            _restartListeningLoop();
-          }
-        },
+        onStatus: _handleSpeechStatus,
         onError: (error) {
           if (_disposed) return;
+          final raw = error.errorMsg;
+          if (_isRecoverableSpeechGap(raw) && _shouldKeepListening) {
+            _commitCurrentPartial();
+            _restartListeningLoop();
+            return;
+          }
           if (_shouldKeepListening) {
-            value = value.copyWith(
-              errorMessage: _userMessage(error.errorMsg),
-            );
+            value = value.copyWith(errorMessage: _userMessage(raw));
             _restartListeningLoop();
           } else {
-            _setError(error.errorMsg);
+            _setError(raw);
           }
         },
       );
       if (!_speechReady) {
         throw StateError('SPEECH_RECOGNITION_UNAVAILABLE');
       }
-      if (value.status == SpeechStatus.processing) {
-        value = value.copyWith(status: SpeechStatus.idle, clearError: true);
-      }
+      _leaveInitializationState();
     } catch (error) {
       _speechReady = false;
       _setError(error);
     }
   }
 
+  void _leaveInitializationState() {
+    if (value.status == SpeechStatus.processing &&
+        value.stage == ClinicalVoiceStage.capture) {
+      value = value.copyWith(status: SpeechStatus.idle, clearError: true);
+    }
+  }
+
+  void _restoreExistingSession(ClinicalAiState existing) {
+    final pending = existing.pendingTranscript?.trim();
+    final transcript = pending?.isNotEmpty == true
+        ? pending!
+        : existing.transcript?.trim();
+
+    if (existing.revisions.isNotEmpty ||
+        existing.hasAcceptedChanges ||
+        existing.needsClarification) {
+      if (transcript?.isNotEmpty == true) {
+        _replaceSegmentsWithTranscript(transcript!);
+      }
+      _applyAiState(existing);
+      return;
+    }
+
+    if (transcript?.isNotEmpty == true) {
+      _replaceSegmentsWithTranscript(transcript!);
+      value = value.copyWith(
+        status: SpeechStatus.transcriptReview,
+        stage: ClinicalVoiceStage.capture,
+        transcript: transcript,
+        segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+        clearPartial: true,
+        clearError: true,
+      );
+    }
+  }
+
+  void _replaceSegmentsWithTranscript(String transcript) {
+    _segments
+      ..clear()
+      ..add(
+        ClinicalTranscriptSegment(
+          id: 'restored-${DateTime.now().microsecondsSinceEpoch}',
+          offset: Duration.zero,
+          text: transcript.trim(),
+        ),
+      );
+    _captureStartedAt ??= DateTime.now();
+  }
+
   Future<void> startRealtimeListening() async {
     if (_disposed || value.status == SpeechStatus.listening) return;
+    if (value.stage == ClinicalVoiceStage.review) return;
     await initialize();
     if (!_sessionReady || !_speechReady || _disposed) return;
 
+    _captureStartedAt ??= DateTime.now();
     _shouldKeepListening = true;
-    _committedTurns.clear();
-    _currentPartial = '';
+    _resumeAfterLifecycle = false;
+    _appActive = true;
     value = value.copyWith(
       status: SpeechStatus.listening,
-      transcript: '',
+      stage: ClinicalVoiceStage.capture,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      transcript: clinicalTranscriptFromSegments(_segments),
       soundLevel: 8,
       clearError: true,
+      clearAssistant: true,
     );
+    await _setAwake(true);
     await _listenInternal();
   }
 
   Future<void> _listenInternal() async {
-    if (_disposed || !_shouldKeepListening || !_speechReady) return;
-    if (_speech.isListening) return;
+    if (_disposed ||
+        !_shouldKeepListening ||
+        !_appActive ||
+        !_speechReady ||
+        _speech.isListening) {
+      return;
+    }
 
     try {
       await _speech.listen(
         onResult: (result) {
           if (_disposed || !_shouldKeepListening) return;
-          _currentPartial = result.recognizedWords.trim();
-          _publishInstantTranscript();
-          if (result.finalResult) {
-            _commitCurrentPartial(analyze: true);
+          final words = result.recognizedWords.trim();
+          if (words.isNotEmpty && _currentPartial.isEmpty) {
+            _currentPartialOffset = _elapsedCaptureTime();
           }
+          _currentPartial = words;
+          _publishCaptureState();
+          if (result.finalResult) _commitCurrentPartial();
         },
         onSoundLevelChange: (level) {
           if (_disposed || value.status != SpeechStatus.listening) return;
-          final normalized = (level + 2.0).clamp(5.0, 60.0).toDouble();
-          value = value.copyWith(soundLevel: normalized);
+          value = value.copyWith(
+            soundLevel: (level + 2.0).clamp(5.0, 60.0).toDouble(),
+          );
         },
         listenFor: const Duration(hours: 1),
         pauseFor: const Duration(seconds: 8),
@@ -339,112 +262,220 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  String get _speechLocale {
-    final normalized = _locale.toLowerCase();
-    return normalized.startsWith('en') ? 'en_US' : 'fr_FR';
+  String get _speechLocale => _locale.toLowerCase().startsWith('en')
+      ? 'en_US'
+      : 'fr_FR';
+
+  void _handleSpeechStatus(String status) {
+    if (_disposed || !_shouldKeepListening) return;
+    if (status == 'done' || status == 'notListening') {
+      _commitCurrentPartial();
+      _restartListeningLoop();
+    }
+  }
+
+  bool _isRecoverableSpeechGap(String raw) {
+    return raw.contains('error_speech_timeout') ||
+        raw.contains('error_no_match');
   }
 
   void _restartListeningLoop() {
     _restartTimer?.cancel();
-    _restartTimer = Timer(const Duration(milliseconds: 180), () {
-      if (_shouldKeepListening && !_disposed) {
+    if (!_appActive || !_shouldKeepListening) return;
+    _restartTimer = Timer(const Duration(milliseconds: 220), () {
+      if (_shouldKeepListening && _appActive && !_disposed) {
         unawaited(_listenInternal());
       }
     });
   }
 
-  void _publishInstantTranscript() {
-    final parts = List<String>.from(_committedTurns);
+  Duration _elapsedCaptureTime() {
+    final startedAt = _captureStartedAt;
+    return startedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(startedAt);
+  }
+
+  void _publishCaptureState() {
+    final committed = clinicalTranscriptFromSegments(_segments);
     final partial = _currentPartial.trim();
-    if (partial.isNotEmpty) {
-      if (parts.isNotEmpty && partial.startsWith(parts.last)) {
-        parts.removeLast();
-      }
-      if (!parts.contains(partial)) parts.add(partial);
-    }
-    final transcript = parts.join('. ').trim();
-    final parsed = _parser.parse(transcript);
+    final transcript = <String>[
+      if (committed.isNotEmpty) committed,
+      if (partial.isNotEmpty) partial,
+    ].join('. ').trim();
+
     value = value.copyWith(
-      status: SpeechStatus.listening,
+      status: _shouldKeepListening
+          ? SpeechStatus.listening
+          : SpeechStatus.transcriptReview,
+      stage: ClinicalVoiceStage.capture,
       transcript: transcript,
-      vitals: parsed.vitals.mergePrefer(value.vitals),
-      soundLevel: value.soundLevel,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      partialTranscript: partial,
+      partialOffset: _currentPartialOffset,
       clearError: true,
     );
   }
 
-  void _commitCurrentPartial({required bool analyze}) {
-    final text = _currentPartial.trim();
+  void _commitCurrentPartial() {
+    var text = _currentPartial.trim();
     if (text.isEmpty) return;
 
-    if (_committedTurns.isNotEmpty && text.startsWith(_committedTurns.last)) {
-      _committedTurns.removeLast();
+    final committed = clinicalTranscriptFromSegments(_segments);
+    if (committed.isNotEmpty && text.startsWith(committed)) {
+      text = text.substring(committed.length).trim();
+      text = text.replaceFirst(RegExp(r'^[\s.,;:!?-]+'), '').trim();
     }
-    if (!_committedTurns.contains(text)) {
-      _committedTurns.add(text);
-      if (analyze) _enqueueProgressiveAnalysis(text);
-    }
-    _currentPartial = '';
-    _publishInstantTranscript();
-  }
 
-  void _enqueueProgressiveAnalysis(String segment) {
-    if (segment.trim().isEmpty || _disposed) return;
-    _analysisChain = _analysisChain.then((_) async {
-      if (_disposed) return;
-      try {
-        final state = await _gateway.analyzeTranscript(_visitId, segment);
-        if (_disposed) return;
-        _applyAiState(
-          state,
-          statusOverride: _shouldKeepListening
-              ? SpeechStatus.listening
-              : state.hasPendingProposals
-              ? SpeechStatus.proposalReview
-              : SpeechStatus.transcriptReview,
+    if (text.isNotEmpty) {
+      if (_segments.isNotEmpty && text.startsWith(_segments.last.text)) {
+        _segments[_segments.length - 1] = _segments.last.copyWith(text: text);
+      } else if (_segments.isEmpty || _segments.last.text != text) {
+        _segments.add(
+          ClinicalTranscriptSegment(
+            id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
+            offset: _currentPartialOffset,
+            text: text,
+          ),
         );
-      } catch (error) {
-        if (!_disposed) {
-          value = value.copyWith(errorMessage: _userMessage(error));
-        }
       }
-    });
+    }
+
+    _currentPartial = '';
+    _currentPartialOffset = Duration.zero;
+    _publishCaptureState();
   }
 
   Future<void> stopListening() async {
     if (_disposed || value.status != SpeechStatus.listening) return;
     _shouldKeepListening = false;
+    _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
 
     if (_speech.isListening) await _speech.stop();
-    _commitCurrentPartial(analyze: true);
-    await _analysisChain;
+    _commitCurrentPartial();
+    await _setAwake(false);
 
     value = value.copyWith(
-      status: value.hasPendingProposals
-          ? SpeechStatus.proposalReview
+      status: _segments.isEmpty
+          ? SpeechStatus.idle
           : SpeechStatus.transcriptReview,
+      stage: ClinicalVoiceStage.capture,
+      transcript: clinicalTranscriptFromSegments(_segments),
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
       soundLevel: 0,
+      clearPartial: true,
       clearError: true,
     );
   }
 
-  void updateTranscript(String text) {
+  void updateSegment(String segmentId, String text) {
+    if (_disposed || value.status == SpeechStatus.listening) return;
+    final index = _segments.indexWhere((segment) => segment.id == segmentId);
+    if (index < 0) return;
     final normalized = text.trim();
-    final parsed = _parser.parse(normalized);
+    if (normalized.isEmpty) {
+      deleteSegment(segmentId);
+      return;
+    }
+    _segments[index] = _segments[index].copyWith(text: normalized);
+    _publishReviewedTranscript();
+  }
+
+  void deleteSegment(String segmentId) {
+    if (_disposed || value.status == SpeechStatus.listening) return;
+    _segments.removeWhere((segment) => segment.id == segmentId);
+    _publishReviewedTranscript();
+  }
+
+  void _publishReviewedTranscript() {
+    final transcript = clinicalTranscriptFromSegments(_segments);
     value = value.copyWith(
-      transcript: normalized,
-      vitals: parsed.vitals.mergePrefer(value.vitals),
-      status: SpeechStatus.transcriptReview,
+      status: transcript.isEmpty
+          ? SpeechStatus.idle
+          : SpeechStatus.transcriptReview,
+      stage: ClinicalVoiceStage.capture,
+      transcript: transcript,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      vitals: const PatientVitals(),
+      note: const ConsultationNote(),
+      revisions: const <ClinicalAiRevision>[],
+      needsClarification: false,
+      clearPartial: true,
+      clearAssistant: true,
       clearError: true,
     );
   }
 
-  Future<void> analyzeTranscript() async {
-    final transcript = value.transcript.trim();
-    if (_disposed || transcript.isEmpty) return;
+  Future<void> clearTranscript() async {
+    if (_disposed || value.status == SpeechStatus.processing) return;
+    if (value.status == SpeechStatus.listening) await stopListening();
+    _segments.clear();
+    _currentPartial = '';
+    _currentPartialOffset = Duration.zero;
+    _captureStartedAt = null;
+    try {
+      await _gateway.discardPendingTranscript(_visitId);
+    } catch (_) {
+      // Le flux realtime n'a pas toujours de transcription serveur en attente.
+    }
+    value = const RealtimeSpeechState(
+      status: SpeechStatus.idle,
+      stage: ClinicalVoiceStage.capture,
+      transcript: '',
+      segments: <ClinicalTranscriptSegment>[],
+      partialTranscript: '',
+      partialOffset: Duration.zero,
+      vitals: PatientVitals(),
+      note: ConsultationNote(),
+      revisions: <ClinicalAiRevision>[],
+    );
+  }
 
-    value = value.copyWith(status: SpeechStatus.processing, clearError: true);
+  String _userMessage(Object error) {
+    return clinicalVoiceUserMessage(error, locale: _locale);
+  }
+
+  void _setError(
+    Object error, {
+    SpeechStatus fallbackStatus = SpeechStatus.error,
+  }) {
+    if (_disposed) return;
+    value = value.copyWith(
+      status: fallbackStatus,
+      soundLevel: 0,
+      errorMessage: _userMessage(error),
+    );
+  }
+
+  @override
+  void dispose() {
+    _disposed = true;
+    _shouldKeepListening = false;
+    _resumeAfterLifecycle = false;
+    _restartTimer?.cancel();
+    unawaited(_speech.cancel());
+    unawaited(_setAwake(false));
+    super.dispose();
+  }
+}
+
+extension ClinicalSpeechAnalysis on ClinicalSpeechService {
+  Future<void> analyzeTranscript() async {
+    if (_disposed) return;
+    if (value.status == SpeechStatus.listening) await stopListening();
+    final transcript = clinicalTranscriptFromSegments(_segments);
+    if (transcript.isEmpty) return;
+
+    await initialize();
+    if (!_sessionReady || _disposed) return;
+    value = value.copyWith(
+      status: SpeechStatus.processing,
+      stage: ClinicalVoiceStage.capture,
+      transcript: transcript,
+      clearError: true,
+      clearAssistant: true,
+    );
     try {
       final state = await _gateway.analyzeTranscript(_visitId, transcript);
       _applyAiState(state);
@@ -491,28 +522,58 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  void _applyAiState(
-    ClinicalAiState state, {
-    SpeechStatus? statusOverride,
-  }) {
+  void _applyAiState(ClinicalAiState state) {
     final aiVitals = state.vitalsFrom(includePending: true);
     final explicitVitals = _parser.parse(value.transcript).vitals;
-    final resolvedVitals = explicitVitals.mergePrefer(aiVitals);
     value = RealtimeSpeechState(
-      status:
-          statusOverride ??
-          (state.hasPendingProposals
-              ? SpeechStatus.proposalReview
-              : SpeechStatus.done),
+      status: state.hasPendingProposals
+          ? SpeechStatus.proposalReview
+          : SpeechStatus.done,
+      stage: ClinicalVoiceStage.review,
       transcript: value.transcript,
-      vitals: resolvedVitals,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      partialTranscript: '',
+      partialOffset: Duration.zero,
+      vitals: explicitVitals.mergePrefer(aiVitals),
       note: state.noteFrom(includePending: true),
       revisions: state.revisions,
-      soundLevel: _shouldKeepListening ? value.soundLevel : 0,
       assistantMessage: state.assistantMessage,
       needsClarification: state.needsClarification,
-      errorMessage: value.errorMessage,
     );
+  }
+}
+
+extension ClinicalSpeechLifecycle on ClinicalSpeechService {
+  Future<void> suspendForLifecycle() async {
+    if (_disposed) return;
+    _appActive = false;
+    _restartTimer?.cancel();
+    if (!_shouldKeepListening) return;
+
+    _resumeAfterLifecycle = true;
+    try {
+      if (_speech.isListening) await _speech.stop();
+    } catch (_) {
+      // La plateforme peut déjà avoir arrêté le moteur lors du verrouillage.
+    }
+    _commitCurrentPartial();
+    await _setAwake(false);
+    value = value.copyWith(soundLevel: 0);
+  }
+
+  Future<void> resumeAfterLifecycle() async {
+    if (_disposed) return;
+    _appActive = true;
+    if (!_resumeAfterLifecycle || !_shouldKeepListening) return;
+
+    _resumeAfterLifecycle = false;
+    value = value.copyWith(
+      status: SpeechStatus.listening,
+      stage: ClinicalVoiceStage.capture,
+      clearError: true,
+    );
+    await _setAwake(true);
+    _restartListeningLoop();
   }
 
   Future<bool> prepareForClose() async {
@@ -521,49 +582,17 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     return true;
   }
 
-  Future<void> discardCurrentCapture() async {
-    if (_disposed) return;
-    _shouldKeepListening = false;
-    _restartTimer?.cancel();
-    if (_speech.isListening) await _speech.cancel();
-    _committedTurns.clear();
-    _currentPartial = '';
+  Future<void> discardCurrentCapture() => clearTranscript();
+
+  Future<void> _setAwake(bool enabled) async {
     try {
-      await _gateway.discardPendingTranscript(_visitId);
+      if (enabled) {
+        await WakelockPlus.enable();
+      } else {
+        await WakelockPlus.disable();
+      }
     } catch (_) {
-      // Le flux realtime n'a pas toujours de transcription serveur en attente.
+      // Une erreur du plugin ne doit jamais invalider la transcription.
     }
-    value = const RealtimeSpeechState(
-      status: SpeechStatus.idle,
-      transcript: '',
-      vitals: PatientVitals(),
-      note: ConsultationNote(),
-      revisions: <ClinicalAiRevision>[],
-    );
-  }
-
-  String _userMessage(Object error) {
-    return clinicalVoiceUserMessage(error, locale: _locale);
-  }
-
-  void _setError(
-    Object error, {
-    SpeechStatus fallbackStatus = SpeechStatus.error,
-  }) {
-    if (_disposed) return;
-    value = value.copyWith(
-      status: fallbackStatus,
-      soundLevel: 0,
-      errorMessage: _userMessage(error),
-    );
-  }
-
-  @override
-  void dispose() {
-    _disposed = true;
-    _shouldKeepListening = false;
-    _restartTimer?.cancel();
-    unawaited(_speech.cancel());
-    super.dispose();
   }
 }
