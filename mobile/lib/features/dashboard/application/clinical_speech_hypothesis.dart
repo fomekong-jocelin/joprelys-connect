@@ -11,10 +11,18 @@ final class ClinicalSpeechHypothesisMerge {
   final bool startsNewSegment;
 }
 
+/// Reconciles two speech-recognition hypotheses.
+///
+/// While [currentFinalized] is false, a radically different result is treated as
+/// a correction made by the recognizer inside the same listening window. Once a
+/// result has been finalized by the platform, a genuinely different result starts
+/// the next spoken passage. Progressive results that extend, shorten or overlap
+/// the current text always remain in the same passage.
 ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
   String current,
-  String incoming,
-) {
+  String incoming, {
+  bool currentFinalized = true,
+}) {
   final currentText = _normalizeWhitespace(current);
   final incomingText = _normalizeWhitespace(incoming);
 
@@ -76,7 +84,8 @@ ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
   }
 
   final overlap = _suffixPrefixOverlap(currentKeys, incomingKeys);
-  if (overlap > 0) {
+  final minimumUsefulOverlap = incomingKeys.length <= 3 ? 1 : 2;
+  if (overlap >= minimumUsefulOverlap) {
     final merged = <String>[
       ...currentTokens,
       ...incomingTokens.skip(overlap),
@@ -84,7 +93,7 @@ ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
     return ClinicalSpeechHypothesisMerge(text: merged, startsNewSegment: false);
   }
 
-  if (currentTokens.length <= 2 && incomingTokens.length <= 2) {
+  if (!currentFinalized) {
     return ClinicalSpeechHypothesisMerge(
       text: incomingText,
       startsNewSegment: false,
