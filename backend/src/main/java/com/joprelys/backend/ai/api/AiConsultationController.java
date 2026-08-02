@@ -28,6 +28,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -208,6 +209,21 @@ public class AiConsultationController {
             @Valid @RequestBody AnalyzeTranscriptRequest request,
             Authentication authentication) {
         Identity identity = identity(authentication);
+        return service.stageRealtimeTranscript(
+                visitId,
+                identity.userId(),
+                identity.organizationId(),
+                request.transcript());
+    }
+
+    @PutMapping("/{visitId}/transcriptions/pending")
+    public TranscriptionView replacePendingTranscript(
+            @PathVariable UUID visitId,
+            @Valid @RequestBody AnalyzeTranscriptRequest request,
+            Authentication authentication) {
+        Identity identity = identity(authentication);
+        service.discardPendingTranscript(
+                visitId, identity.userId(), identity.organizationId());
         return service.stageRealtimeTranscript(
                 visitId,
                 identity.userId(),
