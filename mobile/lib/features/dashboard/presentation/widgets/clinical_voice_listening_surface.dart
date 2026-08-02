@@ -35,6 +35,7 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
     final actionColor = active ? colors.error : colors.primary;
+    final actionLabel = active ? stopLabel : startLabel;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
@@ -85,7 +86,7 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
                     const SizedBox(height: 2),
                     Text(
                       statusText,
-                      maxLines: active ? 2 : 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: colors.onSurfaceVariant,
@@ -95,113 +96,93 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
                   ],
                 ),
               ),
-              const SizedBox(width: 10),
-              SizedBox(
-                height: 42,
-                child: OutlinedButton.icon(
-                  onPressed: onToggleListening,
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: actionColor,
-                    side: BorderSide(color: actionColor),
-                    padding: const EdgeInsets.symmetric(horizontal: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(
-                        AppDesignTokens.radiusSm,
-                      ),
-                    ),
-                  ),
-                  icon: Icon(
-                    active ? Icons.stop_rounded : Icons.mic_rounded,
-                    size: 18,
-                  ),
-                  label: Text(
-                    active ? stopLabel : startLabel,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w800),
-                  ),
-                ),
-              ),
             ],
           ),
-          AnimatedSize(
+          const SizedBox(height: 10),
+          AnimatedContainer(
             duration: const Duration(milliseconds: 220),
-            curve: Curves.easeOutCubic,
-            child: active
-                ? Padding(
-                    padding: const EdgeInsets.only(top: 10),
-                    child: SizedBox(
-                      height: 118,
-                      width: double.infinity,
-                      child: Stack(
-                        alignment: Alignment.center,
-                        children: [
-                          Positioned.fill(
-                            child: AnimatedBuilder(
-                              animation: waveController,
-                              builder: (context, child) {
-                                return CustomPaint(
-                                  painter: _SineWavePainter(
-                                    phase: waveController.value * math.pi * 2,
-                                    color: colors.primary,
-                                    soundLevel: soundLevel,
-                                  ),
-                                );
-                              },
-                            ),
+            height: active ? 118 : 92,
+            width: double.infinity,
+            child: Stack(
+              alignment: Alignment.center,
+              children: [
+                if (active)
+                  Positioned.fill(
+                    child: AnimatedBuilder(
+                      animation: waveController,
+                      builder: (context, child) {
+                        return CustomPaint(
+                          painter: _SineWavePainter(
+                            phase: waveController.value * math.pi * 2,
+                            color: colors.primary,
+                            soundLevel: soundLevel,
                           ),
-                          AnimatedBuilder(
-                            animation: haloController,
-                            builder: (context, child) {
-                              final pulse = math.sin(
-                                haloController.value * math.pi * 2,
-                              );
-                              final reactive = soundLevel * 0.18;
-                              return Container(
-                                width: 82 + pulse * 6 + reactive,
-                                height: 82 + pulse * 6 + reactive,
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: colors.primary.withValues(alpha: 0.1),
-                                  border: Border.all(
-                                    color: colors.primary.withValues(
-                                      alpha: 0.28 + pulse.abs() * 0.18,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
+                        );
+                      },
+                    ),
+                  ),
+                AnimatedBuilder(
+                  animation: haloController,
+                  builder: (context, child) {
+                    final pulse = active
+                        ? math.sin(haloController.value * math.pi * 2)
+                        : 0.0;
+                    final reactive = active ? soundLevel * 0.18 : 0.0;
+                    return Container(
+                      width: 82 + pulse * 6 + reactive,
+                      height: 82 + pulse * 6 + reactive,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: actionColor.withValues(alpha: 0.1),
+                        border: Border.all(
+                          color: actionColor.withValues(
+                            alpha: active
+                                ? 0.28 + pulse.abs() * 0.18
+                                : 0.22,
                           ),
-                          GestureDetector(
-                            onTap: onToggleListening,
-                            child: Container(
-                              width: 62,
-                              height: 62,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: colors.primary,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: colors.primary.withValues(
-                                      alpha: 0.25,
-                                    ),
-                                    blurRadius: 14 + soundLevel * 0.12,
-                                    spreadRadius: 2 + soundLevel * 0.04,
-                                  ),
-                                ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
+                Semantics(
+                  button: true,
+                  label: actionLabel,
+                  child: Tooltip(
+                    message: actionLabel,
+                    child: Material(
+                      color: Colors.transparent,
+                      child: InkResponse(
+                        onTap: onToggleListening,
+                        radius: 48,
+                        child: AnimatedContainer(
+                          duration: const Duration(milliseconds: 180),
+                          width: 66,
+                          height: 66,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: actionColor,
+                            boxShadow: [
+                              BoxShadow(
+                                color: actionColor.withValues(alpha: 0.25),
+                                blurRadius: 14 + (active ? soundLevel * 0.12 : 0),
+                                spreadRadius:
+                                    2 + (active ? soundLevel * 0.04 : 0),
                               ),
-                              child: Icon(
-                                Icons.mic_rounded,
-                                size: 31,
-                                color: colors.onPrimary,
-                              ),
-                            ),
+                            ],
                           ),
-                        ],
+                          child: Icon(
+                            active ? Icons.stop_rounded : Icons.mic_rounded,
+                            size: 32,
+                            color: active ? colors.onError : colors.onPrimary,
+                          ),
+                        ),
                       ),
                     ),
-                  )
-                : const SizedBox.shrink(),
+                  ),
+                ),
+              ],
+            ),
           ),
           const SizedBox(height: 8),
           Align(
