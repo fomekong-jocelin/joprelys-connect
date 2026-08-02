@@ -10,14 +10,14 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceCaptureBadge =>
       _voiceIsFrench ? 'Écoute clinique' : 'Clinical listening';
   String get voiceCaptureStatus => _voiceIsFrench
-      ? 'Parlez naturellement, même à distance normale du téléphone.'
-      : 'Speak naturally, even at a normal distance from the phone.';
+      ? 'Parlez naturellement, à une distance normale du téléphone.'
+      : 'Speak naturally at a normal distance from the phone.';
   String get voiceCapturePausedStatus => _voiceIsFrench
       ? 'Transcription prête : corrigez, reprenez ou lancez l’analyse.'
       : 'Transcript ready: edit it, resume, or start the analysis.';
   String get voiceCaptureTip => _voiceIsFrench
-      ? 'Les paroles déjà captées sont conservées. Une pause stable crée automatiquement un nouveau segment.'
-      : 'Previously captured speech is preserved. A stable pause automatically creates a new segment.';
+      ? 'Le passage en cours reste unique pendant que le moteur affine les mots. Il est conservé localement sans requête réseau.'
+      : 'The current passage stays unique while speech recognition refines the words. It is kept locally without a network request.';
   String get voiceResumeDictation => _voiceIsFrench ? 'Reprendre' : 'Resume';
 
   String get voiceSegmentsTitle =>
@@ -29,8 +29,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'La dictée apparaîtra ici'
       : 'Your dictation will appear here';
   String get voiceSegmentsEmptyBody => _voiceIsFrench
-      ? 'Commencez à parler. Les passages seront conservés au fur et à mesure.'
-      : 'Start speaking. Each passage will be preserved as you continue.';
+      ? 'Commencez à parler. Le passage en cours sera mis à jour sans créer de doublons.'
+      : 'Start speaking. The current passage will be updated without creating duplicates.';
   String get voiceLiveSegment =>
       _voiceIsFrench ? 'Paroles en cours' : 'Current speech';
   String voiceSegmentLabel(int index) =>
@@ -45,8 +45,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'Supprimer toute la transcription ?'
       : 'Delete the full transcript?';
   String get voiceClearConfirmBody => _voiceIsFrench
-      ? 'Tous les passages seront supprimés de cet appareil et de la session. Ils ne réapparaîtront pas après actualisation.'
-      : 'All passages will be removed from this device and the session. They will not return after refresh.';
+      ? 'Tous les passages seront supprimés du stockage sécurisé de cet appareil. Ils ne réapparaîtront pas à la réouverture.'
+      : 'All passages will be removed from secure storage on this device. They will not return when reopened.';
   String get voiceCancel => _voiceIsFrench ? 'Annuler' : 'Cancel';
   String get voiceConfirmDelete => _voiceIsFrench ? 'Supprimer' : 'Delete';
   String get voiceAnalyzeAction => _voiceIsFrench
@@ -59,14 +59,17 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'L’IA reformule uniquement si nécessaire, puis classe les informations dans les champs cliniques adaptés.'
       : 'AI rewrites only when needed, then places information in the appropriate clinical fields.';
 
-  String get voiceTranscriptSaving =>
-      _voiceIsFrench ? 'Sauvegarde de la transcription…' : 'Saving transcript…';
+  String get voiceTranscriptSaving => _voiceIsFrench
+      ? 'Enregistrement sécurisé du brouillon…'
+      : 'Saving the draft securely…';
   String get voiceTranscriptSaved => _voiceIsFrench
-      ? 'Transcription sauvegardée dans la session.'
-      : 'Transcript saved to the session.';
+      ? 'Brouillon enregistré sur cet appareil.'
+      : 'Draft saved on this device.';
   String get voiceTranscriptSaveFailed => _voiceIsFrench
-      ? 'La transcription n’a pas pu être sauvegardée. Elle reste affichée : réessayez avant de fermer.'
-      : 'The transcript could not be saved. It remains visible: retry before closing.';
+      ? 'Le brouillon local n’a pas pu être enregistré. Il reste affiché : réessayez avant de fermer.'
+      : 'The local draft could not be saved. It remains visible: retry before closing.';
+  String get voiceRetrySave =>
+      _voiceIsFrench ? 'Réessayer l’enregistrement' : 'Retry saving';
 
   String get voiceReviewTitle => _voiceIsFrench
       ? 'Synthèse clinique proposée'
@@ -102,8 +105,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceIdleBadge =>
       _voiceIsFrench ? 'Assistant en pause' : 'Assistant paused';
   String get voiceStartNewDictation => _voiceIsFrench
-      ? 'Démarrez une nouvelle dictée clinique.'
-      : 'Start a new clinical dictation.';
+      ? 'Démarrez ou reprenez la dictée clinique.'
+      : 'Start or resume the clinical dictation.';
   String get voicePrivacyNotice => _voiceIsFrench
       ? 'Aucune donnée clinique n’est appliquée sans validation explicite.'
       : 'No clinical data is applied without explicit approval.';
