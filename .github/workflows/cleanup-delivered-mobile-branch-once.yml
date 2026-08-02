@@ -1,0 +1,33 @@
+name: Cleanup delivered mobile branch once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cleanup-delivered-mobile-branch-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Delete delivered branch and remove workflow
+        shell: bash
+        run: |
+          set -euo pipefail
+          git push origin --delete feat/mobile-premium-patient-record || true
+          git rm .github/workflows/cleanup-delivered-mobile-branch-once.yml
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git commit -m 'chore(repo): remove delivered mobile feature branch'
+          git push origin HEAD:main
