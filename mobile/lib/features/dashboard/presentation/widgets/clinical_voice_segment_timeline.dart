@@ -332,14 +332,15 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
             ),
           if (_editing) ...[
             const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: 6,
+              runSpacing: 6,
               children: [
                 TextButton(
                   onPressed: _busy ? null : _cancelEditing,
                   child: Text(l10n.voiceCancel),
                 ),
-                const SizedBox(width: 6),
                 FilledButton.tonalIcon(
                   onPressed: _busy ? null : _save,
                   icon: _busy
