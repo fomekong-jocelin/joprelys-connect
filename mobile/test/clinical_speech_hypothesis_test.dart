@@ -36,6 +36,89 @@ void main() {
       );
     });
 
+    test('keeps screenshot passages 28 to 30 as one growing passage', () {
+      var current = 'un peu quand je monte les escaliers';
+
+      final passage29 = mergeClinicalSpeechHypothesis(
+        current,
+        "un peu quand je monte les escaliers j'ai",
+        currentFinalized: true,
+      );
+      expect(passage29.startsNewSegment, isFalse);
+      current = passage29.text;
+
+      final passage30 = mergeClinicalSpeechHypothesis(
+        current,
+        "un peu quand je monte les escaliers j'ai besoin de reprendre",
+        currentFinalized: true,
+      );
+      expect(passage30.startsNewSegment, isFalse);
+      expect(
+        passage30.text,
+        "un peu quand je monte les escaliers j'ai besoin de reprendre",
+      );
+    });
+
+    test('keeps screenshot passages 49 to 51 as one growing passage', () {
+      var current =
+          "pouvez-vous vous asseoir sur la table d'examen je vais d'abord prendre votre tension votre";
+
+      final passage50 = mergeClinicalSpeechHypothesis(
+        current,
+        "pouvez-vous vous asseoir sur la table d'examen je vais d'abord prendre votre tension votre température",
+        currentFinalized: true,
+      );
+      expect(passage50.startsNewSegment, isFalse);
+      current = passage50.text;
+
+      final passage51 = mergeClinicalSpeechHypothesis(
+        current,
+        "pouvez-vous vous asseoir sur la table d'examen je vais d'abord prendre votre tension votre température et votre",
+        currentFinalized: true,
+      );
+      expect(passage51.startsNewSegment, isFalse);
+      expect(
+        passage51.text,
+        "pouvez-vous vous asseoir sur la table d'examen je vais d'abord prendre votre tension votre température et votre",
+      );
+    });
+
+    test('does not lose words when Android resets a non-final partial', () {
+      final result = mergeClinicalSpeechHypothesis(
+        'température est normal votre tension est à 12 8 et votre saturation en',
+        'oxygène',
+        currentFinalized: false,
+      );
+
+      expect(result.startsNewSegment, isFalse);
+      expect(
+        result.text,
+        'température est normal votre tension est à 12 8 et votre saturation en oxygène',
+      );
+    });
+
+    test('accepts a small correction inside a non-final short hypothesis', () {
+      final result = mergeClinicalSpeechHypothesis(
+        'oui',
+        'non',
+        currentFinalized: false,
+      );
+
+      expect(result.startsNewSegment, isFalse);
+      expect(result.text, 'non');
+    });
+
+    test('starts a new segment for a finalized short answer', () {
+      final result = mergeClinicalSpeechHypothesis(
+        'avez-vous une douleur',
+        'non',
+        currentFinalized: true,
+      );
+
+      expect(result.startsNewSegment, isTrue);
+      expect(result.text, 'non');
+    });
+
     test('starts a new segment for a genuinely different passage', () {
       final result = mergeClinicalSpeechHypothesis(
         'La toux est plus importante le soir',
