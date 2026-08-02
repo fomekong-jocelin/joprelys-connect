@@ -1,0 +1,157 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('an existing AI session reopens on editable dictation', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('void _restoreExistingSession');
+    final end = source.indexOf('void _replaceSegmentsWithTranscript', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+
+    final restoration = source.substring(start, end);
+    expect(restoration, isNot(contains('_applyAiState(existing)')));
+    expect(restoration, contains('SpeechStatus.transcriptReview'));
+    expect(restoration, contains('ClinicalVoiceStage.capture'));
+    expect(
+      restoration,
+      contains("transcriptStatus.toUpperCase() == 'PENDING_REVIEW'"),
+    );
+    expect(restoration, contains("transcript: ''"));
+  });
+
+  test('an analyzed AI transcript is never restored as a new dictation', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('void _restoreExistingSession');
+    final end = source.indexOf('void _replaceSegmentsWithTranscript', start);
+    final restoration = source.substring(start, end);
+
+    expect(restoration, contains("== 'PENDING_REVIEW'"));
+    expect(restoration, isNot(contains("!= 'NONE'")));
+  });
+
+  test('an explicit local clear blocks stale draft restoration', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('Future<void> _restoreLocalDraft()');
+    final end = source.indexOf('void _leaveInitializationState', start);
+    final restoration = source.substring(start, end);
+
+    expect(restoration, contains('if (draft.explicitlyCleared)'));
+    expect(
+      restoration,
+      contains('segments: const <ClinicalTranscriptSegment>[]'),
+    );
+  });
+
+  test('capture waits for an explicit tap on the central microphone', () {
+    final sheet = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart',
+    ).readAsStringSync();
+    final surface = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_listening_surface.dart',
+    ).readAsStringSync();
+
+    expect(sheet, contains('Future.microtask(_speechService.initialize)'));
+    expect(
+      sheet,
+      isNot(contains('Future.microtask(_speechService.restoreOrStart)')),
+    );
+    expect(surface, isNot(contains('OutlinedButton.icon(')));
+    expect(surface, contains('InkResponse('));
+    expect(
+      surface,
+      contains('active ? Icons.stop_rounded : Icons.mic_rounded'),
+    );
+    expect(surface, contains('onTap: onToggleListening'));
+  });
+
+  test('a new voice capture starts from a clean SOAP draft', () {
+    final source = File(
+      'lib/features/dashboard/presentation/widgets/consultation_notes_sheet.dart',
+    ).readAsStringSync();
+    final launchStart = source.indexOf('void _launchAssistant()');
+    final retryStart = source.indexOf('Future<void> _retryLoad()', launchStart);
+    expect(launchStart, greaterThanOrEqualTo(0));
+    expect(retryStart, greaterThan(launchStart));
+
+    final launch = source.substring(launchStart, retryStart);
+    expect(launch, contains('initialDraft: const <String, String>{}'));
+    expect(launch, isNot(contains('_controllers.toAiDraft()')));
+    expect(launch, contains('applyAcceptedDraft(result.note)'));
+  });
+
+  test('capture screen saves before exposing clinical synthesis', () {
+    final source = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart',
+    ).readAsStringSync();
+    expect(source, contains('ClinicalTranscriptTimeline('));
+    expect(source, contains('!state.isSynchronizingTranscript'));
+    expect(source, contains('onSegmentChanged: onSegmentChanged'));
+    expect(source, contains('onSegmentDeleted: onSegmentDeleted'));
+    expect(source, contains('mutationDisabled ? null : onClearAll'));
+    expect(source, contains('onToggleListening: onToggleListening'));
+    expect(source, contains('saveDictationForReview'));
+    expect(source, contains('isTranscriptReadyForAnalysis'));
+    expect(source, contains('voiceSaveDictation'));
+    expect(source, contains('showReviewStep'));
+    expect(source, contains('class _CaptureActionBar'));
+    expect(source, contains('state.hasTranscriptSyncFailure'));
+    expect(source, contains('onRetrySave'));
+  });
+
+  test('analysis cannot save an active dictation implicitly', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('Future<void> analyzeTranscript()');
+    final end = source.indexOf('Future<void> decideProposal(', start);
+    expect(start, greaterThanOrEqualTo(0));
+    expect(end, greaterThan(start));
+
+    final analysis = source.substring(start, end);
+    expect(analysis, contains('isTranscriptReadyForAnalysis'));
+    expect(analysis, isNot(contains('await stopListening()')));
+  });
+
+  test('capture never sends one network request per recognized passage', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+
+    expect(source, isNot(contains('_gateway.savePendingTranscript')));
+    expect(source, contains('ClinicalTranscriptDraftGateway'));
+    expect(source, contains('_draftStore.write'));
+    expect(source, contains('_draftDebounce'));
+    expect(source, contains('return _ensureTranscriptPersisted();'));
+  });
+
+  test(
+    'one live passage survives recognizer restarts before being committed',
+    () {
+      final source = File(
+        'lib/features/dashboard/application/clinical_speech_service.dart',
+      ).readAsStringSync();
+
+      expect(source, isNot(contains('_stabilityTimer')));
+      expect(source, isNot(contains('_stableHypothesisDelay')));
+      expect(source, contains('_currentPartialFinalized = true'));
+      expect(source, contains('currentFinalized: _currentPartialFinalized'));
+      expect(source, contains('pauseFor: const Duration(seconds: 4)'));
+      expect(source, contains('stt.SpeechToText.doneStatus'));
+      expect(source, contains('stt.SpeechToText.notListeningStatus'));
+      expect(source, contains('shouldRestartClinicalSpeechRecognition'));
+      expect(source, contains('_recoverSpeechRecognizer'));
+      expect(source, contains('_maximumConsecutiveSpeechRestarts'));
+      expect(source, contains('_listenStartInProgress'));
+      expect(source, contains('cycle != _listeningCycle'));
+      expect(source, contains('if (_speechRecoveryInProgress) return'));
+    },
+  );
+}

@@ -117,9 +117,9 @@ class _ConsultationNotesSheetState
     ClinicalVoiceAssistantSheet.show(
       context,
       visit: widget.visit,
-      initialDraft: _controllers.toAiDraft(),
+      initialDraft: const <String, String>{},
       onExtracted: (result) {
-        final changed = _controllers.applyAcceptedToEmptyFields(result.note);
+        final changed = _controllers.applyAcceptedDraft(result.note);
         if (!mounted) return;
         setState(() {});
         final isFrench = Localizations.localeOf(context).languageCode != 'en';
@@ -128,11 +128,11 @@ class _ConsultationNotesSheetState
             content: Text(
               changed
                   ? (isFrench
-                        ? 'Les éléments acceptés ont rempli uniquement les champs vides.'
-                        : 'Accepted items filled empty fields only.')
+                        ? 'La nouvelle dictée a remplacé intégralement l’ancien SOAP.'
+                        : 'The new dictation fully replaced the previous SOAP note.')
                   : (isFrench
-                        ? 'Aucun champ vide à compléter. Votre saisie a été conservée.'
-                        : 'No empty field to fill. Your entries were preserved.'),
+                        ? 'Le formulaire SOAP était déjà identique à la nouvelle dictée.'
+                        : 'The SOAP form already matched the new dictation.'),
             ),
           ),
         );

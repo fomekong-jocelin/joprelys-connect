@@ -10,26 +10,58 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/vitals_f
 
 void main() {
   test(
-    'accepted voice content never overwrites a manual consultation field',
+    'accepted SOAP draft replaces a stale value from a previous capture',
     () {
       final controllers = ConsultationNoteFormControllers();
       addTearDown(controllers.dispose);
 
-      controllers.symptoms.text = 'Saisie manuelle récente';
+      controllers.symptoms.text = 'Mal de tête depuis trois semaines';
+      controllers.diagnosis.text = 'Céphalée à explorer';
 
-      final changed = controllers.applyAcceptedToEmptyFields(
+      final changed = controllers.applyAcceptedDraft(
         const ConsultationNote(
-          symptoms: 'Proposition vocale obsolète',
-          diagnosis: 'Paludisme simple',
+          symptoms: 'Fièvre et frissons apparus ce matin',
+          diagnosis: 'Syndrome fébrile à explorer',
         ),
       );
 
       expect(changed, isTrue);
-      expect(controllers.symptoms.text, 'Saisie manuelle récente');
-      expect(controllers.diagnosis.text, 'Paludisme simple');
-      expect(controllers.toAiDraft()['symptoms'], 'Saisie manuelle récente');
+      expect(controllers.symptoms.text, 'Fièvre et frissons apparus ce matin');
+      expect(controllers.diagnosis.text, 'Syndrome fébrile à explorer');
+      expect(
+        controllers.toAiDraft()['symptoms'],
+        isNot('Mal de tête depuis trois semaines'),
+      );
     },
   );
+
+  test('accepted clean SOAP draft removes every omitted legacy field', () {
+    final controllers = ConsultationNoteFormControllers();
+    addTearDown(controllers.dispose);
+
+    controllers.symptoms.text =
+        'Ces derniers jours, maux de tête persistants en fin de journée';
+    controllers.clinicalExam.text = 'radio';
+    controllers.diagnosis.text = 'pour notre test';
+    controllers.advice.text = 'ancienne conduite à tenir';
+
+    final changed = controllers.applyAcceptedDraft(
+      const ConsultationNote(
+        symptoms: 'Fièvre apparue ce matin avec frissons',
+        diagnosis: 'Syndrome fébrile à explorer',
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(controllers.symptoms.text, 'Fièvre apparue ce matin avec frissons');
+    expect(controllers.clinicalExam.text, isEmpty);
+    expect(controllers.diagnosis.text, 'Syndrome fébrile à explorer');
+    expect(controllers.advice.text, isEmpty);
+    expect(controllers.toAiDraft(), <String, String>{
+      'symptoms': 'Fièvre apparue ce matin avec frissons',
+      'diagnosis': 'Syndrome fébrile à explorer',
+    });
+  });
 
   test('pending AI proposals stay separate from the accepted draft', () {
     final state = ClinicalAiState.fromJson({

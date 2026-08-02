@@ -510,6 +510,7 @@ class AiConsultationServiceTest {
         SessionView session = service.getSession(
                 visitId, userId, organizationId).orElseThrow();
         assertNull(session.pendingTranscript());
+        assertNull(session.transcript());
         assertEquals("ANALYZED", session.transcriptStatus());
     }
 
