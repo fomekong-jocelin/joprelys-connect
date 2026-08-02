@@ -92,6 +92,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   bool _shouldKeepListening = false;
   bool _appActive = true;
   bool _resumeAfterLifecycle = false;
+  bool _captureCompleted = false;
   bool _disposed = false;
   Timer? _restartTimer;
   Timer? _localDraftTimer;
@@ -174,7 +175,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       final existing = await _gateway.getSession(_visitId);
       if (existing == null) {
         await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
-      } else if (!_hasLocalDraftSnapshot) {
+      } else if (!_hasLocalDraftSnapshot &&
+          !_shouldKeepListening &&
+          !value.hasTranscript) {
         _restoreExistingSession(existing);
       }
       _sessionReady = true;
@@ -744,6 +747,18 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     );
   }
 
+  Future<void> completeCapture() async {
+    _localDraftTimer?.cancel();
+    await _draftPersistence;
+    try {
+      await _draftStore.delete(_visitId);
+      _hasLocalDraftSnapshot = false;
+      _captureCompleted = true;
+    } catch (_) {
+      // La synthèse reste applicable même si le nettoyage local doit être repris.
+    }
+  }
+
   Future<void> _setAwake(bool enabled) async {
     try {
       if (enabled) {
@@ -774,11 +789,14 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   @override
   void dispose() {
+    _localDraftTimer?.cancel();
+    if (!_captureCompleted) {
+      unawaited(_draftStore.write(_visitId, _currentDraft()));
+    }
     _disposed = true;
     _shouldKeepListening = false;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
-    _localDraftTimer?.cancel();
     unawaited(_speech.cancel());
     unawaited(_setAwake(false));
     super.dispose();

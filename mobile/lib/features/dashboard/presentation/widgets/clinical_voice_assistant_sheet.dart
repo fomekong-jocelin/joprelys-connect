@@ -207,7 +207,8 @@ class _ClinicalVoiceAssistantSheetState
     widget.onExtracted(
       DictationParseResult(vitals: state.vitals, note: state.note),
     );
-    Navigator.of(context).pop();
+    await _speechService.completeCapture();
+    if (mounted) Navigator.of(context).pop();
   }
 
   String _reference() {
@@ -409,7 +410,7 @@ class _CapturePhase extends StatelessWidget {
                 if (state.isSynchronizingTranscript ||
                     state.hasTranscriptSyncFailure) ...[
                   const SizedBox(height: 12),
-                  _TranscriptSyncNotice(state: state, onRetry: onRetrySave),
+                  _TranscriptSyncNotice(state: state),
                 ],
               ],
             ),
@@ -444,8 +445,9 @@ class _CaptureActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final disabled =
+    final analyzeDisabled =
         state.isSynchronizingTranscript || state.hasTranscriptSyncFailure;
+    final mutationDisabled = state.isSynchronizingTranscript;
 
     return SafeArea(
       top: false,
@@ -469,7 +471,7 @@ class _CaptureActionBar extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: FilledButton.icon(
-                onPressed: disabled ? null : onAnalyze,
+                onPressed: analyzeDisabled ? null : onAnalyze,
                 icon: disabled
                     ? const SizedBox(
                         width: 18,
@@ -496,7 +498,7 @@ class _CaptureActionBar extends StatelessWidget {
             ],
             const SizedBox(height: 4),
             TextButton.icon(
-              onPressed: disabled ? null : onClearAll,
+              onPressed: mutationDisabled ? null : onClearAll,
               style: TextButton.styleFrom(foregroundColor: colors.error),
               icon: const Icon(Icons.delete_sweep_outlined, size: 19),
               label: Text(l10n.voiceClearAll),
@@ -509,10 +511,9 @@ class _CaptureActionBar extends StatelessWidget {
 }
 
 class _TranscriptSyncNotice extends StatelessWidget {
-  const _TranscriptSyncNotice({required this.state, required this.onRetry});
+  const _TranscriptSyncNotice({required this.state});
 
   final RealtimeSpeechState state;
-  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -561,11 +562,6 @@ class _TranscriptSyncNotice extends StatelessWidget {
                       : FontWeight.w500,
                 ),
               ),
-              if (state.hasTranscriptSyncFailure)
-                TextButton(
-                  onPressed: onRetry,
-                  child: Text(l10n.voiceRetrySave),
-                ),
             ],
           ),
         ),

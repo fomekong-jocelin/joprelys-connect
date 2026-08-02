@@ -47,16 +47,19 @@ void main() {
     expect(source, contains('return _ensureTranscriptPersisted();'));
   });
 
-  test('one live passage survives recognizer restarts before being committed', () {
-    final source = File(
-      'lib/features/dashboard/application/clinical_speech_service.dart',
-    ).readAsStringSync();
+  test(
+    'one live passage survives recognizer restarts before being committed',
+    () {
+      final source = File(
+        'lib/features/dashboard/application/clinical_speech_service.dart',
+      ).readAsStringSync();
 
-    expect(source, isNot(contains('_stabilityTimer')));
-    expect(source, isNot(contains('_stableHypothesisDelay')));
-    expect(source, contains('_currentPartialFinalized = true'));
-    expect(source, contains('currentFinalized: _currentPartialFinalized'));
-    expect(source, contains('pauseFor: const Duration(seconds: 4)'));
-    expect(source, contains("status == 'done' || status == 'notListening'"));
-  });
+      expect(source, isNot(contains('_stabilityTimer')));
+      expect(source, isNot(contains('_stableHypothesisDelay')));
+      expect(source, contains('_currentPartialFinalized = true'));
+      expect(source, contains('currentFinalized: _currentPartialFinalized'));
+      expect(source, contains('pauseFor: const Duration(seconds: 4)'));
+      expect(source, contains("status == 'done' || status == 'notListening'"));
+    },
+  );
 }

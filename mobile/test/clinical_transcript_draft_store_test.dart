@@ -32,10 +32,7 @@ void main() {
       expect(restored.segments.first.id, 'segment-1');
       expect(restored.segments.first.offset, const Duration(seconds: 4));
       expect(restored.segments.last.text, 'Il ne présente pas de fièvre');
-      expect(
-        restored.partialTranscript,
-        'la saturation est à 98 pour cent',
-      );
+      expect(restored.partialTranscript, 'la saturation est à 98 pour cent');
       expect(restored.partialOffset, const Duration(seconds: 18));
     });
 
