@@ -9,27 +9,28 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/consulta
 import 'package:joprelys_mobile/features/dashboard/presentation/widgets/vitals_form_merge.dart';
 
 void main() {
-  test(
-    'accepted voice content never overwrites a manual consultation field',
-    () {
-      final controllers = ConsultationNoteFormControllers();
-      addTearDown(controllers.dispose);
+  test('accepted SOAP draft replaces a stale value from a previous capture', () {
+    final controllers = ConsultationNoteFormControllers();
+    addTearDown(controllers.dispose);
 
-      controllers.symptoms.text = 'Saisie manuelle récente';
+    controllers.symptoms.text = 'Mal de tête depuis trois semaines';
+    controllers.diagnosis.text = 'Céphalée à explorer';
 
-      final changed = controllers.applyAcceptedToEmptyFields(
-        const ConsultationNote(
-          symptoms: 'Proposition vocale obsolète',
-          diagnosis: 'Paludisme simple',
-        ),
-      );
+    final changed = controllers.applyAcceptedDraft(
+      const ConsultationNote(
+        symptoms: 'Fièvre et frissons apparus ce matin',
+        diagnosis: 'Syndrome fébrile à explorer',
+      ),
+    );
 
-      expect(changed, isTrue);
-      expect(controllers.symptoms.text, 'Saisie manuelle récente');
-      expect(controllers.diagnosis.text, 'Paludisme simple');
-      expect(controllers.toAiDraft()['symptoms'], 'Saisie manuelle récente');
-    },
-  );
+    expect(changed, isTrue);
+    expect(controllers.symptoms.text, 'Fièvre et frissons apparus ce matin');
+    expect(controllers.diagnosis.text, 'Syndrome fébrile à explorer');
+    expect(
+      controllers.toAiDraft()['symptoms'],
+      isNot('Mal de tête depuis trois semaines'),
+    );
+  });
 
   test('pending AI proposals stay separate from the accepted draft', () {
     final state = ClinicalAiState.fromJson({
