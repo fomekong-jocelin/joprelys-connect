@@ -19,6 +19,29 @@ import 'clinical_voice_state.dart';
 export 'clinical_voice_error_message.dart';
 export 'clinical_voice_state.dart';
 
+@visibleForTesting
+bool shouldRestartClinicalSpeechRecognition(
+  String errorMessage, {
+  required bool permanent,
+}) {
+  if (!permanent) return true;
+  final raw = errorMessage.toLowerCase();
+  const recoverableAndroidSessionErrors = <String>{
+    'error_speech_timeout',
+    'error_no_match',
+    'error_busy',
+    'error_client',
+    'error_network',
+    'error_network_timeout',
+    'error_server',
+    'error_server_disconnected',
+    'error_retry',
+    'error_audio_error',
+    'error_unknown',
+  };
+  return recoverableAndroidSessionErrors.any(raw.contains);
+}
+
 /// Captation clinique instantanée en deux temps :
 /// 1. écoute et transcription segmentée durable ;
 /// 2. analyse IA du texte relu, puis revue des propositions cliniques.
@@ -70,6 +93,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
        );
 
   static const Duration _draftDebounce = Duration(milliseconds: 700);
+  static const Duration _speechRestartDelay = Duration(milliseconds: 450);
+  static const int _maximumConsecutiveSpeechRestarts = 4;
 
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
@@ -93,7 +118,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   bool _appActive = true;
   bool _resumeAfterLifecycle = false;
   bool _captureCompleted = false;
+  bool _speechRecoveryInProgress = false;
   bool _disposed = false;
+  int _consecutiveSpeechRestarts = 0;
   Timer? _restartTimer;
   Timer? _localDraftTimer;
   double _minimumSoundLevel = double.infinity;
@@ -130,27 +157,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     try {
       _speechReady = await _speech.initialize(
         onStatus: _handleSpeechStatus,
-        onError: (error) {
-          if (_disposed) return;
-          final raw = error.errorMsg;
-          if (_isRecoverableSpeechGap(raw) && _shouldKeepListening) {
-            _currentPartialFinalized = true;
-            _publishCaptureState();
-            _scheduleDraftSave();
-            _restartListeningLoop();
-            return;
-          }
-
-          _shouldKeepListening = false;
-          _resumeAfterLifecycle = false;
-          unawaited(_setAwake(false));
-          _setError(
-            raw,
-            fallbackStatus: value.hasTranscript
-                ? SpeechStatus.transcriptReview
-                : SpeechStatus.idle,
-          );
-        },
+        onError: _handleSpeechError,
       );
       if (!_speechReady) {
         throw StateError('SPEECH_RECOGNITION_UNAVAILABLE');
@@ -316,6 +323,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _captureStartedAt ??= DateTime.now();
     _minimumSoundLevel = double.infinity;
     _maximumSoundLevel = -double.infinity;
+    _consecutiveSpeechRestarts = 0;
     _shouldKeepListening = true;
     _resumeAfterLifecycle = false;
     _appActive = true;
@@ -361,15 +369,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         ),
       );
     } catch (error) {
-      _shouldKeepListening = false;
-      _resumeAfterLifecycle = false;
-      unawaited(_setAwake(false));
-      _setError(
-        error,
-        fallbackStatus: value.hasTranscript
-            ? SpeechStatus.transcriptReview
-            : SpeechStatus.idle,
-      );
+      _stopAfterSpeechFailure(error);
     }
   }
 
@@ -377,6 +377,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       _locale.toLowerCase().startsWith('en') ? 'en_US' : 'fr_FR';
 
   void _ingestRecognition(String rawWords, {required bool finalResult}) {
+    _consecutiveSpeechRestarts = 0;
     final committed = clinicalTranscriptFromSegments(_segments);
     final incoming = stripCommittedClinicalTranscriptPrefix(
       rawWords,
@@ -435,7 +436,13 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   void _handleSpeechStatus(String status) {
     if (_disposed || !_shouldKeepListening) return;
-    if (status == 'done' || status == 'notListening') {
+    if (status == stt.SpeechToText.listeningStatus) {
+      value = value.copyWith(status: SpeechStatus.listening, clearError: true);
+      return;
+    }
+    if (status == stt.SpeechToText.doneStatus ||
+        status == stt.SpeechToText.notListeningStatus ||
+        status == 'doneNoResult') {
       if (_currentPartial.isNotEmpty) {
         _currentPartialFinalized = true;
         _publishCaptureState();
@@ -445,15 +452,80 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  bool _isRecoverableSpeechGap(String raw) {
-    return raw.contains('error_speech_timeout') ||
-        raw.contains('error_no_match');
+  void _handleSpeechError(stt.SpeechRecognitionError error) {
+    if (_disposed) return;
+    final raw = error.errorMsg;
+    if (_shouldKeepListening &&
+        shouldRestartClinicalSpeechRecognition(
+          raw,
+          permanent: error.permanent,
+        )) {
+      if (_currentPartial.isNotEmpty) {
+        _currentPartialFinalized = true;
+        _publishCaptureState();
+        _scheduleDraftSave();
+      }
+      unawaited(_recoverSpeechRecognizer(raw));
+      return;
+    }
+    _stopAfterSpeechFailure(raw);
+  }
+
+  Future<void> _recoverSpeechRecognizer(Object error) async {
+    if (_disposed ||
+        !_shouldKeepListening ||
+        !_appActive ||
+        _speechRecoveryInProgress) {
+      return;
+    }
+    _speechRecoveryInProgress = true;
+    _restartTimer?.cancel();
+    _consecutiveSpeechRestarts += 1;
+
+    if (_consecutiveSpeechRestarts > _maximumConsecutiveSpeechRestarts) {
+      _speechRecoveryInProgress = false;
+      _stopAfterSpeechFailure(error);
+      return;
+    }
+
+    try {
+      try {
+        await _speech.cancel();
+      } catch (_) {
+        // Certains moteurs Android ont déjà détruit la session courante.
+      }
+      await Future<void>.delayed(
+        Duration(
+          milliseconds:
+              _speechRestartDelay.inMilliseconds * _consecutiveSpeechRestarts,
+        ),
+      );
+      if (_disposed || !_shouldKeepListening || !_appActive) return;
+      value = value.copyWith(
+        status: SpeechStatus.listening,
+        stage: ClinicalVoiceStage.capture,
+        clearError: true,
+      );
+      await _listenInternal();
+    } finally {
+      _speechRecoveryInProgress = false;
+    }
+  }
+
+  void _stopAfterSpeechFailure(Object error) {
+    if (_disposed) return;
+    _shouldKeepListening = false;
+    _resumeAfterLifecycle = false;
+    _restartTimer?.cancel();
+    unawaited(_setAwake(false));
+    _setError(error, fallbackStatus: SpeechStatus.error);
+    _scheduleDraftSave();
   }
 
   void _restartListeningLoop() {
     _restartTimer?.cancel();
     if (!_appActive || !_shouldKeepListening) return;
-    _restartTimer = Timer(const Duration(milliseconds: 180), () {
+    _restartTimer = Timer(_speechRestartDelay, () {
       if (_shouldKeepListening && _appActive && !_disposed) {
         unawaited(_listenInternal());
       }
@@ -614,17 +686,32 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<bool> retryDraftSave() => _persistCurrentTranscript();
 
-  Future<void> stopListening() async {
-    if (_disposed || value.status != SpeechStatus.listening) return;
+  Future<bool> saveDictationForReview() async {
+    if (_disposed ||
+        value.stage == ClinicalVoiceStage.review ||
+        value.status == SpeechStatus.processing ||
+        !value.hasTranscript) {
+      return false;
+    }
     _shouldKeepListening = false;
     _resumeAfterLifecycle = false;
     _restartTimer?.cancel();
     _localDraftTimer?.cancel();
 
-    if (_speech.isListening) await _speech.stop();
+    try {
+      if (_speech.isListening) await _speech.stop();
+    } catch (_) {
+      try {
+        await _speech.cancel();
+      } catch (_) {
+        // La transcription locale doit rester enregistrable malgré le plugin.
+      }
+    }
+
     _commitCurrentPartial();
-    await _persistCurrentTranscript();
+    final saved = await _persistCurrentTranscript();
     await _setAwake(false);
+    if (_disposed) return false;
 
     value = value.copyWith(
       status: _segments.isEmpty
@@ -635,7 +722,13 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
       soundLevel: 0,
       clearPartial: true,
+      clearError: saved,
     );
+    return saved;
+  }
+
+  Future<void> stopListening() async {
+    await saveDictationForReview();
   }
 
   Future<bool> updateSegment(String segmentId, String text) async {
@@ -697,7 +790,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<bool> clearTranscript() async {
     if (_disposed || value.status == SpeechStatus.processing) return false;
-    if (value.status == SpeechStatus.listening) await stopListening();
+    if (value.status == SpeechStatus.listening) {
+      await saveDictationForReview();
+    }
 
     final previous = List<ClinicalTranscriptSegment>.from(_segments);
     _segments.clear();
@@ -805,8 +900,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
 extension ClinicalSpeechAnalysis on ClinicalSpeechService {
   Future<void> analyzeTranscript() async {
-    if (_disposed) return;
-    if (value.status == SpeechStatus.listening) await stopListening();
+    if (_disposed || !value.isTranscriptReadyForAnalysis) return;
     final transcript = clinicalTranscriptFromSegments(_segments);
     if (transcript.isEmpty) return;
 
@@ -904,7 +998,11 @@ extension ClinicalSpeechLifecycle on ClinicalSpeechService {
 
   Future<bool> prepareForClose() async {
     if (_disposed || value.status == SpeechStatus.processing) return false;
-    if (value.status == SpeechStatus.listening) await stopListening();
+    if (value.stage == ClinicalVoiceStage.capture &&
+        value.hasTranscript &&
+        !value.isTranscriptReadyForAnalysis) {
+      return saveDictationForReview();
+    }
     return _ensureTranscriptPersisted();
   }
 
