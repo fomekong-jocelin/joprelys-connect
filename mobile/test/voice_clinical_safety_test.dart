@@ -35,6 +35,34 @@ void main() {
     },
   );
 
+  test('accepted clean SOAP draft removes every omitted legacy field', () {
+    final controllers = ConsultationNoteFormControllers();
+    addTearDown(controllers.dispose);
+
+    controllers.symptoms.text =
+        'Ces derniers jours, maux de tête persistants en fin de journée';
+    controllers.clinicalExam.text = 'radio';
+    controllers.diagnosis.text = 'pour notre test';
+    controllers.advice.text = 'ancienne conduite à tenir';
+
+    final changed = controllers.applyAcceptedDraft(
+      const ConsultationNote(
+        symptoms: 'Fièvre apparue ce matin avec frissons',
+        diagnosis: 'Syndrome fébrile à explorer',
+      ),
+    );
+
+    expect(changed, isTrue);
+    expect(controllers.symptoms.text, 'Fièvre apparue ce matin avec frissons');
+    expect(controllers.clinicalExam.text, isEmpty);
+    expect(controllers.diagnosis.text, 'Syndrome fébrile à explorer');
+    expect(controllers.advice.text, isEmpty);
+    expect(controllers.toAiDraft(), <String, String>{
+      'symptoms': 'Fièvre apparue ce matin avec frissons',
+      'diagnosis': 'Syndrome fébrile à explorer',
+    });
+  });
+
   test('pending AI proposals stay separate from the accepted draft', () {
     final state = ClinicalAiState.fromJson({
       'draft': {'symptoms': 'Fièvre depuis trois jours'},
