@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:joprelys_mobile/features/dashboard/application/clinical_speech_service.dart';
+import 'package:joprelys_mobile/features/dashboard/data/clinical_voice_ai_api.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/consultation_note.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/patient_vitals.dart';
 
