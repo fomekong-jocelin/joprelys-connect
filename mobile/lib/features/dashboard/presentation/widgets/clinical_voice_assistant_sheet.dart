@@ -143,7 +143,7 @@ class _ClinicalVoiceAssistantSheetState
       return;
     }
     if (state.status == SpeechStatus.listening) {
-      await _speechService.stopListening();
+      await _speechService.saveDictationForReview();
     } else {
       await _speechService.startRealtimeListening();
     }
@@ -288,7 +288,7 @@ class _ClinicalVoiceAssistantSheetState
               const Divider(height: 1),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                child: _VoicePhaseIndicator(stage: state.stage),
+                child: _VoicePhaseIndicator(state: state),
               ),
               Expanded(
                 child: AnimatedSwitcher(
@@ -302,6 +302,7 @@ class _ClinicalVoiceAssistantSheetState
                           badge: _badge(state, AppLocalizations.of(context)),
                           status: _status(state, AppLocalizations.of(context)),
                           onToggleListening: _toggleListening,
+                          onSave: _speechService.saveDictationForReview,
                           onClearAll: _clearAll,
                           onAnalyze: _speechService.analyzeTranscript,
                           onRetrySave: _speechService.retryDraftSave,
@@ -334,6 +335,7 @@ class _CapturePhase extends StatelessWidget {
     required this.badge,
     required this.status,
     required this.onToggleListening,
+    required this.onSave,
     required this.onClearAll,
     required this.onAnalyze,
     required this.onRetrySave,
@@ -348,6 +350,7 @@ class _CapturePhase extends StatelessWidget {
   final String badge;
   final String status;
   final VoidCallback onToggleListening;
+  final Future<bool> Function() onSave;
   final VoidCallback onClearAll;
   final VoidCallback onAnalyze;
   final VoidCallback onRetrySave;
@@ -359,7 +362,7 @@ class _CapturePhase extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final listening = state.status == SpeechStatus.listening;
     final processing = state.status == SpeechStatus.processing;
-    final showActions = !listening && !processing && state.hasTranscript;
+    final showActions = !processing && state.hasTranscript;
 
     return Column(
       children: [
@@ -377,7 +380,7 @@ class _CapturePhase extends StatelessWidget {
                   badgeText: badge,
                   statusText: status,
                   tipText: l10n.voiceCaptureTip,
-                  stopLabel: l10n.assistantStopDictationButton,
+                  stopLabel: l10n.voiceSaveDictation,
                   startLabel: state.hasTranscript
                       ? l10n.voiceResumeDictation
                       : l10n.assistantStartDictation,
@@ -419,6 +422,7 @@ class _CapturePhase extends StatelessWidget {
         if (showActions)
           _CaptureActionBar(
             state: state,
+            onSave: onSave,
             onClearAll: onClearAll,
             onAnalyze: onAnalyze,
             onRetrySave: onRetrySave,
@@ -431,12 +435,14 @@ class _CapturePhase extends StatelessWidget {
 class _CaptureActionBar extends StatelessWidget {
   const _CaptureActionBar({
     required this.state,
+    required this.onSave,
     required this.onClearAll,
     required this.onAnalyze,
     required this.onRetrySave,
   });
 
   final RealtimeSpeechState state;
+  final Future<bool> Function() onSave;
   final VoidCallback onClearAll;
   final VoidCallback onAnalyze;
   final VoidCallback onRetrySave;
@@ -445,9 +451,9 @@ class _CaptureActionBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
-    final analyzeDisabled =
-        state.isSynchronizingTranscript || state.hasTranscriptSyncFailure;
-    final mutationDisabled = state.isSynchronizingTranscript;
+    final readyForAnalysis = state.isTranscriptReadyForAnalysis;
+    final saving = state.isSynchronizingTranscript;
+    final mutationDisabled = saving;
 
     return SafeArea(
       top: false,
@@ -471,16 +477,26 @@ class _CaptureActionBar extends StatelessWidget {
               width: double.infinity,
               height: 50,
               child: FilledButton.icon(
-                onPressed: analyzeDisabled ? null : onAnalyze,
-                icon: disabled
+                onPressed: saving
+                    ? null
+                    : readyForAnalysis
+                    ? onAnalyze
+                    : () => onSave(),
+                icon: saving
                     ? const SizedBox(
                         width: 18,
                         height: 18,
                         child: CircularProgressIndicator(strokeWidth: 2.4),
                       )
-                    : const Icon(Icons.auto_awesome_rounded),
+                    : Icon(
+                        readyForAnalysis
+                            ? Icons.auto_awesome_rounded
+                            : Icons.save_rounded,
+                      ),
                 label: Text(
-                  l10n.voiceAnalyzeAction,
+                  readyForAnalysis
+                      ? l10n.voiceAnalyzeAction
+                      : l10n.voiceSaveDictation,
                   maxLines: 2,
                   textAlign: TextAlign.center,
                   overflow: TextOverflow.ellipsis,
@@ -687,30 +703,35 @@ class _ReviewPhase extends StatelessWidget {
 }
 
 class _VoicePhaseIndicator extends StatelessWidget {
-  const _VoicePhaseIndicator({required this.stage});
+  const _VoicePhaseIndicator({required this.state});
 
-  final ClinicalVoiceStage stage;
+  final RealtimeSpeechState state;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final showReviewStep =
+        state.stage == ClinicalVoiceStage.review ||
+        state.isTranscriptReadyForAnalysis;
     return Row(
       children: [
         Expanded(
           child: _PhasePill(
             label: l10n.voiceCaptureStep,
-            active: stage == ClinicalVoiceStage.capture,
-            completed: stage == ClinicalVoiceStage.review,
+            active: !showReviewStep,
+            completed: showReviewStep,
           ),
         ),
-        const SizedBox(width: 8),
-        Expanded(
-          child: _PhasePill(
-            label: l10n.voiceReviewStep,
-            active: stage == ClinicalVoiceStage.review,
-            completed: false,
+        if (showReviewStep) ...[
+          const SizedBox(width: 8),
+          Expanded(
+            child: _PhasePill(
+              label: l10n.voiceReviewStep,
+              active: true,
+              completed: state.stage == ClinicalVoiceStage.review,
+            ),
           ),
-        ),
+        ],
       ],
     );
   }
