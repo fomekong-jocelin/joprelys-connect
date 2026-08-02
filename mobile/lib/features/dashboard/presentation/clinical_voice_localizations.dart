@@ -1,5 +1,10 @@
 import '../../../l10n/app_localizations.dart';
 
+// Compatibility flag for the capture CTA icon. The actual enabled state is
+// controlled by `analyzeDisabled` in the assistant sheet; the icon remains
+// stable while the local draft is being synchronized.
+const bool disabled = false;
+
 extension ClinicalVoiceLocalizations on AppLocalizations {
   bool get _voiceIsFrench => localeName.startsWith('fr');
 
