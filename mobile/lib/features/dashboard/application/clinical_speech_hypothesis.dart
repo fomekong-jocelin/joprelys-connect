@@ -152,12 +152,16 @@ String stripCommittedClinicalTranscriptPrefix(
     }
   }
 
-  if (allowRecentReplay) {
-    final exactOverlap = _suffixPrefixOverlap(committedKeys, incomingKeys);
-    if (exactOverlap >= 3) {
-      return incomingTokens.skip(exactOverlap).join(' ').trim();
-    }
+  // Android frequently restarts recognition from the last few words without
+  // replaying the complete committed transcript. An exact suffix/prefix match of
+  // at least three tokens is safe enough to remove on every boundary, including
+  // normal finalization; otherwise repeated tails become new SOAP sentences.
+  final exactOverlap = _suffixPrefixOverlap(committedKeys, incomingKeys);
+  if (exactOverlap >= 3) {
+    return incomingTokens.skip(exactOverlap).join(' ').trim();
+  }
 
+  if (allowRecentReplay) {
     final approximateOverlap = _approximateSuffixPrefixOverlap(
       committedKeys,
       incomingKeys,
