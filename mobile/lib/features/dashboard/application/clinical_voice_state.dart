@@ -16,6 +16,8 @@ enum SpeechStatus {
 
 enum ClinicalVoiceStage { capture, review }
 
+enum TranscriptSyncStatus { idle, syncing, synced, failed }
+
 @immutable
 final class ClinicalTranscriptSegment {
   const ClinicalTranscriptSegment({
@@ -40,11 +42,15 @@ final class ClinicalTranscriptSegment {
 String clinicalTranscriptFromSegments(
   Iterable<ClinicalTranscriptSegment> segments,
 ) {
-  return segments
+  final texts = segments
       .map((segment) => segment.text.trim())
-      .where((text) => text.isNotEmpty)
-      .join('. ')
-      .trim();
+      .where((text) => text.isNotEmpty);
+
+  return texts.fold<String>('', (result, text) {
+    if (result.isEmpty) return text;
+    if (RegExp(r'[.!?;:]$').hasMatch(result)) return '$result $text';
+    return '$result. $text';
+  }).trim();
 }
 
 @immutable
@@ -60,6 +66,7 @@ final class RealtimeSpeechState {
     required this.note,
     required this.revisions,
     this.soundLevel = 0.0,
+    this.transcriptSyncStatus = TranscriptSyncStatus.idle,
     this.errorMessage,
     this.assistantMessage,
     this.needsClarification = false,
@@ -75,6 +82,7 @@ final class RealtimeSpeechState {
   final ConsultationNote note;
   final List<ClinicalAiRevision> revisions;
   final double soundLevel;
+  final TranscriptSyncStatus transcriptSyncStatus;
   final String? errorMessage;
   final String? assistantMessage;
   final bool needsClarification;
@@ -87,6 +95,12 @@ final class RealtimeSpeechState {
 
   bool get hasTranscript => transcript.trim().isNotEmpty;
 
+  bool get isSynchronizingTranscript =>
+      transcriptSyncStatus == TranscriptSyncStatus.syncing;
+
+  bool get hasTranscriptSyncFailure =>
+      transcriptSyncStatus == TranscriptSyncStatus.failed;
+
   RealtimeSpeechState copyWith({
     SpeechStatus? status,
     ClinicalVoiceStage? stage,
@@ -98,6 +112,7 @@ final class RealtimeSpeechState {
     ConsultationNote? note,
     List<ClinicalAiRevision>? revisions,
     double? soundLevel,
+    TranscriptSyncStatus? transcriptSyncStatus,
     String? errorMessage,
     String? assistantMessage,
     bool? needsClarification,
@@ -120,6 +135,8 @@ final class RealtimeSpeechState {
       note: note ?? this.note,
       revisions: revisions ?? this.revisions,
       soundLevel: soundLevel ?? this.soundLevel,
+      transcriptSyncStatus:
+          transcriptSyncStatus ?? this.transcriptSyncStatus,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       assistantMessage: clearAssistant
           ? null
