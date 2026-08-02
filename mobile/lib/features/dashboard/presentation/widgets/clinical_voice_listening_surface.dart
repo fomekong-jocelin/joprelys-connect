@@ -138,9 +138,7 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
                         color: actionColor.withValues(alpha: 0.1),
                         border: Border.all(
                           color: actionColor.withValues(
-                            alpha: active
-                                ? 0.28 + pulse.abs() * 0.18
-                                : 0.22,
+                            alpha: active ? 0.28 + pulse.abs() * 0.18 : 0.22,
                           ),
                         ),
                       ),
