@@ -1,0 +1,63 @@
+name: Cleanup all non-main branches once
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/cleanup-all-branches-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    name: Delete every branch except main
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout main with write credentials
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Delete all remote branches except main
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mapfile -t branches < <(
+            git ls-remote --heads origin \
+              | awk '{sub("refs/heads/", "", $2); print $2}' \
+              | sort
+          )
+
+          failures=()
+          for branch in "${branches[@]}"; do
+            if [[ "$branch" == "main" ]]; then
+              continue
+            fi
+
+            echo "Deleting branch: $branch"
+            if ! git push origin --delete "$branch"; then
+              failures+=("$branch")
+            fi
+          done
+
+          mapfile -t remaining < <(
+            git ls-remote --heads origin \
+              | awk '{sub("refs/heads/", "", $2); print $2}' \
+              | grep -v '^main$' \
+              | sort || true
+          )
+
+          if (( ${#failures[@]} > 0 )); then
+            printf 'Branches whose deletion failed:\n%s\n' "${failures[*]}"
+          fi
+
+          if (( ${#remaining[@]} > 0 )); then
+            printf 'Branches still present after cleanup:\n%s\n' "${remaining[*]}"
+            exit 1
+          fi
+
+          echo 'Branch cleanup complete: only main remains.'
