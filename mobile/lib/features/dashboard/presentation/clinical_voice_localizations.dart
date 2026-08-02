@@ -1,10 +1,5 @@
 import '../../../l10n/app_localizations.dart';
 
-// Compatibility flag for the capture CTA icon. The actual enabled state is
-// controlled by `analyzeDisabled` in the assistant sheet; the icon remains
-// stable while the local draft is being synchronized.
-const bool disabled = false;
-
 extension ClinicalVoiceLocalizations on AppLocalizations {
   bool get _voiceIsFrench => localeName.startsWith('fr');
 
@@ -18,12 +13,14 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'Parlez naturellement, à une distance normale du téléphone.'
       : 'Speak naturally at a normal distance from the phone.';
   String get voiceCapturePausedStatus => _voiceIsFrench
-      ? 'Transcription prête : corrigez, reprenez ou lancez l’analyse.'
-      : 'Transcript ready: edit it, resume, or start the analysis.';
+      ? 'Dictée enregistrée : relisez-la avant de lancer la synthèse.'
+      : 'Dictation saved: review it before starting the clinical summary.';
   String get voiceCaptureTip => _voiceIsFrench
       ? 'Le passage en cours reste unique pendant que le moteur affine les mots. Il est conservé localement sans requête réseau.'
       : 'The current passage stays unique while speech recognition refines the words. It is kept locally without a network request.';
   String get voiceResumeDictation => _voiceIsFrench ? 'Reprendre' : 'Resume';
+  String get voiceSaveDictation =>
+      _voiceIsFrench ? 'Enregistrer la dictée' : 'Save dictation';
 
   String get voiceSegmentsTitle =>
       _voiceIsFrench ? 'Transcription' : 'Transcript';
