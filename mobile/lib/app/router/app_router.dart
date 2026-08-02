@@ -15,7 +15,10 @@ import 'route_names.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefreshNotifier();
   ref.listen(authControllerProvider, (previous, next) => refresh.notify());
-  ref.listen(appForegroundActivityProvider, (previous, next) => refresh.notify());
+  ref.listen(
+    appForegroundActivityProvider,
+    (previous, next) => refresh.notify(),
+  );
   ref.onDispose(refresh.dispose);
 
   final router = createAppRouter(
@@ -26,10 +29,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           .read(appForegroundActivityProvider)
           .preservesRouteOnLock;
       return auth.when(
-        loading: () =>
-            redirectToRoute(state.matchedLocation, AppRoutePath.authLoading),
-        error: (error, stackTrace) =>
-            redirectToRoute(state.matchedLocation, AppRoutePath.login),
+        loading: () => redirectToRoute(
+          state.matchedLocation,
+          AppRoutePath.authLoading,
+        ),
+        error: (error, stackTrace) => redirectToRoute(
+          state.matchedLocation,
+          AppRoutePath.login,
+        ),
         data: (authState) => authRedirect(
           authState,
           state.matchedLocation,
