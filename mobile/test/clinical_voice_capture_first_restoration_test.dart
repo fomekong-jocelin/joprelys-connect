@@ -28,7 +28,10 @@ void main() {
     expect(source, contains('!state.isSynchronizingTranscript'));
     expect(source, contains('onSegmentChanged: onSegmentChanged'));
     expect(source, contains('onSegmentDeleted: onSegmentDeleted'));
-    expect(source, contains('onPressed: disabled ? null : onClearAll'));
+    expect(
+      source,
+      contains('onPressed: mutationDisabled ? null : onClearAll'),
+    );
     expect(source, contains('onToggleListening: onToggleListening'));
     expect(source, contains('class _CaptureActionBar'));
     expect(source, contains('state.hasTranscriptSyncFailure'));
