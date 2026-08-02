@@ -92,11 +92,11 @@ class _ClinicalVoiceAssistantSheetState
     });
     _haloController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 2800),
+      duration: const Duration(milliseconds: 1800),
     )..repeat();
     _waveController = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1500),
+      duration: const Duration(milliseconds: 850),
     )..repeat();
     _speechService = ClinicalSpeechService(
       gateway: ref.read(clinicalVoiceAiApiProvider),
@@ -269,7 +269,7 @@ class _ClinicalVoiceAssistantSheetState
           ),
           child: Column(
             children: [
-              const SizedBox(height: 12),
+              const SizedBox(height: 10),
               Container(
                 width: 42,
                 height: 4,
@@ -281,7 +281,7 @@ class _ClinicalVoiceAssistantSheetState
               _Header(
                 patientName: widget.visit.patientName,
                 reference: _reference(),
-                processing: processing,
+                processing: processing || state.isSynchronizingTranscript,
                 onClose: _close,
               ),
               const Divider(height: 1),
@@ -291,7 +291,7 @@ class _ClinicalVoiceAssistantSheetState
               ),
               Expanded(
                 child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 240),
+                  duration: const Duration(milliseconds: 220),
                   child: state.stage == ClinicalVoiceStage.capture
                       ? _CapturePhase(
                           key: const ValueKey('capture-phase'),
@@ -347,79 +347,200 @@ class _CapturePhase extends StatelessWidget {
   final VoidCallback onToggleListening;
   final VoidCallback onClearAll;
   final VoidCallback onAnalyze;
-  final void Function(String segmentId, String text) onSegmentChanged;
-  final ValueChanged<String> onSegmentDeleted;
+  final Future<bool> Function(String segmentId, String text) onSegmentChanged;
+  final Future<bool> Function(String segmentId) onSegmentDeleted;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final listening = state.status == SpeechStatus.listening;
     final processing = state.status == SpeechStatus.processing;
+    final showActions = !listening && !processing && state.hasTranscript;
 
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          ClinicalVoiceListeningSurface(
-            active: listening,
-            soundLevel: state.soundLevel,
-            haloController: haloController,
-            waveController: waveController,
-            badgeText: badge,
-            statusText: status,
-            tipText: l10n.voiceCaptureTip,
-            stopLabel: l10n.assistantStopDictationButton,
-            startLabel: l10n.assistantStartDictation,
-            onToggleListening: onToggleListening,
-          ),
-          const SizedBox(height: 16),
-          ClinicalTranscriptTimeline(
-            segments: state.segments,
-            partialTranscript: state.partialTranscript,
-            partialOffset: state.partialOffset,
-            editable: !listening && !processing,
-            onSegmentChanged: onSegmentChanged,
-            onSegmentDeleted: onSegmentDeleted,
-          ),
-          if (processing) ...[
-            const SizedBox(height: 14),
-            _AnalysisProgressCard(
-              title: l10n.voiceAnalyzingTitle,
-              body: l10n.voiceAnalyzingBody,
-            ),
-          ],
-          if (state.errorMessage != null) ...[
-            const SizedBox(height: 12),
-            _ErrorNotice(message: state.errorMessage!),
-          ],
-          if (!listening && !processing && state.hasTranscript) ...[
-            const SizedBox(height: 16),
-            _SafetyNotice(message: l10n.voicePrivacyNotice),
-            const SizedBox(height: 12),
-            Row(
+    return Column(
+      children: [
+        Expanded(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 14, 16, 18),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Expanded(
-                  child: OutlinedButton.icon(
-                    onPressed: onClearAll,
-                    icon: const Icon(Icons.delete_sweep_outlined),
-                    label: Text(l10n.voiceClearAll),
-                  ),
+                ClinicalVoiceListeningSurface(
+                  active: listening,
+                  soundLevel: state.soundLevel,
+                  haloController: haloController,
+                  waveController: waveController,
+                  badgeText: badge,
+                  statusText: status,
+                  tipText: l10n.voiceCaptureTip,
+                  stopLabel: l10n.assistantStopDictationButton,
+                  startLabel: state.hasTranscript
+                      ? l10n.voiceResumeDictation
+                      : l10n.assistantStartDictation,
+                  onToggleListening: onToggleListening,
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  flex: 2,
-                  child: FilledButton.icon(
-                    onPressed: onAnalyze,
-                    icon: const Icon(Icons.auto_awesome_rounded),
-                    label: Text(l10n.voiceAnalyzeAction),
-                  ),
+                const SizedBox(height: 18),
+                ClinicalTranscriptTimeline(
+                  segments: state.segments,
+                  partialTranscript: state.partialTranscript,
+                  partialOffset: state.partialOffset,
+                  editable: !listening &&
+                      !processing &&
+                      !state.isSynchronizingTranscript,
+                  onSegmentChanged: onSegmentChanged,
+                  onSegmentDeleted: onSegmentDeleted,
                 ),
+                if (processing) ...[
+                  const SizedBox(height: 14),
+                  _AnalysisProgressCard(
+                    title: l10n.voiceAnalyzingTitle,
+                    body: l10n.voiceAnalyzingBody,
+                  ),
+                ],
+                if (state.errorMessage != null) ...[
+                  const SizedBox(height: 12),
+                  _ErrorNotice(message: state.errorMessage!),
+                ],
+                if (state.hasTranscript) ...[
+                  const SizedBox(height: 12),
+                  _TranscriptSyncNotice(state: state),
+                ],
               ],
             ),
+          ),
+        ),
+        if (showActions)
+          _CaptureActionBar(
+            state: state,
+            onClearAll: onClearAll,
+            onAnalyze: onAnalyze,
+          ),
+      ],
+    );
+  }
+}
+
+class _CaptureActionBar extends StatelessWidget {
+  const _CaptureActionBar({
+    required this.state,
+    required this.onClearAll,
+    required this.onAnalyze,
+  });
+
+  final RealtimeSpeechState state;
+  final VoidCallback onClearAll;
+  final VoidCallback onAnalyze;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final colors = Theme.of(context).colorScheme;
+    final disabled = state.isSynchronizingTranscript;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
+        decoration: BoxDecoration(
+          color: colors.surface,
+          border: Border(top: BorderSide(color: colors.outlineVariant)),
+          boxShadow: [
+            BoxShadow(
+              color: colors.shadow.withValues(alpha: 0.08),
+              blurRadius: 12,
+              offset: const Offset(0, -3),
+            ),
           ],
-        ],
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: FilledButton.icon(
+                onPressed: disabled ? null : onAnalyze,
+                icon: disabled
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2.4),
+                      )
+                    : const Icon(Icons.auto_awesome_rounded),
+                label: Text(
+                  l10n.voiceAnalyzeAction,
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+            const SizedBox(height: 4),
+            TextButton.icon(
+              onPressed: disabled ? null : onClearAll,
+              style: TextButton.styleFrom(foregroundColor: colors.error),
+              icon: const Icon(Icons.delete_sweep_outlined, size: 19),
+              label: Text(l10n.voiceClearAll),
+            ),
+          ],
+        ),
       ),
+    );
+  }
+}
+
+class _TranscriptSyncNotice extends StatelessWidget {
+  const _TranscriptSyncNotice({required this.state});
+
+  final RealtimeSpeechState state;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final (icon, message, color) = switch (state.transcriptSyncStatus) {
+      TranscriptSyncStatus.syncing => (
+          Icons.sync_rounded,
+          l10n.voiceTranscriptSaving,
+          colors.primary,
+        ),
+      TranscriptSyncStatus.failed => (
+          Icons.cloud_off_rounded,
+          l10n.voiceTranscriptSaveFailed,
+          colors.error,
+        ),
+      TranscriptSyncStatus.synced => (
+          Icons.cloud_done_outlined,
+          l10n.voiceTranscriptSaved,
+          colors.onSurfaceVariant,
+        ),
+      TranscriptSyncStatus.idle => (
+          Icons.verified_user_outlined,
+          l10n.voicePrivacyNotice,
+          colors.onSurfaceVariant,
+        ),
+    };
+
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 17, color: color),
+        const SizedBox(width: 7),
+        Expanded(
+          child: Text(
+            message,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: color,
+              height: 1.35,
+              fontWeight: state.hasTranscriptSyncFailure
+                  ? FontWeight.w700
+                  : FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
@@ -657,6 +778,8 @@ class _Header extends StatelessWidget {
                 ),
                 Text(
                   '$patientName ($reference)',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: colors.onSurfaceVariant,
                   ),
@@ -714,31 +837,6 @@ class _AnalysisProgressCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _SafetyNotice extends StatelessWidget {
-  const _SafetyNotice({required this.message});
-
-  final String message;
-
-  @override
-  Widget build(BuildContext context) {
-    final colors = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: colors.tertiaryContainer.withValues(alpha: 0.55),
-        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
-      ),
-      child: Text(
-        message,
-        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-          color: colors.onTertiaryContainer,
-          fontWeight: FontWeight.w600,
-        ),
       ),
     );
   }
