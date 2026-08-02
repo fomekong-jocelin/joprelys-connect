@@ -23,6 +23,8 @@ abstract interface class ClinicalVoiceAiGateway {
 
   Future<String> transcribeAudio(String visitId, Uint8List audioBytes);
 
+  Future<void> savePendingTranscript(String visitId, String transcript);
+
   Future<ClinicalAiState> analyzeTranscript(String visitId, String transcript);
 
   Future<ClinicalAiState> decideProposal(
@@ -296,6 +298,28 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
       throw const FormatException('Empty AI transcription response');
     }
     return transcript;
+  }
+
+  @override
+  Future<void> savePendingTranscript(
+    String visitId,
+    String transcript,
+  ) async {
+    final normalized = transcript.trim();
+    if (normalized.isEmpty) {
+      await discardPendingTranscript(visitId);
+      return;
+    }
+
+    // L'endpoint de staging refuse une deuxième transcription en attente.
+    // La séquence DELETE puis POST est sérialisée dans le service mobile afin
+    // qu'une édition ou une suppression remplace toujours le brouillon serveur.
+    await discardPendingTranscript(visitId);
+    final response = await _client.post<dynamic>(
+      '/api/ai/consultations/$visitId/transcriptions/realtime',
+      data: <String, dynamic>{'transcript': normalized},
+    );
+    _objectFrom(response.data, 'Invalid AI transcript save response');
   }
 
   @override
