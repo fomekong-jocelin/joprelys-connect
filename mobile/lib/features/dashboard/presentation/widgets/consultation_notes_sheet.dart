@@ -117,7 +117,7 @@ class _ConsultationNotesSheetState
     ClinicalVoiceAssistantSheet.show(
       context,
       visit: widget.visit,
-      initialDraft: _controllers.toAiDraft(),
+      initialDraft: const <String, String>{},
       onExtracted: (result) {
         final changed = _controllers.applyAcceptedDraft(result.note);
         if (!mounted) return;
@@ -128,11 +128,11 @@ class _ConsultationNotesSheetState
             content: Text(
               changed
                   ? (isFrench
-                        ? 'Le brouillon SOAP accepté a remplacé les anciennes valeurs concernées.'
-                        : 'The accepted SOAP draft replaced the affected previous values.')
+                        ? 'La nouvelle dictée a remplacé intégralement l’ancien SOAP.'
+                        : 'The new dictation fully replaced the previous SOAP note.')
                   : (isFrench
-                        ? 'Le formulaire SOAP était déjà identique au brouillon accepté.'
-                        : 'The SOAP form already matched the accepted draft.'),
+                        ? 'Le formulaire SOAP était déjà identique à la nouvelle dictée.'
+                        : 'The SOAP form already matched the new dictation.'),
             ),
           ),
         );
