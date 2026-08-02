@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/lifecycle/app_activity_registry.dart';
 import '../../features/auth/application/auth_controller.dart';
 import '../../features/auth/presentation/pages/auth_loading_page.dart';
 import '../../features/auth/presentation/pages/login_page.dart';
@@ -14,18 +15,26 @@ import 'route_names.dart';
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refresh = _RouterRefreshNotifier();
   ref.listen(authControllerProvider, (previous, next) => refresh.notify());
+  ref.listen(appForegroundActivityProvider, (previous, next) => refresh.notify());
   ref.onDispose(refresh.dispose);
 
   final router = createAppRouter(
     refreshListenable: refresh,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
+      final preserveLockedRoute = ref
+          .read(appForegroundActivityProvider)
+          .preservesRouteOnLock;
       return auth.when(
         loading: () =>
             redirectToRoute(state.matchedLocation, AppRoutePath.authLoading),
         error: (error, stackTrace) =>
             redirectToRoute(state.matchedLocation, AppRoutePath.login),
-        data: (authState) => authRedirect(authState, state.matchedLocation),
+        data: (authState) => authRedirect(
+          authState,
+          state.matchedLocation,
+          preserveLockedRoute: preserveLockedRoute,
+        ),
       );
     },
   );
@@ -86,7 +95,17 @@ String authRouteFor(AuthStatus status) {
   };
 }
 
-String? authRedirect(AuthState authState, String currentLocation) {
+String? authRedirect(
+  AuthState authState,
+  String currentLocation, {
+  bool preserveLockedRoute = false,
+}) {
+  if (authState.status == AuthStatus.locked &&
+      preserveLockedRoute &&
+      !AppRoutePath.isAuthPath(currentLocation)) {
+    return null;
+  }
+
   final destination = authRouteFor(authState.status);
   if (authState.status == AuthStatus.authenticated &&
       !AppRoutePath.isAuthPath(currentLocation)) {
