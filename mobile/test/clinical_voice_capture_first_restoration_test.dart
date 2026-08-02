@@ -31,17 +31,32 @@ void main() {
     expect(source, contains('onPressed: disabled ? null : onClearAll'));
     expect(source, contains('onToggleListening: onToggleListening'));
     expect(source, contains('class _CaptureActionBar'));
+    expect(source, contains('state.hasTranscriptSyncFailure'));
+    expect(source, contains('onRetrySave'));
   });
 
-  test('reviewed transcript mutations are persisted before closing', () {
+  test('capture never sends one network request per recognized passage', () {
     final source = File(
       'lib/features/dashboard/application/clinical_speech_service.dart',
     ).readAsStringSync();
 
-    expect(source, contains('Future<bool> updateSegment'));
-    expect(source, contains('Future<bool> deleteSegment'));
-    expect(source, contains('Future<bool> clearTranscript'));
-    expect(source, contains('_gateway.savePendingTranscript'));
+    expect(source, isNot(contains('_gateway.savePendingTranscript')));
+    expect(source, contains('ClinicalTranscriptDraftGateway'));
+    expect(source, contains('_draftStore.write'));
+    expect(source, contains('_draftDebounce'));
     expect(source, contains('return _ensureTranscriptPersisted();'));
+  });
+
+  test('one live passage survives recognizer restarts before being committed', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_speech_service.dart',
+    ).readAsStringSync();
+
+    expect(source, isNot(contains('_stabilityTimer')));
+    expect(source, isNot(contains('_stableHypothesisDelay')));
+    expect(source, contains('_currentPartialFinalized = true'));
+    expect(source, contains('currentFinalized: _currentPartialFinalized'));
+    expect(source, contains('pauseFor: const Duration(seconds: 4)'));
+    expect(source, contains("status == 'done' || status == 'notListening'"));
   });
 }
