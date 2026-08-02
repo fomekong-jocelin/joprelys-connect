@@ -10,30 +10,32 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceCaptureBadge =>
       _voiceIsFrench ? 'Écoute clinique' : 'Clinical listening';
   String get voiceCaptureStatus => _voiceIsFrench
-      ? 'Parlez naturellement, la transcription apparaît immédiatement.'
-      : 'Speak naturally. The transcript appears immediately.';
+      ? 'Parlez naturellement, même à distance normale du téléphone.'
+      : 'Speak naturally, even at a normal distance from the phone.';
   String get voiceCapturePausedStatus => _voiceIsFrench
-      ? 'Relisez les segments avant de lancer l’analyse.'
-      : 'Review the segments before starting the analysis.';
+      ? 'Transcription prête : corrigez, reprenez ou lancez l’analyse.'
+      : 'Transcript ready: edit it, resume, or start the analysis.';
   String get voiceCaptureTip => _voiceIsFrench
-      ? 'L’écran reste actif pendant l’écoute. Chaque pause crée un segment horodaté.'
-      : 'The screen stays awake while listening. Each pause creates a timestamped segment.';
+      ? 'Les paroles déjà captées sont conservées. Une pause stable crée automatiquement un nouveau segment.'
+      : 'Previously captured speech is preserved. A stable pause automatically creates a new segment.';
+  String get voiceResumeDictation =>
+      _voiceIsFrench ? 'Reprendre' : 'Resume';
 
   String get voiceSegmentsTitle =>
-      _voiceIsFrench ? 'Transcription segmentée' : 'Segmented transcript';
+      _voiceIsFrench ? 'Transcription' : 'Transcript';
   String get voiceSegmentsSubtitle => _voiceIsFrench
-      ? 'Corrigez ou supprimez chaque passage avant l’analyse.'
-      : 'Edit or delete each passage before analysis.';
+      ? 'Chaque passage peut être relu, corrigé ou supprimé avant l’analyse.'
+      : 'Each passage can be reviewed, edited, or deleted before analysis.';
   String get voiceSegmentsEmptyTitle => _voiceIsFrench
       ? 'La dictée apparaîtra ici'
       : 'Your dictation will appear here';
   String get voiceSegmentsEmptyBody => _voiceIsFrench
-      ? 'Commencez à parler. Les phrases seront séparées automatiquement selon vos pauses.'
-      : 'Start speaking. Sentences will be separated automatically when you pause.';
+      ? 'Commencez à parler. Les passages seront conservés au fur et à mesure.'
+      : 'Start speaking. Each passage will be preserved as you continue.';
   String get voiceLiveSegment =>
-      _voiceIsFrench ? 'En cours de transcription' : 'Transcribing now';
+      _voiceIsFrench ? 'Paroles en cours' : 'Current speech';
   String voiceSegmentLabel(int index) =>
-      _voiceIsFrench ? 'Segment $index' : 'Segment $index';
+      _voiceIsFrench ? 'Passage $index' : 'Passage $index';
   String get voiceEditSegment => _voiceIsFrench ? 'Corriger' : 'Edit';
   String get voiceSaveSegment =>
       _voiceIsFrench ? 'Enregistrer' : 'Save changes';
@@ -44,8 +46,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'Supprimer toute la transcription ?'
       : 'Delete the full transcript?';
   String get voiceClearConfirmBody => _voiceIsFrench
-      ? 'Tous les segments saisis seront supprimés. Cette action est irréversible.'
-      : 'All captured segments will be deleted. This action cannot be undone.';
+      ? 'Tous les passages seront supprimés de cet appareil et de la session. Ils ne réapparaîtront pas après actualisation.'
+      : 'All passages will be removed from this device and the session. They will not return after refresh.';
   String get voiceCancel => _voiceIsFrench ? 'Annuler' : 'Cancel';
   String get voiceConfirmDelete => _voiceIsFrench ? 'Supprimer' : 'Delete';
   String get voiceAnalyzeAction => _voiceIsFrench
@@ -57,6 +59,16 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceAnalyzingBody => _voiceIsFrench
       ? 'L’IA reformule uniquement si nécessaire, puis classe les informations dans les champs cliniques adaptés.'
       : 'AI rewrites only when needed, then places information in the appropriate clinical fields.';
+
+  String get voiceTranscriptSaving => _voiceIsFrench
+      ? 'Sauvegarde de la transcription…'
+      : 'Saving transcript…';
+  String get voiceTranscriptSaved => _voiceIsFrench
+      ? 'Transcription sauvegardée dans la session.'
+      : 'Transcript saved to the session.';
+  String get voiceTranscriptSaveFailed => _voiceIsFrench
+      ? 'La transcription n’a pas pu être sauvegardée. Elle reste affichée : réessayez avant de fermer.'
+      : 'The transcript could not be saved. It remains visible: retry before closing.';
 
   String get voiceReviewTitle => _voiceIsFrench
       ? 'Synthèse clinique proposée'
