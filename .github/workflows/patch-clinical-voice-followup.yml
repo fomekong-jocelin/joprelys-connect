@@ -1,0 +1,106 @@
+name: Patch clinical voice safeguards
+
+on:
+  pull_request:
+    types: [ready_for_review]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ github.event.pull_request.head.ref == 'agent/restore-instant-ai-dictation' }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/restore-instant-ai-dictation
+          fetch-depth: 0
+
+      - name: Apply final safeguards
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          def replace(path, old, new):
+              target = Path(path)
+              text = target.read_text(encoding='utf-8')
+              if text.count(old) != 1:
+                  raise SystemExit(f'{path}: replacement count={text.count(old)}')
+              target.write_text(text.replace(old, new), encoding='utf-8')
+
+          service = 'mobile/lib/features/dashboard/application/clinical_speech_service.dart'
+          replace(
+              service,
+              "  bool _resumeAfterLifecycle = false;\n  bool _disposed = false;\n",
+              "  bool _resumeAfterLifecycle = false;\n  bool _captureCompleted = false;\n  bool _disposed = false;\n",
+          )
+          replace(
+              service,
+              "      } else if (!_hasLocalDraftSnapshot) {\n        _restoreExistingSession(existing);\n",
+              "      } else if (!_hasLocalDraftSnapshot &&\n          !_shouldKeepListening &&\n          !value.hasTranscript) {\n        _restoreExistingSession(existing);\n",
+          )
+          replace(
+              service,
+              "  Future<void> _setAwake(bool enabled) async {\n",
+              "  Future<void> completeCapture() async {\n    _localDraftTimer?.cancel();\n    await _draftPersistence;\n    try {\n      await _draftStore.delete(_visitId);\n      _hasLocalDraftSnapshot = false;\n      _captureCompleted = true;\n    } catch (_) {\n      // La synthèse reste applicable même si le nettoyage local doit être repris.\n    }\n  }\n\n  Future<void> _setAwake(bool enabled) async {\n",
+          )
+          replace(
+              service,
+              "  @override\n  void dispose() {\n    _disposed = true;\n    _shouldKeepListening = false;\n    _resumeAfterLifecycle = false;\n    _restartTimer?.cancel();\n    _localDraftTimer?.cancel();\n    unawaited(_speech.cancel());\n",
+              "  @override\n  void dispose() {\n    _localDraftTimer?.cancel();\n    if (!_captureCompleted) {\n      unawaited(_draftStore.write(_visitId, _currentDraft()));\n    }\n    _disposed = true;\n    _shouldKeepListening = false;\n    _resumeAfterLifecycle = false;\n    _restartTimer?.cancel();\n    unawaited(_speech.cancel());\n",
+          )
+
+          sheet = 'mobile/lib/features/dashboard/presentation/widgets/clinical_voice_assistant_sheet.dart'
+          replace(
+              sheet,
+              "    widget.onExtracted(\n      DictationParseResult(vitals: state.vitals, note: state.note),\n    );\n    Navigator.of(context).pop();\n",
+              "    widget.onExtracted(\n      DictationParseResult(vitals: state.vitals, note: state.note),\n    );\n    await _speechService.completeCapture();\n    if (mounted) Navigator.of(context).pop();\n",
+          )
+          replace(
+              sheet,
+              "                  _TranscriptSyncNotice(state: state, onRetry: onRetrySave),\n",
+              "                  _TranscriptSyncNotice(state: state),\n",
+          )
+          replace(
+              sheet,
+              "    final disabled =\n        state.isSynchronizingTranscript || state.hasTranscriptSyncFailure;\n",
+              "    final analyzeDisabled =\n        state.isSynchronizingTranscript || state.hasTranscriptSyncFailure;\n    final mutationDisabled = state.isSynchronizingTranscript;\n",
+          )
+          replace(sheet, "onPressed: disabled ? null : onAnalyze,", "onPressed: analyzeDisabled ? null : onAnalyze,")
+          replace(sheet, "onPressed: disabled ? null : onClearAll,", "onPressed: mutationDisabled ? null : onClearAll,")
+          replace(
+              sheet,
+              "class _TranscriptSyncNotice extends StatelessWidget {\n  const _TranscriptSyncNotice({required this.state, required this.onRetry});\n\n  final RealtimeSpeechState state;\n  final VoidCallback onRetry;\n",
+              "class _TranscriptSyncNotice extends StatelessWidget {\n  const _TranscriptSyncNotice({required this.state});\n\n  final RealtimeSpeechState state;\n",
+          )
+          replace(
+              sheet,
+              "              if (state.hasTranscriptSyncFailure)\n                TextButton(\n                  onPressed: onRetry,\n                  child: Text(l10n.voiceRetrySave),\n                ),\n",
+              "",
+          )
+
+          Path('.github/workflows/patch-clinical-voice-followup.yml').unlink()
+          PY
+
+      - name: Set up Flutter 3.44.6
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+
+      - name: Format Dart files
+        working-directory: mobile
+        run: dart format lib test
+
+      - name: Commit final safeguards
+        shell: bash
+        run: |
+          git config user.name 'Joprelys CI Repair'
+          git config user.email 'actions@users.noreply.github.com'
+          git add -A
+          git commit -m 'fix(mobile): finalize offline clinical capture safeguards' || exit 0
+          git push origin HEAD:agent/restore-instant-ai-dictation
