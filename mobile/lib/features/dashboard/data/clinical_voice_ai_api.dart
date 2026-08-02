@@ -311,12 +311,8 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
       return;
     }
 
-    // L'endpoint de staging refuse une deuxième transcription en attente.
-    // La séquence DELETE puis POST est sérialisée dans le service mobile afin
-    // qu'une édition ou une suppression remplace toujours le brouillon serveur.
-    await discardPendingTranscript(visitId);
-    final response = await _client.post<dynamic>(
-      '/api/ai/consultations/$visitId/transcriptions/realtime',
+    final response = await _client.put<dynamic>(
+      '/api/ai/consultations/$visitId/transcriptions/pending',
       data: <String, dynamic>{'transcript': normalized},
     );
     _objectFrom(response.data, 'Invalid AI transcript save response');
