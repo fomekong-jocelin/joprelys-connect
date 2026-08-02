@@ -8,16 +8,8 @@ import '../../../auth/domain/effective_access.dart';
 import '../../../foundation/presentation/mobile_workspace_localizations.dart';
 import '../../data/patient_record_api.dart';
 import '../../domain/patient_record.dart';
+import 'patient_record_section.dart';
 import 'patient_record_sections.dart';
-
-enum PatientRecordSection {
-  overview,
-  medical,
-  consultations,
-  laboratory,
-  hospitalizations,
-  audit,
-}
 
 class PatientRecordPage extends ConsumerStatefulWidget {
   const PatientRecordPage({
@@ -91,6 +83,7 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
   Future<void> _load() async {
     setState(() {
       _loading = true;
+      _emergencyLoading = false;
       _error = null;
       _consentRequired = false;
       _emergencyError = null;
@@ -289,12 +282,30 @@ class _SectionChip extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final (label, icon) = switch (section) {
-      PatientRecordSection.overview => (l10n.recordOverview, Icons.grid_view_rounded),
-      PatientRecordSection.medical => (l10n.recordMedical, Icons.health_and_safety_rounded),
-      PatientRecordSection.consultations => (l10n.recordConsultations, Icons.history_rounded),
-      PatientRecordSection.laboratory => (l10n.recordLaboratory, Icons.science_rounded),
-      PatientRecordSection.hospitalizations => (l10n.recordHospitalizations, Icons.local_hospital_rounded),
-      PatientRecordSection.audit => (l10n.recordAudit, Icons.shield_outlined),
+      PatientRecordSection.overview => (
+        l10n.recordOverview,
+        Icons.grid_view_rounded,
+      ),
+      PatientRecordSection.medical => (
+        l10n.recordMedical,
+        Icons.health_and_safety_rounded,
+      ),
+      PatientRecordSection.consultations => (
+        l10n.recordConsultations,
+        Icons.history_rounded,
+      ),
+      PatientRecordSection.laboratory => (
+        l10n.recordLaboratory,
+        Icons.science_rounded,
+      ),
+      PatientRecordSection.hospitalizations => (
+        l10n.recordHospitalizations,
+        Icons.local_hospital_rounded,
+      ),
+      PatientRecordSection.audit => (
+        l10n.recordAudit,
+        Icons.shield_outlined,
+      ),
     };
 
     return Semantics(
