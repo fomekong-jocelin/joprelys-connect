@@ -1,5 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:joprelys_connect/features/auth/domain/effective_access.dart';
+import 'package:joprelys_mobile/features/auth/domain/effective_access.dart';
 
 void main() {
   test('normalizes and checks effective permissions', () {

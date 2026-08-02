@@ -237,7 +237,7 @@ class _MedicalSection extends StatelessWidget {
                 child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _LeadingIcon(icon: Icons.clinical_notes_rounded),
+                    _LeadingIcon(icon: Icons.description_rounded),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Column(
@@ -379,7 +379,7 @@ class _ConsultationsSection extends StatelessWidget {
               Row(
                 children: [
                   Icon(
-                    Icons.stethoscope_rounded,
+                    Icons.medical_services_outlined,
                     size: 16,
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),

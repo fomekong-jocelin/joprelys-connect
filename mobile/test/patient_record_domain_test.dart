@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:joprelys_connect/features/dashboard/domain/active_visit.dart';
-import 'package:joprelys_connect/features/dashboard/domain/patient_history.dart';
-import 'package:joprelys_connect/features/dashboard/domain/patient_record.dart';
+import 'package:joprelys_mobile/features/dashboard/domain/active_visit.dart';
+import 'package:joprelys_mobile/features/dashboard/domain/patient_history.dart';
+import 'package:joprelys_mobile/features/dashboard/domain/patient_record.dart';
 
 void main() {
   const target = PatientRecordTarget(

@@ -111,7 +111,7 @@ class WorkspaceProfilePage extends StatelessWidget {
                 child: FilledButton.icon(
                   onPressed: onOpenAccount,
                   icon: const Icon(Icons.manage_accounts_outlined),
-                  label: Text(l10n.dashboardProfileTitle),
+                  label: Text(l10n.profileWorkspaceTitle),
                 ),
               ),
             ],
