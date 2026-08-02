@@ -119,7 +119,7 @@ class _ConsultationNotesSheetState
       visit: widget.visit,
       initialDraft: _controllers.toAiDraft(),
       onExtracted: (result) {
-        final changed = _controllers.applyAcceptedToEmptyFields(result.note);
+        final changed = _controllers.applyAcceptedDraft(result.note);
         if (!mounted) return;
         setState(() {});
         final isFrench = Localizations.localeOf(context).languageCode != 'en';
@@ -128,11 +128,11 @@ class _ConsultationNotesSheetState
             content: Text(
               changed
                   ? (isFrench
-                        ? 'Les éléments acceptés ont rempli uniquement les champs vides.'
-                        : 'Accepted items filled empty fields only.')
+                        ? 'Le brouillon SOAP accepté a remplacé les anciennes valeurs concernées.'
+                        : 'The accepted SOAP draft replaced the affected previous values.')
                   : (isFrench
-                        ? 'Aucun champ vide à compléter. Votre saisie a été conservée.'
-                        : 'No empty field to fill. Your entries were preserved.'),
+                        ? 'Le formulaire SOAP était déjà identique au brouillon accepté.'
+                        : 'The SOAP form already matched the accepted draft.'),
             ),
           ),
         );
