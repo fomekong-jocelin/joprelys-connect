@@ -28,10 +28,21 @@ void main() {
     expect(source, contains('!state.isSynchronizingTranscript'));
     expect(source, contains('onSegmentChanged: onSegmentChanged'));
     expect(source, contains('onSegmentDeleted: onSegmentDeleted'));
-    expect(source, contains('onPressed: mutationDisabled ? null : onClearAll'));
+    expect(
+      source,
+      contains('onPressed: mutationDisabled ? null : onClearAll'),
+    );
     expect(source, contains('onToggleListening: onToggleListening'));
-    expect(source, contains('onSave: _speechService.saveDictationForReview'));
-    expect(source, contains('readyForAnalysis = state.isTranscriptReadyForAnalysis'));
+    expect(
+      source,
+      contains('onSave: _speechService.saveDictationForReview'),
+    );
+    expect(
+      source,
+      contains(
+        'readyForAnalysis = state.isTranscriptReadyForAnalysis',
+      ),
+    );
     expect(source, contains('l10n.voiceSaveDictation'));
     expect(source, contains('final showReviewStep ='));
     expect(source, contains('state.isTranscriptReadyForAnalysis'));
@@ -52,7 +63,9 @@ void main() {
     final analysis = source.substring(start, end);
     expect(
       analysis,
-      contains('if (_disposed || !value.isTranscriptReadyForAnalysis) return;'),
+      contains(
+        'if (_disposed || !value.isTranscriptReadyForAnalysis) return;',
+      ),
     );
     expect(analysis, isNot(contains('await stopListening()')));
   });
