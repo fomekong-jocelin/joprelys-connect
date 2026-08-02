@@ -36,6 +36,8 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
     final colors = theme.colorScheme;
     final actionColor = active ? colors.error : colors.primary;
     final actionLabel = active ? stopLabel : startLabel;
+    final reactiveBlur = active ? soundLevel * 0.12 : 0.0;
+    final reactiveSpread = active ? soundLevel * 0.04 : 0.0;
 
     return AnimatedContainer(
       duration: const Duration(milliseconds: 220),
@@ -165,9 +167,8 @@ class ClinicalVoiceListeningSurface extends StatelessWidget {
                             boxShadow: [
                               BoxShadow(
                                 color: actionColor.withValues(alpha: 0.25),
-                                blurRadius: 14 + (active ? soundLevel * 0.12 : 0),
-                                spreadRadius:
-                                    2 + (active ? soundLevel * 0.04 : 0),
+                                blurRadius: 14 + reactiveBlur,
+                                spreadRadius: 2 + reactiveSpread,
                               ),
                             ],
                           ),
