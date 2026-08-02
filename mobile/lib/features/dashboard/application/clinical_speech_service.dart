@@ -215,8 +215,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       note: const ConsultationNote(),
       revisions: const <ClinicalAiRevision>[],
       assistantMessage: _isFrench
-          ? 'La dictée précédente a été restaurée. Relisez-la ou reprenez l’enregistrement.'
-          : 'The previous dictation was restored. Review it or resume recording.',
+          ? 'La dictée précédente a été restaurée. Relisez-la ou supprimez-la avant de reprendre l’enregistrement.'
+          : 'The previous dictation was restored. Review or delete it before recording again.',
     );
   }
 
@@ -251,7 +251,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
             : 'Speak normally. The transcript appears during the consultation.',
       );
     } catch (error) {
-      _setError(error);
+      // Coupe toute tentative de reconnexion en arrière-plan après un échec de
+      // démarrage. Le prochain essai doit venir d'une action explicite.
+      await _transport.disconnect();
+      _setError(error, fallbackStatus: SpeechStatus.idle);
     }
   }
 
@@ -524,16 +527,46 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   /// Action destructive explicite. Aucune fermeture normale ne l'appelle.
   Future<void> discardCurrentCapture() async {
-    if (_disposed) return;
+    if (_disposed || value.status == SpeechStatus.processing) return;
+    final previous = value;
+    value = value.copyWith(
+      status: SpeechStatus.processing,
+      soundLevel: 0,
+      clearError: true,
+      assistantMessage: _isFrench
+          ? 'Suppression de la transcription…'
+          : 'Deleting the transcript…',
+    );
+
+    Object? deletionError;
     try {
       await _transport.disconnect();
-      await _gateway.clearLiveTranscript(_visitId);
-      if (_serverHasPendingTranscript) {
-        await _gateway.discardPendingTranscript(_visitId);
-      }
-    } catch (_) {
-      // La suppression explicite reste best effort et n'applique aucune donnée.
+    } catch (error) {
+      deletionError = error;
     }
+    // Les deux suppressions sont indépendantes : l'échec ou l'absence du tampon
+    // live ne doit jamais empêcher la suppression de la transcription en attente.
+    try {
+      await _gateway.clearLiveTranscript(_visitId);
+    } catch (error) {
+      deletionError ??= error;
+    }
+    try {
+      await _gateway.discardPendingTranscript(_visitId);
+    } catch (error) {
+      deletionError ??= error;
+    }
+
+    if (deletionError != null) {
+      value = previous.copyWith(
+        status: SpeechStatus.transcriptReview,
+        errorMessage: _isFrench
+            ? 'La transcription n’a pas pu être supprimée du serveur. Réessayez.'
+            : 'The transcript could not be deleted from the server. Try again.',
+      );
+      return;
+    }
+
     _serverHasPendingTranscript = false;
     _confirmedTranscript = '';
     _partialTranscript = '';

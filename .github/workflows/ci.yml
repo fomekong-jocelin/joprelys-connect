@@ -24,7 +24,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: read
 
 concurrency:
@@ -32,43 +32,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  apply-mobile-voice-blockers-fix:
-    name: Apply mobile voice blockers fix
-    if: ${{ github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && github.event.pull_request.number == 266 }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 25
-    steps:
-      - name: Checkout PR branch
-        uses: actions/checkout@v4
-        with:
-          ref: feat/p0-265-realtime-transcription
-          fetch-depth: 0
-      - name: Apply patch
-        run: python .github/scripts/apply_mobile_voice_blockers_fix.py
-      - name: Set up Flutter 3.44.6
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.6'
-          channel: stable
-          cache: true
-      - name: Validate Flutter blockers
-        working-directory: mobile
-        run: |
-          flutter pub get
-          dart format lib test
-          flutter analyze --no-pub
-          flutter test --no-pub test/clinical_realtime_speech_service_test.dart
-      - name: Commit validated fix and clean temporary CI
-        shell: bash
-        run: |
-          git show HEAD^:.github/workflows/ci.yml > .github/workflows/ci.yml
-          rm -f .github/scripts/apply_mobile_voice_blockers_fix.py
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add backend mobile .github/workflows/ci.yml .github/scripts
-          git commit -m "fix(mobile): restore safe recording and transcript deletion"
-          git push origin HEAD:feat/p0-265-realtime-transcription
-
   pr-gate-freshness:
     name: PR gate freshness
     if: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.event.pull_request.draft == false }}

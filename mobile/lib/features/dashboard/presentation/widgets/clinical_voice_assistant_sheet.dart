@@ -131,6 +131,35 @@ class _ClinicalVoiceAssistantSheetState
     if (safeToClose && mounted) Navigator.of(context).pop();
   }
 
+  Future<void> _discardTranscript() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: Text(
+          _isFrench
+              ? 'Supprimer cette transcription ?'
+              : 'Delete this transcript?',
+        ),
+        content: Text(
+          _isFrench
+              ? 'La transcription enregistrée pour cette consultation sera supprimée. Cette action est irréversible.'
+              : 'The saved transcript for this consultation will be deleted. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(false),
+            child: Text(_isFrench ? 'Annuler' : 'Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(dialogContext).pop(true),
+            child: Text(_isFrench ? 'Supprimer' : 'Delete'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true) await _speechService.discardCurrentCapture();
+  }
+
   Future<void> _applyAcceptedResult() async {
     final state = _speechService.value;
     if (!state.hasApplicableResult ||
@@ -313,6 +342,24 @@ class _ClinicalVoiceAssistantSheetState
                           editable:
                               state.status == SpeechStatus.transcriptReview,
                         ),
+                        if (!listening && !processing) ...[
+                          const SizedBox(height: 6),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton.icon(
+                              onPressed: _discardTranscript,
+                              icon: const Icon(Icons.delete_outline_rounded),
+                              label: Text(
+                                _isFrench
+                                    ? 'Supprimer cette transcription'
+                                    : 'Delete this transcript',
+                              ),
+                              style: TextButton.styleFrom(
+                                foregroundColor: colors.error,
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                       if (state.status == SpeechStatus.transcriptReview) ...[
                         const SizedBox(height: 12),

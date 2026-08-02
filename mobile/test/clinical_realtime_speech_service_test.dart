@@ -246,6 +246,62 @@ void main() {
     },
   );
 
+  test(
+    'restored transcript can be deleted before starting a new recording',
+    () async {
+      final gateway = _FakeGateway()
+        ..sessionPendingTranscript = 'Ancienne transcription à supprimer.'
+        ..liveTranscript = 'Ancienne transcription à supprimer.';
+      final transport = _FakeTransport();
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-delete',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
+
+      await service.restoreOrStart();
+      expect(service.value.status, SpeechStatus.transcriptReview);
+
+      await service.discardCurrentCapture();
+
+      expect(gateway.clearLiveCalls, 1);
+      expect(gateway.discardPendingCalls, 1);
+      expect(service.value.status, SpeechStatus.idle);
+      expect(service.value.transcript, isEmpty);
+
+      await service.startRealtimeListening();
+      expect(service.value.status, SpeechStatus.listening);
+      expect(transport.connectCalls, 1);
+    },
+  );
+
+  test(
+    'failed initial realtime connection is disconnected without retry loop',
+    () async {
+      final gateway = _FakeGateway();
+      final transport = _FakeTransport()
+        ..connectError = StateError('AI_REALTIME_CHANNEL_TIMEOUT');
+      final service = ClinicalSpeechService(
+        gateway: gateway,
+        visitId: 'visit-start-failure',
+        initialDraft: const <String, String>{},
+        locale: 'fr',
+        transport: transport,
+      );
+      addTearDown(service.dispose);
+
+      await service.restoreOrStart();
+
+      expect(transport.connectCalls, 1);
+      expect(transport.disconnectCalls, 1);
+      expect(service.value.status, SpeechStatus.idle);
+      expect(service.value.errorMessage, contains('temps réel'));
+    },
+  );
+
   test('duplicate completed items are not appended twice', () async {
     final gateway = _FakeGateway();
     final transport = _FakeTransport();
@@ -283,7 +339,9 @@ final class _FakeTransport implements ClinicalRealtimeTranscriptionTransport {
       StreamController<ClinicalRealtimeEvent>.broadcast(sync: true);
 
   int connectCalls = 0;
+  int disconnectCalls = 0;
   int finalizeCalls = 0;
+  Object? connectError;
 
   @override
   Stream<ClinicalRealtimeEvent> get events => _controller.stream;
@@ -296,6 +354,8 @@ final class _FakeTransport implements ClinicalRealtimeTranscriptionTransport {
     required String locale,
   }) async {
     connectCalls++;
+    final error = connectError;
+    if (error != null) throw error;
     emit(const ClinicalRealtimeEvent(ClinicalRealtimeEventType.connected));
   }
 
@@ -305,7 +365,9 @@ final class _FakeTransport implements ClinicalRealtimeTranscriptionTransport {
   }
 
   @override
-  Future<void> disconnect() async {}
+  Future<void> disconnect() async {
+    disconnectCalls++;
+  }
 
   @override
   Future<void> dispose() => _controller.close();
@@ -318,6 +380,9 @@ final class _FakeGateway implements ClinicalVoiceAiGateway {
   int transcribeAudioCalls = 0;
   int analyzeCalls = 0;
   ApiException? liveTranscriptError;
+  String? sessionPendingTranscript;
+  int clearLiveCalls = 0;
+  int discardPendingCalls = 0;
 
   ClinicalAiState get _emptyState => const ClinicalAiState(
     draft: <String, String>{},
@@ -328,7 +393,19 @@ final class _FakeGateway implements ClinicalVoiceAiGateway {
   );
 
   @override
-  Future<ClinicalAiState?> getSession(String visitId) async => null;
+  Future<ClinicalAiState?> getSession(String visitId) async {
+    final pending = sessionPendingTranscript;
+    if (pending == null) return null;
+    return ClinicalAiState(
+      draft: const <String, String>{},
+      revisions: const <ClinicalAiRevision>[],
+      transcript: pending,
+      assistantMessage: null,
+      needsClarification: false,
+      pendingTranscript: pending,
+      transcriptStatus: 'PENDING_REVIEW',
+    );
+  }
 
   @override
   Future<ClinicalAiState> startSession(
@@ -363,6 +440,7 @@ final class _FakeGateway implements ClinicalVoiceAiGateway {
 
   @override
   Future<void> clearLiveTranscript(String visitId) async {
+    clearLiveCalls++;
     liveTranscript = null;
     liveSequence = 0;
   }
@@ -391,7 +469,11 @@ final class _FakeGateway implements ClinicalVoiceAiGateway {
   }
 
   @override
-  Future<void> discardPendingTranscript(String visitId) async {}
+  Future<void> discardPendingTranscript(String visitId) async {
+    discardPendingCalls++;
+    sessionPendingTranscript = null;
+    stagedTranscript = null;
+  }
 
   @override
   Future<String> createRealtimeCall(

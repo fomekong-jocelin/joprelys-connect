@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter_webrtc/flutter_webrtc.dart';
-import 'package:permission_handler/permission_handler.dart';
 
 import '../data/clinical_voice_ai_api.dart';
 
@@ -76,6 +75,8 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   String _locale = 'fr';
   bool _shouldStayConnected = false;
   bool _connecting = false;
+  bool _hasConnectedOnce = false;
+  bool _tearingDown = false;
   bool _disposed = false;
   int _reconnectAttempts = 0;
   final Set<String> _segmentedItemIds = <String>{};
@@ -93,6 +94,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     _locale = locale == 'en' ? 'en' : 'fr';
     _shouldStayConnected = true;
     _reconnectAttempts = 0;
+    _hasConnectedOnce = false;
     _segmentedItemIds.clear();
     _reconnectTimer?.cancel();
     await _establishConnection();
@@ -104,26 +106,12 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
     await _teardownTransport();
 
     try {
-      final permission = await Permission.microphone.request();
-      if (!permission.isGranted) {
-        throw StateError('MICROPHONE_PERMISSION_DENIED');
-      }
-
-      final stream = await navigator.mediaDevices.getUserMedia(const <
-        String,
-        dynamic
-      >{
-        'audio': <String, dynamic>{
-          'channelCount': 1,
-          // Le serveur applique déjà un filtre far_field adapté à la
-          // consultation en salle. Le double traitement Android supprimait des
-          // syllabes et les voix jouées à distance pendant la recette.
-          'echoCancellation': false,
-          'noiseSuppression': false,
-          'autoGainControl': false,
-        },
-        'video': false,
-      });
+      // Sur Android, flutter_webrtc délègue lui-même la permission micro.
+      // Des contraintes booléennes avancées provoquent des crashes natifs sur
+      // certains constructeurs ; on demande donc une piste audio standard.
+      final stream = await navigator.mediaDevices.getUserMedia(
+        const <String, dynamic>{'audio': true, 'video': false},
+      );
       if (!_shouldStayConnected) {
         await _disposeStream(stream);
         return;
@@ -156,7 +144,9 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
           final completer = _dataChannelOpenCompleter;
           if (completer != null && !completer.isCompleted) completer.complete();
         } else if (state == RTCDataChannelState.RTCDataChannelClosed &&
-            _shouldStayConnected) {
+            _shouldStayConnected &&
+            _hasConnectedOnce &&
+            !_tearingDown) {
           _scheduleReconnect();
         }
       };
@@ -184,6 +174,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
       await _waitForDataChannel();
 
       _reconnectAttempts = 0;
+      _hasConnectedOnce = true;
       _emit(const ClinicalRealtimeEvent(ClinicalRealtimeEventType.connected));
     } catch (error) {
       await _teardownTransport();
@@ -191,7 +182,15 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
         _emit(
           ClinicalRealtimeEvent(ClinicalRealtimeEventType.error, error: error),
         );
-        _scheduleReconnect();
+        // Une première négociation qui échoue doit revenir à l'interface.
+        // Relancer immédiatement flutter_webrtc en boucle peut faire tomber le
+        // processus Android. La reconnexion automatique reste réservée aux
+        // connexions qui ont déjà été établies au moins une fois.
+        if (_hasConnectedOnce) {
+          _scheduleReconnect();
+        } else {
+          _shouldStayConnected = false;
+        }
       }
       rethrow;
     } finally {
@@ -228,7 +227,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   }
 
   void _handleConnectionState(RTCPeerConnectionState state) {
-    if (!_shouldStayConnected) return;
+    if (!_shouldStayConnected || !_hasConnectedOnce || _tearingDown) return;
     if (state == RTCPeerConnectionState.RTCPeerConnectionStateFailed ||
         state == RTCPeerConnectionState.RTCPeerConnectionStateDisconnected ||
         state == RTCPeerConnectionState.RTCPeerConnectionStateClosed) {
@@ -237,7 +236,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   }
 
   void _handleIceConnectionState(RTCIceConnectionState state) {
-    if (!_shouldStayConnected) return;
+    if (!_shouldStayConnected || !_hasConnectedOnce || _tearingDown) return;
     if (state == RTCIceConnectionState.RTCIceConnectionStateFailed ||
         state == RTCIceConnectionState.RTCIceConnectionStateDisconnected ||
         state == RTCIceConnectionState.RTCIceConnectionStateClosed) {
@@ -246,7 +245,13 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   }
 
   void _scheduleReconnect() {
-    if (_disposed || !_shouldStayConnected || _reconnectTimer != null) return;
+    if (_disposed ||
+        !_shouldStayConnected ||
+        !_hasConnectedOnce ||
+        _tearingDown ||
+        _reconnectTimer != null) {
+      return;
+    }
     if (_reconnectAttempts >= _maximumReconnectAttempts) {
       _emit(
         ClinicalRealtimeEvent(
@@ -428,6 +433,8 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
   }
 
   Future<void> _teardownTransport() async {
+    if (_tearingDown) return;
+    _tearingDown = true;
     final channel = _dataChannel;
     final peerConnection = _peerConnection;
     final stream = _mediaStream;
@@ -449,6 +456,7 @@ final class WebRtcClinicalRealtimeTranscriptionTransport
       // Fermeture best effort.
     }
     if (stream != null) await _disposeStream(stream);
+    _tearingDown = false;
   }
 
   Future<void> _disposeStream(MediaStream stream) async {
