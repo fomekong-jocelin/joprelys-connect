@@ -14,10 +14,11 @@ final class ClinicalSpeechHypothesisMerge {
 /// Reconciles two speech-recognition hypotheses.
 ///
 /// While [currentFinalized] is false, a radically different result is treated as
-/// a correction made by the recognizer inside the same listening window. Once a
-/// result has been finalized by the platform, a genuinely different result starts
-/// the next spoken passage. Progressive results that extend, shorten or overlap
-/// the current text always remain in the same passage.
+/// either a small recognizer correction or a reset to the latest words inside the
+/// same listening window. Existing words are never discarded during such a reset.
+/// Once a result has been finalized by the platform, a genuinely different result
+/// starts the next spoken passage. Progressive results that extend, shorten or
+/// overlap the current text always remain in the same passage.
 ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
   String current,
   String incoming, {
@@ -94,8 +95,14 @@ ClinicalSpeechHypothesisMerge mergeClinicalSpeechHypothesis(
   }
 
   if (!currentFinalized) {
+    if (currentTokens.length <= 2 && incomingTokens.length <= 2) {
+      return ClinicalSpeechHypothesisMerge(
+        text: incomingText,
+        startsNewSegment: false,
+      );
+    }
     return ClinicalSpeechHypothesisMerge(
-      text: incomingText,
+      text: '$currentText $incomingText',
       startsNewSegment: false,
     );
   }
