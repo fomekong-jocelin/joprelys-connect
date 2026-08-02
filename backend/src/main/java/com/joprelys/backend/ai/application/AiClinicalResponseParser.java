@@ -28,7 +28,6 @@ final class AiClinicalResponseParser {
     private static final Set<String> PRESCRIPTION_FIELDS = Set.of(
             "drugName", "dosage", "posology", "duration", "quantity",
             "instructions", "form", "route", "frequency", "substitutionAllowed");
-    private static final Set<String> VITAL_FIELDS = AiVitalsSafetyRules.VITAL_FIELDS;
     private static final Set<String> ALLOWED_OPERATIONS = Set.of("SET", "CLEAR");
     private static final Set<String> ALLOWED_UNCERTAINTIES = Set.of("LOW", "MEDIUM", "HIGH");
     private static final int MAX_CLARIFICATION_OPTIONS = 5;
@@ -40,8 +39,25 @@ final class AiClinicalResponseParser {
         this.objectMapper = objectMapper;
     }
 
-    @SuppressWarnings("unchecked")
+    /**
+     * Runtime parsing keeps every independently grounded and valid change. A single
+     * malformed proposal must never erase an otherwise usable clinical report.
+     */
     ParsedResponse parse(String content) {
+        return parse(content, true);
+    }
+
+    /** Strict entry point kept for contract and security regression tests. */
+    ParsedResponse parseStrict(String content) {
+        return parse(content, false);
+    }
+
+    ParsedResponse parseCapture(String content) {
+        return parse(content, true);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ParsedResponse parse(String content, boolean tolerateInvalidChanges) {
         if (content == null || content.isBlank()) {
             throw invalidOutput();
         }
@@ -63,7 +79,8 @@ final class AiClinicalResponseParser {
             ParsedClarification clarification = needsClarification
                     ? parseClarification(root.get("clarification"))
                     : null;
-            List<ParsedChange> changes = parseChanges(root.get("changes"));
+            List<ParsedChange> changes = parseChanges(
+                    root.get("changes"), tolerateInvalidChanges);
             if (needsClarification && clarification != null) {
                 changes = changes.stream()
                         .filter(change -> !change.field().equals(clarification.field()))
@@ -81,13 +98,22 @@ final class AiClinicalResponseParser {
         }
     }
 
-    private List<ParsedChange> parseChanges(Object changesValue) {
+    private List<ParsedChange> parseChanges(
+            Object changesValue,
+            boolean tolerateInvalidChanges) {
         if (!(changesValue instanceof List<?> changes)) {
             throw invalidOutput();
         }
         List<ParsedChange> result = new ArrayList<>();
         for (Object value : changes) {
-            result.add(parseChange(value));
+            try {
+                result.add(parseChange(value));
+            } catch (ResponseStatusException exception) {
+                if (!tolerateInvalidChanges
+                        || !"AI_CHANGE_INVALID".equals(exception.getReason())) {
+                    throw exception;
+                }
+            }
         }
         return List.copyOf(result);
     }
@@ -254,19 +280,48 @@ final class AiClinicalResponseParser {
         if (!(parsed instanceof Map<?, ?> map)) {
             throw invalidChange();
         }
-        Map<String, Number> normalized = new LinkedHashMap<>();
+        Map<String, Number> candidates = new LinkedHashMap<>();
         for (Map.Entry<?, ?> entry : map.entrySet()) {
             String key = entry.getKey() == null ? "" : entry.getKey().toString();
-            if (!(entry.getValue() instanceof Number number)
-                    || !AiVitalsSafetyRules.isSafeProposal(key, number)) {
+            if (!AiVitalsSafetyRules.VITAL_FIELDS.contains(key)
+                    || !(entry.getValue() instanceof Number number)) {
                 throw invalidChange();
             }
-            normalized.put(key, number);
+            candidates.put(key, number);
+        }
+        normalizeBloodPressureShorthand(candidates);
+
+        Map<String, Number> normalized = new LinkedHashMap<>();
+        for (Map.Entry<String, Number> entry : candidates.entrySet()) {
+            if (!AiVitalsSafetyRules.isSafeProposal(entry.getKey(), entry.getValue())) {
+                throw invalidChange();
+            }
+            normalized.put(entry.getKey(), entry.getValue());
         }
         if (normalized.isEmpty()) {
             throw invalidChange();
         }
         return normalized;
+    }
+
+    private void normalizeBloodPressureShorthand(Map<String, Number> values) {
+        Number systolic = values.get("systolic");
+        Number diastolic = values.get("diastolic");
+        if (systolic == null || diastolic == null) return;
+        double systolicValue = systolic.doubleValue();
+        double diastolicValue = diastolic.doubleValue();
+        if (systolicValue >= 7.0d
+                && systolicValue <= 25.0d
+                && diastolicValue >= 4.0d
+                && diastolicValue <= 15.0d) {
+            values.put("systolic", scalePressure(systolicValue));
+            values.put("diastolic", scalePressure(diastolicValue));
+        }
+    }
+
+    private Number scalePressure(double value) {
+        double scaled = value * 10.0d;
+        return Math.rint(scaled) == scaled ? (int) scaled : scaled;
     }
 
     private void rejectUnknownKeys(Map<?, ?> map, Set<String> allowed) {

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
+import { formatClinicalValue } from './ai-clinical-value-formatter';
 import {
   AiConsultationApiService,
   AiConsultationDraft,
@@ -179,38 +180,12 @@ export class AiDraftPreviewComponent {
   }
 
   formatValue(field: AiField, value: string): string {
-    if (!['prescription', 'labOrders', 'vitals'].includes(field)) return value;
-    try {
-      const parsed = JSON.parse(value);
-      if (field === 'prescription' && Array.isArray(parsed)) {
-        return parsed
-          .map((line: Record<string, unknown>) =>
-            [
-              line['drugName'],
-              line['dosage'],
-              line['form'],
-              line['posology'],
-              line['frequency'],
-              line['route'],
-              line['duration'],
-              line['quantity'],
-              line['instructions'],
-            ]
-              .filter(item => typeof item === 'string' && !!item.trim())
-              .join(' · '),
-          )
-          .join('\n');
-      }
-      if (field === 'labOrders' && Array.isArray(parsed)) return parsed.join(', ');
-      if (field === 'vitals' && parsed && typeof parsed === 'object') {
-        return Object.entries(parsed as Record<string, unknown>)
-          .map(([key, item]) => `${this.vitalLabel(key)}: ${this.vitalValue(key, item)}`)
-          .join(' · ');
-      }
-    } catch {
-      return value;
-    }
-    return value;
+    return formatClinicalValue(
+      field,
+      value,
+      this.i18n.currentLanguage(),
+      (key, item) => `${this.vitalLabel(key)}: ${this.vitalValue(key, item)}`,
+    );
   }
 
   fieldLabel(field: AiField): string {

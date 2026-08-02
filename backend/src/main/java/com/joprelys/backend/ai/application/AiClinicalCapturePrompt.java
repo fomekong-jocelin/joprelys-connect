@@ -15,7 +15,7 @@ import java.util.Map;
  */
 final class AiClinicalCapturePrompt {
 
-    static final String SCHEMA_NAME = "joprelys_clinical_capture_v2";
+    static final String SCHEMA_NAME = "joprelys_clinical_capture_v3";
 
     static final String SYSTEM_PROMPT = """
             You are Joprelys Clinical Capture Extractor.
@@ -23,10 +23,14 @@ final class AiClinicalCapturePrompt {
 
             ABSOLUTE RULES
             - Extract every clinically relevant fact explicitly present in CURRENT TRANSCRIPT. Do not summarize away details.
+            - Treat CURRENT TRANSCRIPT as a clinical dialogue even when speaker labels are absent, repeated or noisy. Patient complaints, answers and denials remain subjective clinical facts and belong in symptoms.
+            - Symptoms include the chief complaint, duration, chronology, severity, associated or denied symptoms, treatment adherence, functional impact and any subjective history explicitly stated by the patient or clinician.
+            - A prescription, advice or follow-up plan never justifies omitting symptoms or examination findings from the same transcript.
             - Emit at most ONE change per field. Combine all safe facts for the same field in that single change; put all medications in one prescription array and all requested examinations in one labOrders array.
             - Never invent, complete, medically improve or infer a fact.
             - Never turn a symptom into a diagnosis or strengthen the clinician's stated certainty.
             - Keep negations, uncertainty, chronology, numbers, units, medication names, doses, routes, frequencies and durations faithful to the transcript.
+            - For text fields, use near-verbatim source wording with only minimal grammatical linking. Do not replace a spoken expression with a medical synonym that is absent from CURRENT TRANSCRIPT, for example do not replace "maux de tête" with "céphalée" unless "céphalée" was actually spoken.
             - A malformed or uncertain attribute must never make another safe fact disappear.
             - For a medication with one uncertain attribute, keep the medication and every independently supported attribute; omit the unsupported attribute or preserve its literal wording when it is explicitly spoken.
             - One ambiguous medication must never remove another medication.
@@ -37,7 +41,7 @@ final class AiClinicalCapturePrompt {
             - If a clinical fact cannot be supported by an exact quote, do not emit it.
 
             FIELD MAPPING
-            - symptoms: complaint, symptoms, history of present illness and subjective facts.
+            - symptoms: complaint, symptoms, history of present illness, treatment adherence, functional impact, associated symptoms, denied symptoms and other subjective facts.
             - clinicalExam: physical examination and objective observations explicitly dictated.
             - diagnosis: any diagnostic assessment explicitly stated by the clinician.
             - conclusion: explicitly dictated conclusion.
@@ -46,6 +50,19 @@ final class AiClinicalCapturePrompt {
             - prescription: medications/products explicitly prescribed in this chunk only.
             - labOrders: examinations/tests explicitly ordered in this chunk only.
             - vitals: vital-sign values explicitly dictated in this chunk only.
+
+            MANDATORY FIELD-BY-FIELD PASS
+            Inspect CURRENT TRANSCRIPT in this exact order before returning:
+            1. symptoms
+            2. clinicalExam
+            3. diagnosis
+            4. conclusion
+            5. advice
+            6. followUp
+            7. prescription
+            8. labOrders
+            9. vitals
+            For every field containing at least one explicit supported fact, emit its change. Do not stop after finding advice, follow-up or medication. Re-read patient answers and denials specifically for symptoms before returning.
 
             STRUCTURED FIELD ENCODING
             The JSON Schema requires change.value to be a string. For structured fields, put compact JSON inside that string:

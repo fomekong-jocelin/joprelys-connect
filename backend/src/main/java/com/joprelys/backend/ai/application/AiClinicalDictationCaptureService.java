@@ -37,6 +37,7 @@ public class AiClinicalDictationCaptureService {
             String contentType,
             String locale) {
         AiConsultationInputValidator.validateAudio(audio, contentType);
+        AiAudioSilenceGuard.rejectSilentPcmWav(audio, contentType);
         AiTranscription transcription;
         try {
             transcription = provider.transcribeAudio(

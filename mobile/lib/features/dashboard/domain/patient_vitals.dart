@@ -59,6 +59,24 @@ class PatientVitals {
     };
   }
 
+  /// Keep every explicit value and let the preferred source replace only the
+  /// fields it actually contains.
+  PatientVitals mergePrefer(PatientVitals preferred) {
+    return PatientVitals(
+      temperature: preferred.temperature ?? temperature,
+      weight: preferred.weight ?? weight,
+      height: preferred.height ?? height,
+      pulse: preferred.pulse ?? pulse,
+      systolic: preferred.systolic ?? systolic,
+      diastolic: preferred.diastolic ?? diastolic,
+      spo2: preferred.spo2 ?? spo2,
+      glycemia: preferred.glycemia ?? glycemia,
+      respiratoryRate: preferred.respiratoryRate ?? respiratoryRate,
+      painScale: preferred.painScale ?? painScale,
+      bmi: preferred.bmi ?? bmi,
+    );
+  }
+
   double? get calculatedBmi {
     if (bmi != null) return bmi;
     if (weight != null && height != null && height! > 0) {
