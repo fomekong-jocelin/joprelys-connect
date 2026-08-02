@@ -155,16 +155,6 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         ? pending!
         : existing.transcript?.trim();
 
-    if (existing.revisions.isNotEmpty ||
-        existing.hasAcceptedChanges ||
-        existing.needsClarification) {
-      if (transcript?.isNotEmpty == true) {
-        _replaceSegmentsWithTranscript(transcript!);
-      }
-      _applyAiState(existing);
-      return;
-    }
-
     if (transcript?.isNotEmpty == true) {
       _replaceSegmentsWithTranscript(transcript!);
       value = value.copyWith(
