@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_design_tokens.dart';
@@ -41,7 +39,8 @@ class ClinicalTranscriptTimeline extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final theme = Theme.of(context);
     final colors = theme.colorScheme;
-    final hasContent = segments.isNotEmpty || partialTranscript.trim().isNotEmpty;
+    final hasContent =
+        segments.isNotEmpty || partialTranscript.trim().isNotEmpty;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -191,8 +190,7 @@ class _TranscriptSegmentCard extends StatefulWidget {
   final ValueChanged<String> onDeleted;
 
   @override
-  State<_TranscriptSegmentCard> createState() =>
-      _TranscriptSegmentCardState();
+  State<_TranscriptSegmentCard> createState() => _TranscriptSegmentCardState();
 }
 
 class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
@@ -304,9 +302,7 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
                 filled: true,
                 fillColor: colors.surface,
                 border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(
-                    AppDesignTokens.radiusSm,
-                  ),
+                  borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
                 ),
               ),
             )
@@ -416,11 +412,7 @@ class _EmptyTranscriptState extends StatelessWidget {
       ),
       child: Column(
         children: [
-          Icon(
-            Icons.format_quote_rounded,
-            color: colors.primary,
-            size: 28,
-          ),
+          Icon(Icons.format_quote_rounded, color: colors.primary, size: 28),
           const SizedBox(height: 8),
           Text(
             title,

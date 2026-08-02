@@ -45,11 +45,7 @@ void main() {
     final state = AuthState.locked(professionalSession());
 
     expect(
-      authRedirect(
-        state,
-        AppRoutePath.foundation,
-        preserveLockedRoute: true,
-      ),
+      authRedirect(state, AppRoutePath.foundation, preserveLockedRoute: true),
       isNull,
     );
     expect(

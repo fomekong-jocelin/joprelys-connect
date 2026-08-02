@@ -48,14 +48,17 @@ void main() {
       expect(state?.draft['diagnosis'], 'Paludisme simple suspecté');
     });
 
-    test('treats an empty successful GET body as no existing session', () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => stringResponse(200, '   '),
-      );
-      final api = buildApi(adapter);
+    test(
+      'treats an empty successful GET body as no existing session',
+      () async {
+        final adapter = QueueHttpClientAdapter(
+          (_, _) => stringResponse(200, '   '),
+        );
+        final api = buildApi(adapter);
 
-      expect(await api.getSession('visit-123'), isNull);
-    });
+        expect(await api.getSession('visit-123'), isNull);
+      },
+    );
 
     test('rejects a non-object JSON session payload', () async {
       final adapter = QueueHttpClientAdapter(
@@ -77,29 +80,32 @@ void main() {
   });
 
   group('ClinicalVoiceAiApi progressive analysis', () {
-    test('keeps using the realtime endpoint and decodes MessageView strings', () async {
-      final adapter = QueueHttpClientAdapter((options, _) {
-        expect(
-          options.path,
-          '/api/ai/consultations/visit-123/messages/realtime',
+    test(
+      'keeps using the realtime endpoint and decodes MessageView strings',
+      () async {
+        final adapter = QueueHttpClientAdapter((options, _) {
+          expect(
+            options.path,
+            '/api/ai/consultations/visit-123/messages/realtime',
+          );
+          final request = Map<String, dynamic>.from(options.data as Map);
+          expect(request['transcript'], 'Le patient présente une forte fièvre');
+          expect(request['confidence'], 1.0);
+          return stringResponse(200, jsonEncode(messageViewJson()));
+        });
+        final api = buildApi(adapter);
+
+        final state = await api.analyzeTranscript(
+          'visit-123',
+          'Le patient présente une forte fièvre',
         );
-        final request = Map<String, dynamic>.from(options.data as Map);
-        expect(request['transcript'], 'Le patient présente une forte fièvre');
-        expect(request['confidence'], 1.0);
-        return stringResponse(200, jsonEncode(messageViewJson()));
-      });
-      final api = buildApi(adapter);
 
-      final state = await api.analyzeTranscript(
-        'visit-123',
-        'Le patient présente une forte fièvre',
-      );
-
-      expect(state.sessionId, 'session-123');
-      expect(state.visitId, isNull);
-      expect(state.noteFrom(includePending: true).symptoms, 'Forte fièvre');
-      expect(state.revisions.single.hasPendingProposals, isTrue);
-    });
+        expect(state.sessionId, 'session-123');
+        expect(state.visitId, isNull);
+        expect(state.noteFrom(includePending: true).symptoms, 'Forte fièvre');
+        expect(state.revisions.single.hasPendingProposals, isTrue);
+      },
+    );
   });
 }
 

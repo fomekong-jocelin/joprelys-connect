@@ -3,9 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 enum AppForegroundActivity { clinicalVoiceAssistant }
 
 final appForegroundActivityProvider =
-    NotifierProvider<AppForegroundActivityController, Set<AppForegroundActivity>>(
-      AppForegroundActivityController.new,
-    );
+    NotifierProvider<
+      AppForegroundActivityController,
+      Set<AppForegroundActivity>
+    >(AppForegroundActivityController.new);
 
 class AppForegroundActivityController
     extends Notifier<Set<AppForegroundActivity>> {

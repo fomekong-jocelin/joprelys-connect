@@ -97,11 +97,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       try {
         final existing = await _gateway.getSession(_visitId);
         if (existing == null) {
-          await _gateway.startSession(
-            _visitId,
-            _initialDraft,
-            locale: _locale,
-          );
+          await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
         } else {
           _restoreExistingSession(existing);
         }
@@ -245,12 +241,14 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
             soundLevel: (level + 2.0).clamp(5.0, 60.0).toDouble(),
           );
         },
-        listenFor: const Duration(hours: 1),
-        pauseFor: const Duration(seconds: 8),
-        partialResults: true,
-        cancelOnError: false,
-        listenMode: stt.ListenMode.dictation,
-        localeId: _speechLocale,
+        listenOptions: stt.SpeechListenOptions(
+          listenFor: const Duration(hours: 1),
+          pauseFor: const Duration(seconds: 8),
+          partialResults: true,
+          cancelOnError: false,
+          listenMode: stt.ListenMode.dictation,
+          localeId: _speechLocale,
+        ),
       );
     } catch (error) {
       if (_shouldKeepListening) {
@@ -262,9 +260,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  String get _speechLocale => _locale.toLowerCase().startsWith('en')
-      ? 'en_US'
-      : 'fr_FR';
+  String get _speechLocale =>
+      _locale.toLowerCase().startsWith('en') ? 'en_US' : 'fr_FR';
 
   void _handleSpeechStatus(String status) {
     if (_disposed || !_shouldKeepListening) return;

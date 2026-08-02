@@ -291,14 +291,8 @@ class _ClinicalVoiceAssistantSheetState
                           state: state,
                           haloController: _haloController,
                           waveController: _waveController,
-                          badge: _badge(
-                            state,
-                            AppLocalizations.of(context),
-                          ),
-                          status: _status(
-                            state,
-                            AppLocalizations.of(context),
-                          ),
+                          badge: _badge(state, AppLocalizations.of(context)),
+                          status: _status(state, AppLocalizations.of(context)),
                           onToggleListening: _toggleListening,
                           onClearAll: _clearAll,
                           onAnalyze: _speechService.analyzeTranscript,
@@ -456,9 +450,7 @@ class _ReviewPhase extends StatelessWidget {
             decoration: BoxDecoration(
               color: colors.primaryContainer.withValues(alpha: 0.32),
               borderRadius: BorderRadius.circular(AppDesignTokens.radiusMd),
-              border: Border.all(
-                color: colors.primary.withValues(alpha: 0.35),
-              ),
+              border: Border.all(color: colors.primary.withValues(alpha: 0.35)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -590,9 +582,7 @@ class _PhasePill extends StatelessWidget {
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: active
-            ? colors.primaryContainer
-            : colors.surfaceContainerLow,
+        color: active ? colors.primaryContainer : colors.surfaceContainerLow,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
         border: Border.all(
           color: active ? colors.primary : colors.outlineVariant,

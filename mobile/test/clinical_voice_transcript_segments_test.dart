@@ -5,20 +5,19 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/clinical
 void main() {
   group('clinical transcript segments', () {
     test('rebuilds the reviewed transcript in chronological order', () {
-      final transcript = clinicalTranscriptFromSegments(
-        const <ClinicalTranscriptSegment>[
-          ClinicalTranscriptSegment(
-            id: 'segment-1',
-            offset: Duration(seconds: 2),
-            text: 'Le patient présente une fièvre',
-          ),
-          ClinicalTranscriptSegment(
-            id: 'segment-2',
-            offset: Duration(seconds: 14),
-            text: 'La température est à 38,5 degrés',
-          ),
-        ],
-      );
+      final transcript =
+          clinicalTranscriptFromSegments(const <ClinicalTranscriptSegment>[
+            ClinicalTranscriptSegment(
+              id: 'segment-1',
+              offset: Duration(seconds: 2),
+              text: 'Le patient présente une fièvre',
+            ),
+            ClinicalTranscriptSegment(
+              id: 'segment-2',
+              offset: Duration(seconds: 14),
+              text: 'La température est à 38,5 degrés',
+            ),
+          ]);
 
       expect(
         transcript,
@@ -27,20 +26,19 @@ void main() {
     });
 
     test('ignores blank segments after an edit', () {
-      final transcript = clinicalTranscriptFromSegments(
-        const <ClinicalTranscriptSegment>[
-          ClinicalTranscriptSegment(
-            id: 'segment-1',
-            offset: Duration.zero,
-            text: '   ',
-          ),
-          ClinicalTranscriptSegment(
-            id: 'segment-2',
-            offset: Duration(seconds: 5),
-            text: 'Auscultation pulmonaire normale',
-          ),
-        ],
-      );
+      final transcript =
+          clinicalTranscriptFromSegments(const <ClinicalTranscriptSegment>[
+            ClinicalTranscriptSegment(
+              id: 'segment-1',
+              offset: Duration.zero,
+              text: '   ',
+            ),
+            ClinicalTranscriptSegment(
+              id: 'segment-2',
+              offset: Duration(seconds: 5),
+              text: 'Auscultation pulmonaire normale',
+            ),
+          ]);
 
       expect(transcript, 'Auscultation pulmonaire normale');
     });

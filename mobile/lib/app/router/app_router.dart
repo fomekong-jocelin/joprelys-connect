@@ -29,14 +29,10 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           .read(appForegroundActivityProvider)
           .preservesRouteOnLock;
       return auth.when(
-        loading: () => redirectToRoute(
-          state.matchedLocation,
-          AppRoutePath.authLoading,
-        ),
-        error: (error, stackTrace) => redirectToRoute(
-          state.matchedLocation,
-          AppRoutePath.login,
-        ),
+        loading: () =>
+            redirectToRoute(state.matchedLocation, AppRoutePath.authLoading),
+        error: (error, stackTrace) =>
+            redirectToRoute(state.matchedLocation, AppRoutePath.login),
         data: (authState) => authRedirect(
           authState,
           state.matchedLocation,

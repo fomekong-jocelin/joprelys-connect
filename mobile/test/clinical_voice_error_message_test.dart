@@ -35,7 +35,10 @@ void main() {
         locale: 'fr',
       );
 
-      expect(message, 'Autorisez l’accès au microphone pour démarrer la dictée.');
+      expect(
+        message,
+        'Autorisez l’accès au microphone pour démarrer la dictée.',
+      );
       expect(message, isNot(contains('error_permission')));
     });
 
@@ -45,7 +48,10 @@ void main() {
         locale: 'fr',
       );
 
-      expect(message, 'Impossible de poursuivre la dictée pour le moment. Réessayez.');
+      expect(
+        message,
+        'Impossible de poursuivre la dictée pour le moment. Réessayez.',
+      );
       expect(message, isNot(contains('unexpected_native_failure_42')));
     });
   });

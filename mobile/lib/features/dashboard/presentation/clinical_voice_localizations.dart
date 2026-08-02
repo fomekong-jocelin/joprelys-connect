@@ -24,8 +24,9 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceSegmentsSubtitle => _voiceIsFrench
       ? 'Corrigez ou supprimez chaque passage avant l’analyse.'
       : 'Edit or delete each passage before analysis.';
-  String get voiceSegmentsEmptyTitle =>
-      _voiceIsFrench ? 'La dictée apparaîtra ici' : 'Your dictation will appear here';
+  String get voiceSegmentsEmptyTitle => _voiceIsFrench
+      ? 'La dictée apparaîtra ici'
+      : 'Your dictation will appear here';
   String get voiceSegmentsEmptyBody => _voiceIsFrench
       ? 'Commencez à parler. Les phrases seront séparées automatiquement selon vos pauses.'
       : 'Start speaking. Sentences will be separated automatically when you pause.';
@@ -57,8 +58,9 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'L’IA reformule uniquement si nécessaire, puis classe les informations dans les champs cliniques adaptés.'
       : 'AI rewrites only when needed, then places information in the appropriate clinical fields.';
 
-  String get voiceReviewTitle =>
-      _voiceIsFrench ? 'Synthèse clinique proposée' : 'Proposed clinical summary';
+  String get voiceReviewTitle => _voiceIsFrench
+      ? 'Synthèse clinique proposée'
+      : 'Proposed clinical summary';
   String get voiceReviewSubtitle => _voiceIsFrench
       ? 'Validez les propositions avant tout remplissage de la consultation.'
       : 'Review the proposals before anything is applied to the consultation.';
