@@ -75,6 +75,7 @@ class _ClinicalVoiceAssistantSheetState
   late final ClinicalSpeechService _speechService;
   late final AnimationController _haloController;
   late final AnimationController _waveController;
+  late final AppForegroundActivityController _activityController;
 
   bool get _isFrench => widget.locale == 'fr';
 
@@ -82,9 +83,13 @@ class _ClinicalVoiceAssistantSheetState
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    ref
-        .read(appForegroundActivityProvider.notifier)
-        .activate(AppForegroundActivity.clinicalVoiceAssistant);
+    _activityController = ref.read(appForegroundActivityProvider.notifier);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _activityController.activate(
+        AppForegroundActivity.clinicalVoiceAssistant,
+      );
+    });
     _haloController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 2800),
@@ -120,9 +125,11 @@ class _ClinicalVoiceAssistantSheetState
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    ref
-        .read(appForegroundActivityProvider.notifier)
-        .deactivate(AppForegroundActivity.clinicalVoiceAssistant);
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _activityController.deactivate(
+        AppForegroundActivity.clinicalVoiceAssistant,
+      );
+    });
     _speechService.dispose();
     _haloController.dispose();
     _waveController.dispose();
