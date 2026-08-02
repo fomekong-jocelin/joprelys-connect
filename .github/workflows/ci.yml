@@ -38,21 +38,19 @@ jobs:
 
           service_path = Path('mobile/lib/features/dashboard/application/clinical_speech_service.dart')
           service = service_path.read_text()
-          old = '''    if (existing.revisions.isNotEmpty ||
-              existing.hasAcceptedChanges ||
-              existing.needsClarification) {
-            if (transcript?.isNotEmpty == true) {
-              _replaceSegmentsWithTranscript(transcript!);
-            }
-            _applyAiState(existing);
-            return;
-          }
-
-          '''
-          count = service.count(old)
-          if count != 1:
-              raise RuntimeError(f'capture-first restoration block: expected 1 occurrence, found {count}')
-          service_path.write_text(service.replace(old, '', 1))
+          start_marker = '    if (existing.revisions.isNotEmpty ||'
+          end_marker = '      return;\n    }\n\n'
+          start = service.find(start_marker)
+          if start < 0:
+              raise RuntimeError('capture-first restoration start marker not found')
+          end = service.find(end_marker, start)
+          if end < 0:
+              raise RuntimeError('capture-first restoration end marker not found')
+          end += len(end_marker)
+          block = service[start:end]
+          if '_applyAiState(existing);' not in block:
+              raise RuntimeError('capture-first block does not contain the forced review transition')
+          service_path.write_text(service[:start] + service[end:])
 
           test_path = Path('mobile/test/clinical_voice_capture_first_restoration_test.dart')
           test_path.write_text("""import 'dart:io';
