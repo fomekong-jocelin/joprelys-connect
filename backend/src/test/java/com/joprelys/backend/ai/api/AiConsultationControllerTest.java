@@ -3,6 +3,7 @@ package com.joprelys.backend.ai.api;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -18,6 +19,7 @@ import java.util.Map;
 import java.util.UUID;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.InOrder;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.server.ResponseStatusException;
@@ -195,6 +197,35 @@ class AiConsultationControllerTest {
                 userId,
                 organizationId,
                 "Patient sans fièvre");
+    }
+
+    @Test
+    void shouldReplacePendingTranscriptWithAuthenticatedIdentity() {
+        AiConsultationService service = mock(AiConsultationService.class);
+        AiConsultationController controller = new AiConsultationController(service);
+        Authentication authentication = mock(Authentication.class);
+        UUID visitId = UUID.randomUUID();
+        UUID userId = UUID.randomUUID();
+        UUID organizationId = UUID.randomUUID();
+        when(authentication.getDetails()).thenReturn(claims(userId.toString(), organizationId.toString()));
+        TenantContext.setTenantId(organizationId);
+
+        controller.replacePendingTranscript(
+                visitId,
+                new AiConsultationController.AnalyzeTranscriptRequest(
+                        "Transcription complète et corrigée"),
+                authentication);
+
+        InOrder order = inOrder(service);
+        order.verify(service).discardPendingTranscript(
+                visitId,
+                userId,
+                organizationId);
+        order.verify(service).stageRealtimeTranscript(
+                visitId,
+                userId,
+                organizationId,
+                "Transcription complète et corrigée");
     }
 
     @Test
