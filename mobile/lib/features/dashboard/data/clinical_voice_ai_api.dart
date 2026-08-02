@@ -262,11 +262,17 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
       '/api/ai/consultations/$visitId/session',
     );
     if (response.statusCode == 204) return null;
-    final json = _optionalObjectFrom(
+
+    // Une ouverture de l'assistant correspond à une nouvelle capture clinique.
+    // On valide la réponse puis on supprime toute session précédente afin que le
+    // brouillon SOAP courant soit la seule base du prochain POST /sessions.
+    final existing = _optionalObjectFrom(
       response.data,
       'Invalid AI session response',
     );
-    return json == null ? null : ClinicalAiState.fromJson(json);
+    if (existing == null) return null;
+    await _client.delete<void>('/api/ai/consultations/$visitId/session');
+    return null;
   }
 
   @override
@@ -320,13 +326,17 @@ final class ClinicalVoiceAiApi implements ClinicalVoiceAiGateway {
     String visitId,
     String transcript,
   ) async {
+    final normalized = transcript.trim();
+    if (normalized.isEmpty) {
+      throw const FormatException('Empty AI transcript analysis request');
+    }
+
+    // Le flux final doit reconstruire un diff SOAP depuis la transcription relue,
+    // pas l'ajouter comme un nouveau message realtime à un ancien brouillon.
+    await savePendingTranscript(visitId, normalized);
     final response = await _client.post<dynamic>(
-      '/api/ai/consultations/$visitId/messages/realtime',
-      data: <String, dynamic>{
-        'transcript': transcript,
-        'confidence': 1.0,
-        'eventId': 'mobile-reviewed-${DateTime.now().microsecondsSinceEpoch}',
-      },
+      '/api/ai/consultations/$visitId/transcriptions/analyze',
+      data: <String, dynamic>{'transcript': normalized},
     );
     return _stateFrom(response.data, 'Invalid AI analysis response');
   }
