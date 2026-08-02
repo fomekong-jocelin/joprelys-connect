@@ -21,19 +21,20 @@ final class ConsultationNoteFormControllers {
     followUp.text = note.followUp ?? '';
   }
 
-  /// Applique uniquement dans les champs encore vides.
+  /// Remplace le brouillon SOAP courant par le brouillon IA explicitement accepté.
   ///
-  /// Une proposition vocale ne peut donc jamais écraser silencieusement une
-  /// saisie manuelle plus récente. Le remplacement explicite fera l'objet d'un
-  /// véritable écran de diff dans une incision séparée.
-  bool applyAcceptedToEmptyFields(ConsultationNote note) {
+  /// Le résultat transmis par l'assistant représente l'état SOAP complet construit
+  /// à partir du brouillon initial et des décisions du praticien. Les champs non
+  /// modifiés sont donc conservés dans ce résultat, tandis qu'une modification ou
+  /// un effacement accepté doit réellement remplacer l'ancienne valeur affichée.
+  bool applyAcceptedDraft(ConsultationNote note) {
     var changed = false;
-    changed = _fillWhenEmpty(symptoms, note.symptoms) || changed;
-    changed = _fillWhenEmpty(clinicalExam, note.clinicalExam) || changed;
-    changed = _fillWhenEmpty(diagnosis, note.diagnosis) || changed;
-    changed = _fillWhenEmpty(conclusion, note.conclusion) || changed;
-    changed = _fillWhenEmpty(advice, note.advice) || changed;
-    changed = _fillWhenEmpty(followUp, note.followUp) || changed;
+    changed = _replace(symptoms, note.symptoms) || changed;
+    changed = _replace(clinicalExam, note.clinicalExam) || changed;
+    changed = _replace(diagnosis, note.diagnosis) || changed;
+    changed = _replace(conclusion, note.conclusion) || changed;
+    changed = _replace(advice, note.advice) || changed;
+    changed = _replace(followUp, note.followUp) || changed;
     return changed;
   }
 
@@ -68,14 +69,10 @@ final class ConsultationNoteFormControllers {
     followUp.dispose();
   }
 
-  bool _fillWhenEmpty(TextEditingController controller, String? value) {
-    final proposed = value?.trim();
-    if (controller.text.trim().isNotEmpty ||
-        proposed == null ||
-        proposed.isEmpty) {
-      return false;
-    }
-    controller.text = proposed;
+  bool _replace(TextEditingController controller, String? value) {
+    final replacement = value?.trim() ?? '';
+    if (controller.text == replacement) return false;
+    controller.text = replacement;
     return true;
   }
 
