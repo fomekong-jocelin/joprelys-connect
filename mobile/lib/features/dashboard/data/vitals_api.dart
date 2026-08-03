@@ -48,6 +48,18 @@ final class VitalsApi implements VitalsGateway {
     if (data is! Map) {
       throw const FormatException('Invalid save vitals response format');
     }
-    return PatientVitals.fromJson(Map<String, dynamic>.from(data));
+    final saved = PatientVitals.fromJson(Map<String, dynamic>.from(data));
+
+    // As for consultation notes, durable voice capture remains recoverable until
+    // the clinical form is saved. Cleanup is best-effort and cannot invalidate an
+    // already persisted set of vital signs.
+    try {
+      await _client.post<void>(
+        '/api/ai/consultations/$visitId/realtime-intake/consume',
+      );
+    } catch (_) {
+      // A later save or explicit clear retries cleanup; clinical persistence wins.
+    }
+    return saved;
   }
 }
