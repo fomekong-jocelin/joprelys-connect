@@ -13,11 +13,11 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'Parlez naturellement, à une distance normale du téléphone.'
       : 'Speak naturally at a normal distance from the phone.';
   String get voiceCapturePausedStatus => _voiceIsFrench
-      ? 'Dictée enregistrée : relisez-la avant de lancer la synthèse.'
-      : 'Dictation saved: review it before starting the clinical summary.';
+      ? 'Dictée enregistrée : relisez-la avant la reconstruction finale.'
+      : 'Dictation saved: review it before the final rebuild.';
   String get voiceCaptureTip => _voiceIsFrench
-      ? 'Le passage en cours reste unique pendant que le moteur affine les mots. Il est conservé localement sans requête réseau.'
-      : 'The current passage stays unique while speech recognition refines the words. It is kept locally without a network request.';
+      ? 'Le micro reste actif pendant que les passages finalisés sont enregistrés puis structurés en arrière-plan.'
+      : 'The microphone stays active while finalized passages are saved and structured in the background.';
   String get voiceResumeDictation => _voiceIsFrench ? 'Reprendre' : 'Resume';
   String get voiceSaveDictation =>
       _voiceIsFrench ? 'Enregistrer la dictée' : 'Save dictation';
@@ -25,8 +25,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceSegmentsTitle =>
       _voiceIsFrench ? 'Transcription' : 'Transcript';
   String get voiceSegmentsSubtitle => _voiceIsFrench
-      ? 'Chaque passage peut être relu, corrigé ou supprimé avant l’analyse.'
-      : 'Each passage can be reviewed, edited, or deleted before analysis.';
+      ? 'Chaque passage peut être relu, corrigé ou supprimé avant la reconstruction finale.'
+      : 'Each passage can be reviewed, edited, or deleted before the final rebuild.';
   String get voiceSegmentsEmptyTitle => _voiceIsFrench
       ? 'La dictée apparaîtra ici'
       : 'Your dictation will appear here';
@@ -47,31 +47,37 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
       ? 'Supprimer toute la transcription ?'
       : 'Delete the full transcript?';
   String get voiceClearConfirmBody => _voiceIsFrench
-      ? 'Tous les passages seront supprimés du stockage sécurisé de cet appareil. Ils ne réapparaîtront pas à la réouverture.'
-      : 'All passages will be removed from secure storage on this device. They will not return when reopened.';
+      ? 'Tous les passages seront retirés du stockage sécurisé de cet appareil et du brouillon serveur récupérable. Ils ne réapparaîtront pas à la réouverture.'
+      : 'All passages will be removed from secure storage on this device and from the recoverable server draft. They will not return when reopened.';
   String get voiceCancel => _voiceIsFrench ? 'Annuler' : 'Cancel';
   String get voiceConfirmDelete => _voiceIsFrench ? 'Supprimer' : 'Delete';
   String get voiceAnalyzeAction => _voiceIsFrench
-      ? 'Analyser la transcription relue'
-      : 'Analyze reviewed transcript';
+      ? 'Reconstruire la synthèse finale'
+      : 'Build final clinical summary';
   String get voiceAnalyzingTitle => _voiceIsFrench
       ? 'Reformulation et extraction en cours'
       : 'Rewriting and extraction in progress';
   String get voiceAnalyzingBody => _voiceIsFrench
-      ? 'L’IA reformule uniquement si nécessaire, puis classe les informations dans les champs cliniques adaptés.'
-      : 'AI rewrites only when needed, then places information in the appropriate clinical fields.';
+      ? 'L’IA reformule de façon contrôlée, sans inventer de fait, puis classe les informations dans les champs cliniques adaptés.'
+      : 'AI performs controlled rewriting without inventing facts, then places information in the appropriate clinical fields.';
+  String get voiceProgressivePreviewTitle => _voiceIsFrench
+      ? 'Synthèse actualisée pendant l’écoute'
+      : 'Summary updated while listening';
+  String get voiceProgressivePreviewBody => _voiceIsFrench
+      ? 'Les passages déjà finalisés sont sécurisés et structurés sans couper le microphone.'
+      : 'Finalized passages are secured and structured without stopping the microphone.';
 
   String get voiceTranscriptSaving => _voiceIsFrench
-      ? 'Enregistrement sécurisé du brouillon…'
-      : 'Saving the draft securely…';
+      ? 'Synchronisation sécurisée du brouillon…'
+      : 'Securely synchronizing the draft…';
   String get voiceTranscriptSaved => _voiceIsFrench
-      ? 'Brouillon enregistré sur cet appareil.'
-      : 'Draft saved on this device.';
+      ? 'Brouillon sécurisé sur l’appareil et synchronisé avec le serveur.'
+      : 'Draft secured on the device and synchronized with the server.';
   String get voiceTranscriptSaveFailed => _voiceIsFrench
-      ? 'Le brouillon local n’a pas pu être enregistré. Il reste affiché : réessayez avant de fermer.'
-      : 'The local draft could not be saved. It remains visible: retry before closing.';
+      ? 'La synchronisation n’a pas abouti. La dictée reste disponible localement : réessayez avant de fermer.'
+      : 'Synchronization did not complete. The dictation remains available locally: retry before closing.';
   String get voiceRetrySave =>
-      _voiceIsFrench ? 'Réessayer l’enregistrement' : 'Retry saving';
+      _voiceIsFrench ? 'Réessayer la synchronisation' : 'Retry synchronization';
 
   String get voiceReviewTitle => _voiceIsFrench
       ? 'Synthèse clinique proposée'
@@ -86,8 +92,8 @@ extension ClinicalVoiceLocalizations on AppLocalizations {
   String get voiceReviewComplete =>
       _voiceIsFrench ? 'Synthèse vérifiée' : 'Summary reviewed';
   String get voiceClarificationRequired => _voiceIsFrench
-      ? 'La synthèse reste incomplète. Corrigez la transcription puis relancez l’analyse.'
-      : 'The summary is incomplete. Correct the transcript and run the analysis again.';
+      ? 'La synthèse reste incomplète. Corrigez la transcription puis relancez la reconstruction.'
+      : 'The summary is incomplete. Correct the transcript and run the rebuild again.';
 
   String get voiceApplyTitle => _voiceIsFrench
       ? 'Appliquer les éléments vérifiés ?'
