@@ -1,0 +1,91 @@
+import 'dart:io';
+
+import 'package:flutter_test/flutter_test.dart';
+
+void main() {
+  test('durable intake is acknowledged before progressive AI analysis', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_voice_progressive_coordinator.dart',
+    ).readAsStringSync();
+
+    final ingest = source.indexOf('await _captureGateway.ingestSegment(');
+    final analyze = source.indexOf(
+      'await _captureGateway.analyzeProgressiveSegment(',
+      ingest,
+    );
+
+    expect(ingest, greaterThanOrEqualTo(0));
+    expect(analyze, greaterThan(ingest));
+    expect(source, contains('Future<void> _serial = Future<void>.value()'));
+  });
+
+  test('AI synchronization never turns active listening into terminal error', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_voice_progressive_coordinator.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('void _publishSynchronizationFailure');
+    final end = source.indexOf('Future<bool> _enqueue', start);
+    final failureHandling = source.substring(start, end);
+
+    expect(
+      failureHandling,
+      contains('current.status == SpeechStatus.listening ? null'),
+    );
+    expect(
+      failureHandling,
+      contains('clearError: current.status == SpeechStatus.listening'),
+    );
+  });
+
+  test('progressive assistant starts only after local restoration', () {
+    final source = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sheet.dart',
+    ).readAsStringSync();
+
+    final initialize = source.indexOf('await _speechService.initialize()');
+    final coordinator = source.indexOf('await _coordinator.start()');
+    expect(initialize, greaterThanOrEqualTo(0));
+    expect(coordinator, greaterThan(initialize));
+    expect(source, contains('ClinicalVoiceProgressivePreview(state: state)'));
+  });
+
+  test('consultation entry point uses the progressive assistant with clean SOAP', () {
+    final source = File(
+      'lib/features/dashboard/presentation/widgets/consultation_notes_sheet.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('void _launchAssistant()');
+    final end = source.indexOf('Future<void> _retryLoad()', start);
+    final launch = source.substring(start, end);
+
+    expect(
+      launch,
+      contains('ClinicalVoiceProgressiveAssistantSheet.show('),
+    );
+    expect(launch, contains('initialDraft: const <String, String>{}'));
+    expect(launch, contains('applyAcceptedDraft(result.note)'));
+  });
+
+  test('voice working set is consumed only after consultation save response', () {
+    final source = File(
+      'lib/features/dashboard/data/consultation_api.dart',
+    ).readAsStringSync();
+
+    final saveResponse = source.indexOf('final saved = ConsultationNote.fromJson');
+    final consume = source.indexOf("realtime-intake/consume", saveResponse);
+    expect(saveResponse, greaterThanOrEqualTo(0));
+    expect(consume, greaterThan(saveResponse));
+  });
+
+  test('final review rebuilds from durable transcript instead of stale session', () {
+    final source = File(
+      'lib/features/dashboard/application/clinical_voice_progressive_coordinator.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('Future<void> finishAndReview()');
+    final end = source.indexOf('Future<bool> clearAll()', start);
+    final finalization = source.substring(start, end);
+
+    expect(finalization, contains('await synchronizeNow()'));
+    expect(finalization, contains('await _captureGateway.rebuild('));
+    expect(finalization, isNot(contains('_aiGateway.getSession')));
+  });
+}
