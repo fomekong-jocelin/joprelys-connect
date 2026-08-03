@@ -1,10 +1,12 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:joprelys_mobile/features/dashboard/application/clinical_voice_state.dart';
 import 'package:joprelys_mobile/features/dashboard/data/clinical_transcript_draft_store.dart';
 
 void main() {
   group('clinical transcript draft codec', () {
-    test('round-trips segments, offsets and the live passage', () {
+    test('round-trips v3 segments, offsets and the live passage', () {
       final draft = ClinicalTranscriptDraft(
         segments: const <ClinicalTranscriptSegment>[
           ClinicalTranscriptSegment(
@@ -23,10 +25,13 @@ void main() {
         explicitlyCleared: false,
       );
 
-      final restored = decodeClinicalTranscriptDraft(
-        encodeClinicalTranscriptDraft(draft),
+      final encoded = encodeClinicalTranscriptDraft(draft);
+      final decoded = Map<String, dynamic>.from(
+        jsonDecode(encoded) as Map,
       );
+      final restored = decodeClinicalTranscriptDraft(encoded);
 
+      expect(decoded['version'], clinicalTranscriptDraftVersion);
       expect(restored.explicitlyCleared, isFalse);
       expect(restored.segments, hasLength(2));
       expect(restored.segments.first.id, 'segment-1');
@@ -50,6 +55,27 @@ void main() {
 
       expect(restored.hasContent, isFalse);
       expect(restored.explicitlyCleared, isTrue);
+    });
+
+    test('rejects a legacy v2 draft so stale text cannot be restored', () {
+      expect(
+        () => decodeClinicalTranscriptDraft(
+          jsonEncode(<String, Object?>{
+            'version': 2,
+            'explicitlyCleared': false,
+            'partialTranscript': '',
+            'partialOffsetMs': 0,
+            'segments': <Map<String, Object?>>[
+              <String, Object?>{
+                'id': 'old-segment',
+                'offsetMs': 0,
+                'text': 'Ancien transcript déjà appliqué',
+              },
+            ],
+          }),
+        ),
+        throwsFormatException,
+      );
     });
 
     test('rejects a non-object payload', () {
