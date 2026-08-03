@@ -10,7 +10,6 @@ import '../../../auth/application/auth_controller.dart';
 import '../../application/clinical_dictation_parser.dart';
 import '../../application/clinical_speech_service.dart';
 import '../../application/clinical_voice_progressive_coordinator.dart';
-import '../../application/clinical_voice_state.dart';
 import '../../data/clinical_voice_ai_api.dart';
 import '../../data/clinical_voice_capture_api.dart';
 import '../../domain/active_visit.dart';

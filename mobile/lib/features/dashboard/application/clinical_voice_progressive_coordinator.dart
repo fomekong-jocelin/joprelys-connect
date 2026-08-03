@@ -1,3 +1,5 @@
+// ignore_for_file: prefer_initializing_formals
+
 import 'dart:async';
 
 import '../data/clinical_voice_ai_api.dart';
@@ -6,8 +8,6 @@ import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
 import 'clinical_dictation_parser.dart';
 import 'clinical_speech_service.dart';
-import 'clinical_voice_error_message.dart';
-import 'clinical_voice_state.dart';
 
 /// Coordinates the non-blocking mobile voice pipeline:
 ///
