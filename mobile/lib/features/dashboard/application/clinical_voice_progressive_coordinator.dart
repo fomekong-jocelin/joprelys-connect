@@ -47,6 +47,7 @@ final class ClinicalVoiceProgressiveCoordinator {
   Future<void> _serial = Future<void>.value();
   Timer? _syncTimer;
   String _lastObservedFingerprint = '';
+  bool _sessionReady = false;
   bool _started = false;
   bool _disposed = false;
 
@@ -59,15 +60,17 @@ final class ClinicalVoiceProgressiveCoordinator {
     _scheduleSync();
   }
 
-  Future<void> synchronizeNow() async {
+  Future<bool> synchronizeNow() async {
     _syncTimer?.cancel();
-    await _enqueue(_synchronizeCurrentSegments);
+    return _enqueue(_synchronizeCurrentSegments);
   }
 
   Future<void> finishAndReview() async {
     if (_disposed) return;
-    await synchronizeNow();
-    if (_disposed || !_speechService.value.hasTranscript) return;
+    final synchronized = await synchronizeNow();
+    if (!synchronized || _disposed || !_speechService.value.hasTranscript) {
+      return;
+    }
 
     final current = _speechService.value;
     _speechService.value = current.copyWith(
@@ -84,9 +87,11 @@ final class ClinicalVoiceProgressiveCoordinator {
         _initialDraft,
         locale: _locale,
       );
+      _sessionReady = true;
       if (_disposed) return;
       _applyAiState(state, finalReview: true);
     } catch (error) {
+      _sessionReady = false;
       if (_disposed) return;
       _speechService.value = _speechService.value.copyWith(
         status: SpeechStatus.transcriptReview,
@@ -99,27 +104,32 @@ final class ClinicalVoiceProgressiveCoordinator {
 
   Future<bool> clearAll() async {
     if (_disposed) return false;
-    try {
-      await _enqueue(() async {
-        await _captureGateway.discardAll(_visitId);
-        await _captureGateway.deleteSession(_visitId);
-        _remoteBySegmentId.clear();
-        _syncedTextBySegmentId.clear();
-      });
-      if (_disposed) return false;
-      return _speechService.clearTranscript();
-    } catch (error) {
-      if (!_disposed) _publishSynchronizationFailure(error);
-      return false;
-    }
+    final remoteCleared = await _enqueue(() async {
+      await _captureGateway.discardAll(_visitId);
+      await _captureGateway.deleteSession(_visitId);
+      _sessionReady = false;
+      _remoteBySegmentId.clear();
+      _syncedTextBySegmentId.clear();
+    });
+    if (!remoteCleared || _disposed) return false;
+    return _speechService.clearTranscript();
   }
 
-  Future<void> completeCapture() async {
-    if (_disposed) return;
-    await synchronizeNow();
-    await _captureGateway.consume(_visitId);
-    await _captureGateway.deleteSession(_visitId);
-    await _speechService.completeCapture();
+  /// Seals the assistant result locally but deliberately keeps durable intake rows
+  /// recoverable until the consultation itself has been saved successfully.
+  Future<bool> completeCapture() async {
+    if (_disposed) return false;
+    final synchronized = await synchronizeNow();
+    if (!synchronized || _disposed) return false;
+    try {
+      await _captureGateway.deleteSession(_visitId);
+      _sessionReady = false;
+      await _speechService.completeCapture();
+      return true;
+    } catch (error) {
+      _publishSynchronizationFailure(error);
+      return false;
+    }
   }
 
   void dispose() {
@@ -181,12 +191,9 @@ final class ClinicalVoiceProgressiveCoordinator {
     }
 
     await _captureGateway.deleteSession(_visitId);
+    _sessionReady = false;
     if (active.isEmpty) {
-      await _aiGateway.startSession(
-        _visitId,
-        _initialDraft,
-        locale: _locale,
-      );
+      await _ensureSessionReady();
       return;
     }
 
@@ -195,7 +202,19 @@ final class ClinicalVoiceProgressiveCoordinator {
       _initialDraft,
       locale: _locale,
     );
+    _sessionReady = true;
     if (!_disposed) _applyAiState(rebuilt, finalReview: false);
+  }
+
+  Future<void> _ensureSessionReady() async {
+    if (_sessionReady) return;
+    await _captureGateway.deleteSession(_visitId);
+    await _aiGateway.startSession(
+      _visitId,
+      _initialDraft,
+      locale: _locale,
+    );
+    _sessionReady = true;
   }
 
   Future<void> _synchronizeCurrentSegments() async {
@@ -238,6 +257,7 @@ final class ClinicalVoiceProgressiveCoordinator {
         _remoteBySegmentId[segment.id] = intake;
         _syncedTextBySegmentId[segment.id] = text;
 
+        await _ensureSessionReady();
         final progressive = await _captureGateway.analyzeProgressiveSegment(
           _visitId,
           eventId: eventId,
@@ -265,6 +285,7 @@ final class ClinicalVoiceProgressiveCoordinator {
         _initialDraft,
         locale: _locale,
       );
+      _sessionReady = true;
       if (!_disposed) _applyAiState(rebuilt, finalReview: false);
     } else if (segments.isEmpty) {
       _clearAiPreview();
@@ -337,19 +358,20 @@ final class ClinicalVoiceProgressiveCoordinator {
     );
   }
 
-  Future<void> _enqueue(Future<void> Function() operation) {
-    final completer = Completer<void>();
+  Future<bool> _enqueue(Future<void> Function() operation) {
+    final completer = Completer<bool>();
     _serial = _serial.then((_) async {
       if (_disposed) {
-        completer.complete();
+        completer.complete(false);
         return;
       }
       try {
         await operation();
-        completer.complete();
-      } catch (error, stackTrace) {
+        completer.complete(true);
+      } catch (error) {
+        _sessionReady = false;
         _publishSynchronizationFailure(error);
-        completer.completeError(error, stackTrace);
+        completer.complete(false);
       }
     });
     return completer.future;
