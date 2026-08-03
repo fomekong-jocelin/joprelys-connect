@@ -140,8 +140,7 @@ final class ClinicalVoiceProgressiveCoordinator {
   }
 
   void _onSpeechChanged() {
-    if (_disposed ||
-        _speechService.value.stage != ClinicalVoiceStage.capture) {
+    if (_disposed || _speechService.value.stage != ClinicalVoiceStage.capture) {
       return;
     }
     final fingerprint = _fingerprint(_speechService.value.segments);
@@ -209,17 +208,12 @@ final class ClinicalVoiceProgressiveCoordinator {
   Future<void> _ensureSessionReady() async {
     if (_sessionReady) return;
     await _captureGateway.deleteSession(_visitId);
-    await _aiGateway.startSession(
-      _visitId,
-      _initialDraft,
-      locale: _locale,
-    );
+    await _aiGateway.startSession(_visitId, _initialDraft, locale: _locale);
     _sessionReady = true;
   }
 
   Future<void> _synchronizeCurrentSegments() async {
-    if (_disposed ||
-        _speechService.value.stage != ClinicalVoiceStage.capture) {
+    if (_disposed || _speechService.value.stage != ClinicalVoiceStage.capture) {
       return;
     }
     final segments = List<ClinicalTranscriptSegment>.from(

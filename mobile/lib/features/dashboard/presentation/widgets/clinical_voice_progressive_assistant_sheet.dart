@@ -432,9 +432,7 @@ class _CaptureBody extends StatelessWidget {
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
               decoration: BoxDecoration(
                 color: colors.surface,
-                border: Border(
-                  top: BorderSide(color: colors.outlineVariant),
-                ),
+                border: Border(top: BorderSide(color: colors.outlineVariant)),
               ),
               child: Column(
                 children: [
@@ -443,8 +441,7 @@ class _CaptureBody extends StatelessWidget {
                     icon: Icons.auto_awesome_rounded,
                     expand: true,
                     loading: processing,
-                    onPressed:
-                        processing || state.isSynchronizingTranscript
+                    onPressed: processing || state.isSynchronizingTranscript
                         ? null
                         : onFinalize,
                   ),
@@ -659,10 +656,9 @@ class _SyncNotice extends StatelessWidget {
         Expanded(
           child: Text(
             text,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: color,
-              height: 1.35,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: color, height: 1.35),
           ),
         ),
       ],

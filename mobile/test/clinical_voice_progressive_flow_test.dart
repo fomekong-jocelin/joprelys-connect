@@ -50,21 +50,21 @@ void main() {
     expect(source, contains('ClinicalVoiceProgressivePreview(state: state)'));
   });
 
-  test('consultation entry point uses the progressive assistant with clean SOAP', () {
-    final source = File(
-      'lib/features/dashboard/presentation/widgets/consultation_notes_sheet.dart',
-    ).readAsStringSync();
-    final start = source.indexOf('void _launchAssistant()');
-    final end = source.indexOf('Future<void> _retryLoad()', start);
-    final launch = source.substring(start, end);
+  test(
+    'consultation entry point uses the progressive assistant with clean SOAP',
+    () {
+      final source = File(
+        'lib/features/dashboard/presentation/widgets/consultation_notes_sheet.dart',
+      ).readAsStringSync();
+      final start = source.indexOf('void _launchAssistant()');
+      final end = source.indexOf('Future<void> _retryLoad()', start);
+      final launch = source.substring(start, end);
 
-    expect(
-      launch,
-      contains('ClinicalVoiceProgressiveAssistantSheet.show('),
-    );
-    expect(launch, contains('initialDraft: const <String, String>{}'));
-    expect(launch, contains('applyAcceptedDraft(result.note)'));
-  });
+      expect(launch, contains('ClinicalVoiceProgressiveAssistantSheet.show('));
+      expect(launch, contains('initialDraft: const <String, String>{}'));
+      expect(launch, contains('applyAcceptedDraft(result.note)'));
+    },
+  );
 
   test('vitals entry point uses the same progressive capture pipeline', () {
     final source = File(
@@ -74,24 +74,26 @@ void main() {
     final end = source.indexOf('int _applyAcceptedVitals', start);
     final launch = source.substring(start, end);
 
-    expect(
-      launch,
-      contains('ClinicalVoiceProgressiveAssistantSheet.show('),
-    );
+    expect(launch, contains('ClinicalVoiceProgressiveAssistantSheet.show('));
     expect(launch, contains("'vitals': jsonEncode(current.toJson())"));
     expect(launch, contains('_applyAcceptedVitals(result.vitals)'));
   });
 
-  test('voice working set is consumed only after consultation save response', () {
-    final source = File(
-      'lib/features/dashboard/data/consultation_api.dart',
-    ).readAsStringSync();
+  test(
+    'voice working set is consumed only after consultation save response',
+    () {
+      final source = File(
+        'lib/features/dashboard/data/consultation_api.dart',
+      ).readAsStringSync();
 
-    final saveResponse = source.indexOf('final saved = ConsultationNote.fromJson');
-    final consume = source.indexOf('realtime-intake/consume', saveResponse);
-    expect(saveResponse, greaterThanOrEqualTo(0));
-    expect(consume, greaterThan(saveResponse));
-  });
+      final saveResponse = source.indexOf(
+        'final saved = ConsultationNote.fromJson',
+      );
+      final consume = source.indexOf('realtime-intake/consume', saveResponse);
+      expect(saveResponse, greaterThanOrEqualTo(0));
+      expect(consume, greaterThan(saveResponse));
+    },
+  );
 
   test('voice working set is consumed only after vitals save response', () {
     final source = File(
@@ -104,16 +106,19 @@ void main() {
     expect(consume, greaterThan(saveResponse));
   });
 
-  test('final review rebuilds from durable transcript instead of stale session', () {
-    final source = File(
-      'lib/features/dashboard/application/clinical_voice_progressive_coordinator.dart',
-    ).readAsStringSync();
-    final start = source.indexOf('Future<void> finishAndReview()');
-    final end = source.indexOf('Future<bool> clearAll()', start);
-    final finalization = source.substring(start, end);
+  test(
+    'final review rebuilds from durable transcript instead of stale session',
+    () {
+      final source = File(
+        'lib/features/dashboard/application/clinical_voice_progressive_coordinator.dart',
+      ).readAsStringSync();
+      final start = source.indexOf('Future<void> finishAndReview()');
+      final end = source.indexOf('Future<bool> clearAll()', start);
+      final finalization = source.substring(start, end);
 
-    expect(finalization, contains('await synchronizeNow()'));
-    expect(finalization, contains('await _captureGateway.rebuild('));
-    expect(finalization, isNot(contains('_aiGateway.getSession')));
-  });
+      expect(finalization, contains('await synchronizeNow()'));
+      expect(finalization, contains('await _captureGateway.rebuild('));
+      expect(finalization, isNot(contains('_aiGateway.getSession')));
+    },
+  );
 }

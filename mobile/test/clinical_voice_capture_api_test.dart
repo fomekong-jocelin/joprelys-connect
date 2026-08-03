@@ -12,10 +12,7 @@ void main() {
   test('restores the active durable transcript working set', () async {
     final adapter = QueueHttpClientAdapter((options, _) {
       expect(options.method, 'GET');
-      expect(
-        options.path,
-        '/api/ai/consultations/visit-123/realtime-intake',
-      );
+      expect(options.path, '/api/ai/consultations/visit-123/realtime-intake');
       return ResponseBody.fromString(
         jsonEncode(<Map<String, dynamic>>[
           intakeJson(),
@@ -42,10 +39,7 @@ void main() {
       requestIndex++;
       if (requestIndex == 1) {
         expect(options.method, 'POST');
-        expect(
-          options.path,
-          '/api/ai/consultations/visit-123/realtime-intake',
-        );
+        expect(options.path, '/api/ai/consultations/visit-123/realtime-intake');
         final body = Map<String, dynamic>.from(options.data as Map);
         expect(body['eventId'], 'mobile-segment-1');
         expect(body['itemId'], 'segment-1');
@@ -55,10 +49,7 @@ void main() {
       }
 
       expect(options.method, 'POST');
-      expect(
-        options.path,
-        '/api/ai/consultations/visit-123/messages/realtime',
-      );
+      expect(options.path, '/api/ai/consultations/visit-123/messages/realtime');
       final body = Map<String, dynamic>.from(options.data as Map);
       expect(body['eventId'], 'mobile-segment-1');
       expect(body['confidence'], 1.0);
@@ -79,36 +70,34 @@ void main() {
     );
 
     expect(intake.transcript, 'Le patient tousse depuis trois jours');
-    expect(state.noteFrom().symptoms, 'Le patient rapporte une toux depuis trois jours');
+    expect(
+      state.noteFrom().symptoms,
+      'Le patient rapporte une toux depuis trois jours',
+    );
     expect(adapter.requests, hasLength(2));
   });
 
   test('rebuilds the authoritative final draft from durable intake', () async {
     final adapter = QueueHttpClientAdapter((options, _) {
       expect(options.method, 'POST');
-      expect(
-        options.path,
-        '/api/ai/consultations/visit-123/capture/rebuild',
-      );
-      expect(
-        Map<String, dynamic>.from(options.data as Map),
-        <String, dynamic>{
-          'draft': const <String, String>{},
-          'locale': 'fr',
-        },
-      );
+      expect(options.path, '/api/ai/consultations/visit-123/capture/rebuild');
+      expect(Map<String, dynamic>.from(options.data as Map), <String, dynamic>{
+        'draft': const <String, String>{},
+        'locale': 'fr',
+      });
       return jsonResponse(200, sessionViewJson());
     });
 
-    final state = await buildApi(adapter).rebuild(
-      'visit-123',
-      const <String, String>{},
-      locale: 'fr',
-    );
+    final state = await buildApi(
+      adapter,
+    ).rebuild('visit-123', const <String, String>{}, locale: 'fr');
 
     expect(state.sessionId, 'session-123');
     expect(state.transcriptStatus, 'ANALYZED');
-    expect(state.noteFrom().symptoms, 'Le patient rapporte une toux depuis trois jours');
+    expect(
+      state.noteFrom().symptoms,
+      'Le patient rapporte une toux depuis trois jours',
+    );
   });
 
   test('consumes the durable working set only after clinical save', () async {
@@ -172,7 +161,8 @@ Map<String, dynamic> messageViewJson() {
       'symptoms': 'Le patient rapporte une toux depuis trois jours',
     },
     'changedFields': const <String>['symptoms'],
-    'assistantMessage': 'Transcription conservée et brouillon de travail mis à jour.',
+    'assistantMessage':
+        'Transcription conservée et brouillon de travail mis à jour.',
     'needsClarification': false,
     'conversation': const <Object>[],
     'clarifications': const <Object>[],

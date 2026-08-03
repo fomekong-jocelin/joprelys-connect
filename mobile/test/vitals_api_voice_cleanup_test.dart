@@ -10,32 +10,35 @@ import 'package:joprelys_mobile/features/dashboard/domain/patient_vitals.dart';
 import 'support/queue_http_client_adapter.dart';
 
 void main() {
-  test('consumes voice intake only after vitals persistence succeeds', () async {
-    var requestIndex = 0;
-    final adapter = QueueHttpClientAdapter((options, _) {
-      requestIndex++;
-      if (requestIndex == 1) {
+  test(
+    'consumes voice intake only after vitals persistence succeeds',
+    () async {
+      var requestIndex = 0;
+      final adapter = QueueHttpClientAdapter((options, _) {
+        requestIndex++;
+        if (requestIndex == 1) {
+          expect(options.method, 'POST');
+          expect(options.path, '/api/visits/visit-123/vitals');
+          return jsonResponse(200, vitalsJson());
+        }
         expect(options.method, 'POST');
-        expect(options.path, '/api/visits/visit-123/vitals');
-        return jsonResponse(200, vitalsJson());
-      }
-      expect(options.method, 'POST');
-      expect(
-        options.path,
-        '/api/ai/consultations/visit-123/realtime-intake/consume',
+        expect(
+          options.path,
+          '/api/ai/consultations/visit-123/realtime-intake/consume',
+        );
+        return ResponseBody.fromString('', 204);
+      });
+
+      final saved = await buildApi(adapter).saveVitals(
+        'visit-123',
+        const PatientVitals(temperature: 38.2, pulse: 92),
       );
-      return ResponseBody.fromString('', 204);
-    });
 
-    final saved = await buildApi(adapter).saveVitals(
-      'visit-123',
-      const PatientVitals(temperature: 38.2, pulse: 92),
-    );
-
-    expect(saved.temperature, 38.2);
-    expect(saved.pulse, 92);
-    expect(adapter.requests, hasLength(2));
-  });
+      expect(saved.temperature, 38.2);
+      expect(saved.pulse, 92);
+      expect(adapter.requests, hasLength(2));
+    },
+  );
 
   test('cleanup outage does not invalidate already saved vitals', () async {
     var requestIndex = 0;
@@ -60,10 +63,9 @@ void main() {
     );
 
     await expectLater(
-      buildApi(adapter).saveVitals(
-        'visit-123',
-        const PatientVitals(temperature: 38.2),
-      ),
+      buildApi(
+        adapter,
+      ).saveVitals('visit-123', const PatientVitals(temperature: 38.2)),
       throwsA(anything),
     );
     expect(adapter.requests, hasLength(1));

@@ -100,11 +100,12 @@ final class ClinicalVoiceCaptureApi implements ClinicalVoiceCaptureGateway {
     return data
         .whereType<Map>()
         .map(
-          (item) => ClinicalVoiceIntake.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
+          (item) =>
+              ClinicalVoiceIntake.fromJson(Map<String, dynamic>.from(item)),
         )
-        .where((item) => item.id.isNotEmpty && item.transcript.trim().isNotEmpty)
+        .where(
+          (item) => item.id.isNotEmpty && item.transcript.trim().isNotEmpty,
+        )
         .toList(growable: false);
   }
 
