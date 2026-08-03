@@ -24,7 +24,7 @@ on:
         type: boolean
 
 permissions:
-  contents: write
+  contents: read
   pull-requests: read
 
 concurrency:
@@ -32,39 +32,6 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  mobile-format-autofix:
-    name: Mobile — Normalize hotfix formatting
-    if: ${{ github.event_name == 'pull_request' && github.event.action == 'ready_for_review' && github.event.pull_request.head.ref == 'fix/mobile-clinical-voice-progressive-sync' }}
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - name: Checkout hotfix branch
-        uses: actions/checkout@v4
-        with:
-          ref: ${{ github.event.pull_request.head.ref }}
-          fetch-depth: 0
-      - name: Set up Flutter 3.44.6
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.6'
-          channel: 'stable'
-          cache: true
-      - name: Normalize Dart sources and tests
-        working-directory: mobile
-        run: dart format lib test
-      - name: Commit normalized sources
-        shell: bash
-        run: |
-          if git diff --quiet -- mobile; then
-            echo "Dart sources are already normalized."
-            exit 0
-          fi
-          git config user.name "Joprelys CI"
-          git config user.email "actions@users.noreply.github.com"
-          git add mobile
-          git commit -m "style(mobile): apply Dart formatter"
-          git push origin HEAD:${{ github.event.pull_request.head.ref }}
-
   pr-gate-freshness:
     name: PR gate freshness
     if: ${{ github.event_name == 'pull_request' && github.event.action == 'synchronize' && github.event.pull_request.draft == false }}
