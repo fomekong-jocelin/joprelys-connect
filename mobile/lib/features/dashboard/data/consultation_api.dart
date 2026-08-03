@@ -52,6 +52,18 @@ final class ConsultationApi implements ConsultationGateway {
     if (data is! Map) {
       throw const FormatException('Invalid save consultation note response');
     }
-    return ConsultationNote.fromJson(Map<String, dynamic>.from(data));
+    final saved = ConsultationNote.fromJson(Map<String, dynamic>.from(data));
+
+    // The durable voice working set remains recoverable until the clinical note
+    // itself is saved. Cleanup is deliberately best-effort: a cleanup outage must
+    // never make the UI report that an already persisted consultation has failed.
+    try {
+      await _client.post<void>(
+        '/api/ai/consultations/$visitId/realtime-intake/consume',
+      );
+    } catch (_) {
+      // A later save or explicit clear retries cleanup; clinical persistence wins.
+    }
+    return saved;
   }
 }
