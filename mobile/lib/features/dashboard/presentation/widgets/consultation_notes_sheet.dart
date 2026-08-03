@@ -8,7 +8,7 @@ import '../../../../shared/widgets/app_button.dart';
 import '../../data/consultation_api.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
-import 'clinical_voice_assistant_sheet.dart';
+import 'clinical_voice_progressive_assistant_sheet.dart';
 import 'consultation_note_form_controllers.dart';
 import 'consultation_notes_form.dart';
 import 'consultation_notes_header.dart';
@@ -114,7 +114,7 @@ class _ConsultationNotesSheetState
   }
 
   void _launchAssistant() {
-    ClinicalVoiceAssistantSheet.show(
+    ClinicalVoiceProgressiveAssistantSheet.show(
       context,
       visit: widget.visit,
       initialDraft: const <String, String>{},
