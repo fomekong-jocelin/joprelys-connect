@@ -228,11 +228,15 @@ class _ClinicalVoiceProgressiveAssistantSheetState
     );
     if (confirmed != true || !mounted) return;
 
-    widget.onExtracted(
-      DictationParseResult(vitals: state.vitals, note: state.note),
+    final result = DictationParseResult(
+      vitals: state.vitals,
+      note: state.note,
     );
-    await _coordinator.completeCapture();
-    if (mounted) Navigator.of(context).pop();
+    final completed = await _coordinator.completeCapture();
+    if (!completed || !mounted) return;
+
+    widget.onExtracted(result);
+    Navigator.of(context).pop();
   }
 
   void _returnToCapture() {
