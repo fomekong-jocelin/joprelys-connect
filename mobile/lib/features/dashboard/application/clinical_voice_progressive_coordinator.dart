@@ -121,15 +121,24 @@ final class ClinicalVoiceProgressiveCoordinator {
     if (_disposed) return false;
     final synchronized = await synchronizeNow();
     if (!synchronized || _disposed) return false;
+
     try {
-      await _captureGateway.deleteSession(_visitId);
-      _sessionReady = false;
       await _speechService.completeCapture();
-      return true;
     } catch (error) {
       _publishSynchronizationFailure(error);
       return false;
     }
+
+    // The recoverable local draft must already be gone before the result is
+    // applied to a form. Session cleanup is secondary and will be retried on the
+    // next assistant opening if the backend is temporarily unavailable.
+    try {
+      await _captureGateway.deleteSession(_visitId);
+      _sessionReady = false;
+    } catch (_) {
+      _sessionReady = false;
+    }
+    return true;
   }
 
   void dispose() {
