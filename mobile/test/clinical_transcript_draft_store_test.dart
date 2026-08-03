@@ -26,9 +26,7 @@ void main() {
       );
 
       final encoded = encodeClinicalTranscriptDraft(draft);
-      final decoded = Map<String, dynamic>.from(
-        jsonDecode(encoded) as Map,
-      );
+      final decoded = Map<String, dynamic>.from(jsonDecode(encoded) as Map);
       final restored = decodeClinicalTranscriptDraft(encoded);
 
       expect(decoded['version'], clinicalTranscriptDraftVersion);

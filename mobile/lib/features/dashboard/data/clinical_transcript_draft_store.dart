@@ -44,7 +44,9 @@ final class ClinicalTranscriptDraft {
   factory ClinicalTranscriptDraft.fromJson(Map<String, dynamic> json) {
     final version = int.tryParse(json['version']?.toString() ?? '');
     if (version != clinicalTranscriptDraftVersion) {
-      throw const FormatException('Unsupported clinical transcript draft version');
+      throw const FormatException(
+        'Unsupported clinical transcript draft version',
+      );
     }
 
     final rawSegments = json['segments'];

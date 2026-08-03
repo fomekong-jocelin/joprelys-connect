@@ -46,7 +46,9 @@ void main() {
       'lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sections.dart',
     ).readAsStringSync();
 
-    final initialize = orchestration.indexOf('await _speechService.initialize()');
+    final initialize = orchestration.indexOf(
+      'await _speechService.initialize()',
+    );
     final coordinator = orchestration.indexOf('await _coordinator.start()');
     expect(initialize, greaterThanOrEqualTo(0));
     expect(coordinator, greaterThan(initialize));

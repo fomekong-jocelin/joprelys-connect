@@ -228,10 +228,7 @@ class _ClinicalVoiceProgressiveAssistantSheetState
     );
     if (confirmed != true || !mounted) return;
 
-    final result = DictationParseResult(
-      vitals: state.vitals,
-      note: state.note,
-    );
+    final result = DictationParseResult(vitals: state.vitals, note: state.note);
     final completed = await _coordinator.completeCapture();
     if (!completed || !mounted) return;
 
