@@ -78,7 +78,7 @@ class AiClinicalReformulationContractTest {
         assertTrue(AiClinicalFidelityContract.SYSTEM_INSTRUCTION.contains(
                 "must preserve every clinical fact"));
         assertTrue(AiClinicalFidelityContract.SYSTEM_INSTRUCTION.contains(
-                "exact quotes copied from the CURRENT input"));
+                "EXACT quotes copied from the CURRENT input"));
         assertTrue(AiClinicalCapturePrompt.SYSTEM_PROMPT.contains(
                 "concise professional clinical sentences"));
         assertTrue(AiClinicalCapturePrompt.SYSTEM_PROMPT.contains(
