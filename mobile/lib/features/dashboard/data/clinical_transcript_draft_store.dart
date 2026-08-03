@@ -5,6 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../application/clinical_voice_state.dart';
 
+const int clinicalTranscriptDraftVersion = 3;
+
 @immutable
 final class ClinicalTranscriptDraft {
   const ClinicalTranscriptDraft({
@@ -24,7 +26,7 @@ final class ClinicalTranscriptDraft {
       partialTranscript.trim().isNotEmpty;
 
   Map<String, Object?> toJson() => <String, Object?>{
-    'version': 2,
+    'version': clinicalTranscriptDraftVersion,
     'explicitlyCleared': explicitlyCleared,
     'partialTranscript': partialTranscript,
     'partialOffsetMs': partialOffset.inMilliseconds,
@@ -40,6 +42,11 @@ final class ClinicalTranscriptDraft {
   };
 
   factory ClinicalTranscriptDraft.fromJson(Map<String, dynamic> json) {
+    final version = int.tryParse(json['version']?.toString() ?? '');
+    if (version != clinicalTranscriptDraftVersion) {
+      throw const FormatException('Unsupported clinical transcript draft version');
+    }
+
     final rawSegments = json['segments'];
     final segments = <ClinicalTranscriptSegment>[];
     if (rawSegments is List) {
@@ -100,13 +107,24 @@ final class SecureClinicalTranscriptDraftStore
     this._storage = const FlutterSecureStorage(),
   });
 
-  static const String _keyPrefix = 'joprelys.clinical-voice.draft.v2.';
+  static const String _keyPrefix = 'joprelys.clinical-voice.draft.v3.';
+  static const String _legacyKeyPrefix = 'joprelys.clinical-voice.draft.v2.';
   final FlutterSecureStorage _storage;
 
   String _key(String visitId) => '$_keyPrefix${visitId.trim()}';
+  String _legacyKey(String visitId) => '$_legacyKeyPrefix${visitId.trim()}';
 
   @override
   Future<ClinicalTranscriptDraft?> read(String visitId) async {
+    // v2 drafts were written by the former stop-then-analyze lifecycle and may
+    // already represent an applied or rejected dictation. They are deliberately
+    // invalidated instead of being re-injected into the new durable v3 pipeline.
+    try {
+      await _storage.delete(key: _legacyKey(visitId));
+    } catch (_) {
+      // Legacy cleanup is best-effort; current-draft recovery remains available.
+    }
+
     final encoded = await _storage.read(key: _key(visitId));
     if (encoded == null || encoded.trim().isEmpty) return null;
     try {
