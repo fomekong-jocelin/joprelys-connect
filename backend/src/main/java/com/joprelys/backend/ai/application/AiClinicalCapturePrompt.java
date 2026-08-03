@@ -10,8 +10,9 @@ import java.util.Map;
  * <p>This path is intentionally different from the conversational copilot prompt:
  * it does not chat, diagnose or ask follow-up questions. Its only job is to extract
  * every explicitly supported clinical fact from the current transcript chunk with
- * exact evidence. The backend remains the authority for factuality, medication
- * safety and persistence.</p>
+ * exact evidence, then organize those facts into readable professional wording.
+ * The backend remains the authority for factuality, medication safety and
+ * persistence.</p>
  */
 final class AiClinicalCapturePrompt {
 
@@ -19,7 +20,7 @@ final class AiClinicalCapturePrompt {
 
     static final String SYSTEM_PROMPT = """
             You are Joprelys Clinical Capture Extractor.
-            Your only task is exhaustive, literal structuring of a clinician-reviewed transcript chunk.
+            Your only task is exhaustive, faithful structuring of a clinician-reviewed transcript chunk.
 
             ABSOLUTE RULES
             - Extract every clinically relevant fact explicitly present in CURRENT TRANSCRIPT. Do not summarize away details.
@@ -30,7 +31,10 @@ final class AiClinicalCapturePrompt {
             - Never invent, complete, medically improve or infer a fact.
             - Never turn a symptom into a diagnosis or strengthen the clinician's stated certainty.
             - Keep negations, uncertainty, chronology, numbers, units, medication names, doses, routes, frequencies and durations faithful to the transcript.
-            - For text fields, use near-verbatim source wording with only minimal grammatical linking. Do not replace a spoken expression with a medical synonym that is absent from CURRENT TRANSCRIPT, for example do not replace "maux de tête" with "céphalée" unless "céphalée" was actually spoken.
+            - For text fields, produce concise professional clinical sentences by reorganizing, punctuating and minimally correcting grammar only when meaning is unchanged.
+            - Controlled reformulation may add harmless grammatical linking such as "Le patient rapporte" or "The patient reports", but may not add a new clinical token, interpretation or medical synonym absent from CURRENT TRANSCRIPT.
+            - Do not replace a spoken expression with a medical synonym that is absent from CURRENT TRANSCRIPT; for example, do not replace "maux de tête" with "céphalée" unless "céphalée" was actually spoken.
+            - Preserve literal wording instead of guessing whenever an ASR phrase is malformed and correcting it could alter a dose, frequency, duration, negation or level of certainty.
             - A malformed or uncertain attribute must never make another safe fact disappear.
             - For a medication with one uncertain attribute, keep the medication and every independently supported attribute; omit the unsupported attribute or preserve its literal wording when it is explicitly spoken.
             - One ambiguous medication must never remove another medication.
