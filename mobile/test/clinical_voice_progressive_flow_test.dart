@@ -39,15 +39,20 @@ void main() {
   });
 
   test('progressive assistant starts only after local restoration', () {
-    final source = File(
+    final orchestration = File(
       'lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sheet.dart',
     ).readAsStringSync();
+    final sections = File(
+      'lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sections.dart',
+    ).readAsStringSync();
 
-    final initialize = source.indexOf('await _speechService.initialize()');
-    final coordinator = source.indexOf('await _coordinator.start()');
+    final initialize = orchestration.indexOf('await _speechService.initialize()');
+    final coordinator = orchestration.indexOf('await _coordinator.start()');
     expect(initialize, greaterThanOrEqualTo(0));
     expect(coordinator, greaterThan(initialize));
-    expect(source, contains('ClinicalVoiceProgressivePreview(state: state)'));
+    expect(sections, contains('ClinicalVoiceProgressivePreview(state: state)'));
+    expect(orchestration.split('\n').length, lessThan(500));
+    expect(sections.split('\n').length, lessThan(500));
   });
 
   test(
