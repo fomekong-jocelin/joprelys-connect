@@ -75,7 +75,8 @@ void main() {
 
       await api.saveConsultationNote('visit-123', note);
 
-      final request = adapter.requests.single;
+      expect(adapter.requests, hasLength(2));
+      final request = adapter.requests.first;
       final requestData = Map<String, dynamic>.from(request.data as Map);
       expect(request.method, 'POST');
       expect(request.path, '/api/visits/visit-123/consultation');
@@ -86,6 +87,10 @@ void main() {
       expect(requestData.containsKey('finalDiagnosis'), isFalse);
       expect(requestData.containsKey('subjective'), isFalse);
       expect(requestData.containsKey('plan'), isFalse);
+      expect(
+        adapter.requests.last.path,
+        '/api/ai/consultations/visit-123/realtime-intake/consume',
+      );
     });
 
     test('does not hide a true 404 as an absent consultation', () async {

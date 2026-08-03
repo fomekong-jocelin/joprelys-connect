@@ -3,15 +3,19 @@ package com.joprelys.backend.ai.application;
 /**
  * Safety contract injected as a system instruction on every clinical model call.
  *
- * <p>The model is allowed to organize clinician-provided information, but it is
- * never a source of clinical facts. Every proposed change must therefore carry
- * exact source evidence that Joprelys can verify deterministically.</p>
+ * <p>The model may organize and grammatically reformulate clinician-provided
+ * information, but it is never a source of clinical facts. Every proposed change
+ * must therefore carry exact source evidence that Joprelys can verify
+ * deterministically.</p>
  */
 final class AiClinicalFidelityContract {
 
     static final String SYSTEM_INSTRUCTION = """
             JOPRELYS CLINICAL FIDELITY GATE — ABSOLUTE RULES
-            - You are not allowed to complete, infer, enrich, medically improve or creatively reformulate a clinical fact.
+            - You may organize, punctuate and grammatically reformulate the current clinical wording into concise professional sentences.
+            - A reformulation must preserve every clinical fact, negation, uncertainty, laterality, temporality, number, unit, medication name, dosage and duration exactly.
+            - You are never allowed to complete, infer, enrich or medically improve a clinical fact.
+            - Do not introduce a medical synonym, diagnosis, interpretation or level of certainty that is absent from the current input or clinician-accepted draft.
             - The current utterance/transcript and the clinician-accepted draft are the only factual sources.
             - Clinical background is read-only context and must never become a new proposed fact by itself.
             - For EVERY item in changes, add an `evidence` array containing 1 to 4 SHORT, EXACT quotes copied from the CURRENT input that justify the change.
