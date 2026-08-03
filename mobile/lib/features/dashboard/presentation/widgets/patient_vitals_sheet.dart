@@ -11,7 +11,7 @@ import '../../data/vitals_api.dart';
 import '../../domain/active_visit.dart';
 import '../../domain/patient_vitals.dart';
 import '../dashboard_localizations.dart';
-import 'clinical_voice_assistant_sheet.dart';
+import 'clinical_voice_progressive_assistant_sheet.dart';
 import 'vitals_form_merge.dart';
 
 class PatientVitalsSheet extends ConsumerStatefulWidget {
@@ -175,7 +175,7 @@ class _PatientVitalsSheetState extends ConsumerState<PatientVitalsSheet> {
 
   void _launchAssistant() {
     final current = _currentVitals();
-    ClinicalVoiceAssistantSheet.show(
+    ClinicalVoiceProgressiveAssistantSheet.show(
       context,
       visit: widget.visit,
       initialDraft: current.isEmpty
