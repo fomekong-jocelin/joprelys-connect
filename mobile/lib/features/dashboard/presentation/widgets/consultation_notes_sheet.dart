@@ -117,24 +117,25 @@ class _ConsultationNotesSheetState
     ClinicalVoiceProgressiveAssistantSheet.show(
       context,
       visit: widget.visit,
-      initialDraft: const <String, String>{},
+      initialDraft: _controllers.toAiDraft(),
       onExtracted: (result) {
-        final changed = _controllers.applyAcceptedDraft(result.note);
+        _controllers.applyAcceptedDraft(result.note);
         if (!mounted) return;
         setState(() {});
         final isFrench = Localizations.localeOf(context).languageCode != 'en';
+        final hasPrescriptions = result.note.prescriptions?.trim().isNotEmpty == true;
+        final hasLabOrders = result.note.labOrders?.trim().isNotEmpty == true;
+        final extras = [
+          if (hasPrescriptions) (isFrench ? 'ordonnance' : 'prescription'),
+          if (hasLabOrders) (isFrench ? 'examens' : 'lab orders'),
+        ];
+        final message = extras.isEmpty
+            ? (isFrench ? 'Notes SOAP mises à jour.' : 'SOAP notes updated.')
+            : (isFrench
+                  ? 'Notes SOAP mises à jour. À saisir séparément : ${extras.join(', ')}.'
+                  : 'SOAP notes updated. To enter separately: ${extras.join(', ')}.');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              changed
-                  ? (isFrench
-                        ? 'La nouvelle dictée a remplacé intégralement l’ancien SOAP.'
-                        : 'The new dictation fully replaced the previous SOAP note.')
-                  : (isFrench
-                        ? 'Le formulaire SOAP était déjà identique à la nouvelle dictée.'
-                        : 'The SOAP form already matched the new dictation.'),
-            ),
-          ),
+          SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
         );
       },
     );

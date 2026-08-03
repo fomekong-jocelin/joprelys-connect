@@ -225,6 +225,8 @@ final class ClinicalAiState {
       conclusion: _nonBlank(source['conclusion']),
       advice: _nonBlank(source['advice']),
       followUp: _nonBlank(source['followUp']),
+      prescriptions: _nonBlank(source['prescription']),
+      labOrders: _nonBlank(source['labOrders']),
     );
   }
 

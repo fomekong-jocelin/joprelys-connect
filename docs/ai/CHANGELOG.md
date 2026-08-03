@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260804 — Support ordonnances/examens, captation continue non-bloquante et chunking strict backend** :
+  - **Assistant IA Mobile** : ajout du support des prescriptions et examens complémentaires (`prescriptions` et `labOrders`) dans `ConsultationNote`, extrait par l'IA et affiché dans l'aperçu clinique `ClinicalAcceptedPreview`. Notification explicite du praticien si des ordonnances/examens sont détectés pour leur saisie dans les modules dédiés.
+  - **Performance Écoute** : passage de l'analyse progressive (`analyzeProgressiveSegment`) en mode non-bloquant (`unawaited`) dans `ClinicalVoiceProgressiveCoordinator` pour éviter tout blocage de la boucle de sérialisation audio.
+  - **Robustesse Backend** : refonte de `AiClinicalCaptureRebuildService` pour empêcher tout scindage arbitraire au milieu d'un segment (`splitLongText` supprimé).
+  - **SemVer** : correctif rétrocompatible candidat PATCH.
+
+
 - **BUG-20260802 — Fiabilisation end-to-end de l'assistant vocal mobile** :
   - **Diagnostic P0** : courses entre reprise Android et recovery, déduplication insuffisante des fenêtres ASR, restauration de transcripts `ANALYZED`, marqueur d'effacement ignoré et `eventId` backend inutilisé identifiés comme causes des répétitions, retours d'anciens textes et pertes aux frontières.
   - **Cible du correctif** : une seule écoute active, fusion bornée des replays récents, restauration limitée à `PENDING_REVIEW`, effacement durable, analyse realtime idempotente et working set Vitals filtré.

@@ -290,11 +290,13 @@ class ClinicalAcceptedPreview extends StatelessWidget {
   const ClinicalAcceptedPreview({
     required this.note,
     required this.vitals,
+    required this.isFrench,
     super.key,
   });
 
   final ConsultationNote note;
   final PatientVitals vitals;
+  final bool isFrench;
 
   @override
   Widget build(BuildContext context) {
@@ -311,13 +313,15 @@ class ClinicalAcceptedPreview extends StatelessWidget {
         VitalExtractPill(label: 'Pouls: ${vitals.pulse} bpm'),
       if (vitals.spo2 != null) VitalExtractPill(label: 'SpO2: ${vitals.spo2}%'),
     ];
-    final rows = <(String, String?)>[
-      (l10n.consultationSubjectiveLabel, note.symptoms),
-      (l10n.consultationObjectiveLabel, note.clinicalExam),
-      (l10n.consultationDiagnosisLabel, note.diagnosis),
-      (l10n.consultationConclusionLabel, note.conclusion),
-      (l10n.consultationAdviceLabel, note.advice),
-      (l10n.consultationFollowUpLabel, note.followUp),
+    final rows = <(String, String?, String)>[
+      (l10n.consultationSubjectiveLabel, note.symptoms, 'text'),
+      (l10n.consultationObjectiveLabel, note.clinicalExam, 'text'),
+      (l10n.consultationDiagnosisLabel, note.diagnosis, 'text'),
+      (l10n.consultationConclusionLabel, note.conclusion, 'text'),
+      (l10n.consultationAdviceLabel, note.advice, 'text'),
+      (l10n.consultationFollowUpLabel, note.followUp, 'text'),
+      ('Prescription', note.prescriptions, 'prescription'),
+      (isFrench ? 'Examens demandés' : 'Lab orders', note.labOrders, 'labOrders'),
     ];
 
     return Column(
@@ -336,7 +340,12 @@ class ClinicalAcceptedPreview extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 3),
-            Text(row.$2!, style: theme.textTheme.bodyMedium),
+            Text(
+              row.$3 == 'text'
+                  ? row.$2!
+                  : formatClinicalValue(row.$3, row.$2, isFrench: isFrench),
+              style: theme.textTheme.bodyMedium,
+            ),
             const SizedBox(height: 10),
           ],
       ],

@@ -58,7 +58,11 @@ class ClinicalVoiceProgressivePreview extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 10),
-          ClinicalAcceptedPreview(note: state.note, vitals: state.vitals),
+          ClinicalAcceptedPreview(
+            note: state.note,
+            vitals: state.vitals,
+            isFrench: Localizations.localeOf(context).languageCode != 'en',
+          ),
         ],
       ),
     );

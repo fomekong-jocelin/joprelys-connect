@@ -9,6 +9,8 @@ final class ConsultationNote {
     this.conclusion,
     this.advice,
     this.followUp,
+    this.prescriptions,
+    this.labOrders,
     this.updatedAt,
   });
 
@@ -20,6 +22,8 @@ final class ConsultationNote {
       conclusion: json['conclusion'] as String?,
       advice: json['advice'] as String?,
       followUp: json['followUp'] as String?,
+      prescriptions: json['prescriptions'] as String?,
+      labOrders: json['labOrders'] as String?,
       updatedAt: json['updatedAt'] != null
           ? DateTime.tryParse(json['updatedAt'] as String)
           : null,
@@ -32,6 +36,10 @@ final class ConsultationNote {
   final String? conclusion;
   final String? advice;
   final String? followUp;
+  /// JSON array string des médicaments prescrits (format prompt IA).
+  final String? prescriptions;
+  /// JSON array string des examens demandés.
+  final String? labOrders;
   final DateTime? updatedAt;
 
   bool get isEmpty =>
@@ -40,7 +48,9 @@ final class ConsultationNote {
       _isBlank(diagnosis) &&
       _isBlank(conclusion) &&
       _isBlank(advice) &&
-      _isBlank(followUp);
+      _isBlank(followUp) &&
+      _isBlank(prescriptions) &&
+      _isBlank(labOrders);
 
   Map<String, dynamic> toJson() {
     return {
@@ -50,6 +60,8 @@ final class ConsultationNote {
       if (conclusion != null) 'conclusion': conclusion,
       if (advice != null) 'advice': advice,
       if (followUp != null) 'followUp': followUp,
+      if (prescriptions != null) 'prescriptions': prescriptions,
+      if (labOrders != null) 'labOrders': labOrders,
     };
   }
 
@@ -60,6 +72,8 @@ final class ConsultationNote {
     String? conclusion,
     String? advice,
     String? followUp,
+    String? prescriptions,
+    String? labOrders,
     DateTime? updatedAt,
   }) {
     return ConsultationNote(
@@ -69,6 +83,8 @@ final class ConsultationNote {
       conclusion: conclusion ?? this.conclusion,
       advice: advice ?? this.advice,
       followUp: followUp ?? this.followUp,
+      prescriptions: prescriptions ?? this.prescriptions,
+      labOrders: labOrders ?? this.labOrders,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }

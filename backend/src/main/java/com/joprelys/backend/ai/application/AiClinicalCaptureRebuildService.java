@@ -91,43 +91,35 @@ public class AiClinicalCaptureRebuildService {
         return result;
     }
 
+    /**
+     * Regroupe les segments en chunks sans jamais couper un segment en deux.
+     * Un segment trop long pour tenir seul est envoyé dans son propre chunk.
+     */
     private List<String> chunks(List<IntakeView> capture) {
         List<String> result = new ArrayList<>();
         StringBuilder current = new StringBuilder();
         for (IntakeView item : capture) {
             String text = item.transcript() == null ? "" : item.transcript().trim();
             if (text.isBlank()) continue;
+            // Flush avant d'ajouter si le segment ferait déborder le chunk courant.
             if (current.length() > 0 && current.length() + 1 + text.length() > MAX_MODEL_CHUNK_CHARS) {
                 result.add(current.toString());
                 current.setLength(0);
             }
-            if (text.length() > MAX_MODEL_CHUNK_CHARS) {
-                flush(result, current);
-                splitLongText(result, text);
-                continue;
-            }
+            // Un segment plus grand que la limite est envoyé seul (jamais coupé).
             if (current.length() > 0) current.append('\n');
             current.append(text);
+            // Si le segment seul dépasse la limite, on le flush immédiatement.
+            if (current.length() >= MAX_MODEL_CHUNK_CHARS) {
+                result.add(current.toString());
+                current.setLength(0);
+            }
         }
         flush(result, current);
         if (result.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_CAPTURE_EMPTY");
         }
         return List.copyOf(result);
-    }
-
-    private void splitLongText(List<String> result, String text) {
-        int offset = 0;
-        while (offset < text.length()) {
-            int end = Math.min(text.length(), offset + MAX_MODEL_CHUNK_CHARS);
-            if (end < text.length()) {
-                int boundary = text.lastIndexOf(' ', end);
-                if (boundary > offset + MAX_MODEL_CHUNK_CHARS / 2) end = boundary;
-            }
-            result.add(text.substring(offset, end).trim());
-            offset = end;
-            while (offset < text.length() && Character.isWhitespace(text.charAt(offset))) offset++;
-        }
     }
 
     private void flush(List<String> result, StringBuilder current) {

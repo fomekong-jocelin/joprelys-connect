@@ -22,11 +22,6 @@ final class ConsultationNoteFormControllers {
   }
 
   /// Remplace le brouillon SOAP courant par le brouillon IA explicitement accepté.
-  ///
-  /// Le résultat transmis par l'assistant représente l'état SOAP complet construit
-  /// à partir du brouillon initial et des décisions du praticien. Les champs non
-  /// modifiés sont donc conservés dans ce résultat, tandis qu'une modification ou
-  /// un effacement accepté doit réellement remplacer l'ancienne valeur affichée.
   bool applyAcceptedDraft(ConsultationNote note) {
     var changed = false;
     changed = _replace(symptoms, note.symptoms) || changed;

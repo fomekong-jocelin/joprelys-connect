@@ -261,12 +261,23 @@ final class ClinicalVoiceProgressiveCoordinator {
         _syncedTextBySegmentId[segment.id] = text;
 
         await _ensureSessionReady();
-        final progressive = await _captureGateway.analyzeProgressiveSegment(
-          _visitId,
-          eventId: eventId,
-          transcript: text,
+        // Fire-and-forget: ne bloque pas _serial pour ne pas interrompre l'écoute.
+        final capturedEventId = eventId;
+        final capturedText = text;
+        unawaited(
+          _captureGateway
+              .analyzeProgressiveSegment(
+                _visitId,
+                eventId: capturedEventId,
+                transcript: capturedText,
+              )
+              .then((progressive) {
+                if (!_disposed) _applyAiState(progressive, finalReview: false);
+              })
+              .catchError((Object error) {
+                _publishSynchronizationFailure(error);
+              }),
         );
-        if (!_disposed) _applyAiState(progressive, finalReview: false);
         continue;
       }
 

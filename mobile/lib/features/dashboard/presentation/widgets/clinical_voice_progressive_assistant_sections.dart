@@ -215,7 +215,7 @@ class ClinicalVoiceProgressiveReviewBody extends StatelessWidget {
           ],
           if (!state.hasPendingProposals && state.hasApplicableResult) ...[
             const SizedBox(height: 18),
-            ClinicalAcceptedPreview(note: state.note, vitals: state.vitals),
+            ClinicalAcceptedPreview(note: state.note, vitals: state.vitals, isFrench: isFrench),
           ],
           if (state.needsClarification || !state.hasApplicableResult) ...[
             const SizedBox(height: 12),
