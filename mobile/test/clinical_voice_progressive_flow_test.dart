@@ -29,8 +29,9 @@ void main() {
 
     expect(
       failureHandling,
-      contains('current.status == SpeechStatus.listening ? null'),
+      contains('errorMessage: current.status == SpeechStatus.listening'),
     );
+    expect(failureHandling, contains('? null'));
     expect(
       failureHandling,
       contains('clearError: current.status == SpeechStatus.listening'),
@@ -65,13 +66,40 @@ void main() {
     expect(launch, contains('applyAcceptedDraft(result.note)'));
   });
 
+  test('vitals entry point uses the same progressive capture pipeline', () {
+    final source = File(
+      'lib/features/dashboard/presentation/widgets/patient_vitals_sheet.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('void _launchAssistant()');
+    final end = source.indexOf('int _applyAcceptedVitals', start);
+    final launch = source.substring(start, end);
+
+    expect(
+      launch,
+      contains('ClinicalVoiceProgressiveAssistantSheet.show('),
+    );
+    expect(launch, contains("'vitals': jsonEncode(current.toJson())"));
+    expect(launch, contains('_applyAcceptedVitals(result.vitals)'));
+  });
+
   test('voice working set is consumed only after consultation save response', () {
     final source = File(
       'lib/features/dashboard/data/consultation_api.dart',
     ).readAsStringSync();
 
     final saveResponse = source.indexOf('final saved = ConsultationNote.fromJson');
-    final consume = source.indexOf("realtime-intake/consume", saveResponse);
+    final consume = source.indexOf('realtime-intake/consume', saveResponse);
+    expect(saveResponse, greaterThanOrEqualTo(0));
+    expect(consume, greaterThan(saveResponse));
+  });
+
+  test('voice working set is consumed only after vitals save response', () {
+    final source = File(
+      'lib/features/dashboard/data/vitals_api.dart',
+    ).readAsStringSync();
+
+    final saveResponse = source.indexOf('final saved = PatientVitals.fromJson');
+    final consume = source.indexOf('realtime-intake/consume', saveResponse);
     expect(saveResponse, greaterThanOrEqualTo(0));
     expect(consume, greaterThan(saveResponse));
   });
