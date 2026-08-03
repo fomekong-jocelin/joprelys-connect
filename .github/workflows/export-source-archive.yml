@@ -1,0 +1,39 @@
+name: Export corrected source archive
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  package:
+    if: ${{ github.event.head_commit.message == 'chore(artifact): package corrected Joprelys source' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout corrected source
+        uses: actions/checkout@v4
+
+      - name: Build complete source ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          export_dir="/tmp/joprelys-connect-main"
+          archive="$GITHUB_WORKSPACE/joprelys-connect-corrected-2026-08-03.zip"
+          rm -rf "$export_dir" "$archive"
+          cp -a "$GITHUB_WORKSPACE" "$export_dir"
+          rm -rf "$export_dir/.git"
+          rm -f "$export_dir/.github/workflows/export-source-archive.yml"
+          cd /tmp
+          zip -qr "$archive" joprelys-connect-main
+          unzip -t "$archive"
+
+      - name: Upload complete source archive
+        uses: actions/upload-artifact@v4
+        with:
+          name: joprelys-connect-corrected-2026-08-03
+          path: joprelys-connect-corrected-2026-08-03.zip
+          if-no-files-found: error
+          retention-days: 7
