@@ -143,12 +143,18 @@ void main() {
       expect(source, isNot(contains('_stableHypothesisDelay')));
       expect(source, contains('_currentPartialFinalized = true'));
       expect(source, contains('currentFinalized: _currentPartialFinalized'));
-      expect(source, contains('pauseFor: const Duration(seconds: 4)'));
+      // La pause clinique est fixée à 30 secondes pour survivre aux silences
+      // naturels d'une consultation (auscultation, réflexion, question).
+      expect(source, contains('pauseFor: const Duration(seconds: 30)'));
       expect(source, contains('stt.SpeechToText.doneStatus'));
       expect(source, contains('stt.SpeechToText.notListeningStatus'));
       expect(source, contains('shouldRestartClinicalSpeechRecognition'));
       expect(source, contains('_recoverSpeechRecognizer'));
       expect(source, contains('_maximumConsecutiveSpeechRestarts'));
+      expect(source, contains('_reinitializeAfterConsecutiveRestarts'));
+      expect(source, contains('_restartCounterResetDelay'));
+      expect(source, contains('_restartCounterResetTimer'));
+      expect(source, contains('_scheduleRestartCounterReset'));
       expect(source, contains('_listenStartInProgress'));
       expect(source, contains('cycle != _listeningCycle'));
       expect(source, contains('if (_speechRecoveryInProgress) return'));

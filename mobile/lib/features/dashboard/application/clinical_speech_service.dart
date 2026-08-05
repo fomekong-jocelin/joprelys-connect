@@ -94,7 +94,13 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   static const Duration _draftDebounce = Duration(milliseconds: 700);
   static const Duration _speechRestartDelay = Duration(milliseconds: 450);
-  static const int _maximumConsecutiveSpeechRestarts = 4;
+  static const int _maximumConsecutiveSpeechRestarts = 20;
+  /// Nombre de restarts consécutifs après lequel le moteur est réinitialisé
+  /// complètement (initialize) avant de retenter listen().
+  static const int _reinitializeAfterConsecutiveRestarts = 3;
+  /// Durée sans erreur après laquelle le compteur de restarts est remis à zéro,
+  /// même si aucune reconnaissance n'a eu lieu (silence prolongé légitime).
+  static const Duration _restartCounterResetDelay = Duration(seconds: 60);
 
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
@@ -126,6 +132,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   int _listeningCycle = 0;
   Timer? _restartTimer;
   Timer? _localDraftTimer;
+  Timer? _restartCounterResetTimer;
   double _minimumSoundLevel = double.infinity;
   double _maximumSoundLevel = -double.infinity;
   Future<void> _draftPersistence = Future<void>.value();
@@ -389,7 +396,9 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         onSoundLevelChange: _publishSoundLevel,
         listenOptions: stt.SpeechListenOptions(
           listenFor: const Duration(hours: 1),
-          pauseFor: const Duration(seconds: 4),
+          // 30 secondes pour tolérer les pauses cliniques naturelles
+          // (auscultation, réflexion, question au patient).
+          pauseFor: const Duration(seconds: 30),
           partialResults: true,
           cancelOnError: false,
           listenMode: stt.ListenMode.dictation,
@@ -408,6 +417,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
 
   void _ingestRecognition(String rawWords, {required bool finalResult}) {
     _consecutiveSpeechRestarts = 0;
+    _scheduleRestartCounterReset();
     final committed = clinicalTranscriptFromSegments(_segments);
     final incoming = stripCommittedClinicalTranscriptPrefix(
       rawWords,
@@ -469,6 +479,10 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   void _handleSpeechStatus(String status) {
     if (_disposed || !_shouldKeepListening) return;
     if (status == stt.SpeechToText.listeningStatus) {
+      // Le moteur écoute effectivement → le compteur de restarts est remis à
+      // zéro car la session est saine.
+      _consecutiveSpeechRestarts = 0;
+      _scheduleRestartCounterReset();
       value = value.copyWith(status: SpeechStatus.listening, clearError: true);
       return;
     }
@@ -511,6 +525,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
     _speechRecoveryInProgress = true;
     _expectRecognizerReplay = true;
     _restartTimer?.cancel();
+    _restartCounterResetTimer?.cancel();
     _consecutiveSpeechRestarts += 1;
     final cycle = _listeningCycle;
 
@@ -526,10 +541,34 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
       } catch (_) {
         // Certains moteurs Android ont déjà détruit la session courante.
       }
+
+      // Après plusieurs échecs consécutifs, réinitialiser complètement le
+      // moteur natif pour récupérer d'un état corrompu côté Android/iOS.
+      if (_consecutiveSpeechRestarts >= _reinitializeAfterConsecutiveRestarts) {
+        _speechReady = false;
+        try {
+          _speechReady = await _speech.initialize(
+            onStatus: _handleSpeechStatus,
+            onError: (error) => _handleSpeechError(
+              error.errorMsg,
+              permanent: error.permanent,
+            ),
+          );
+        } catch (_) {
+          _speechReady = false;
+        }
+        if (!_speechReady) {
+          _speechRecoveryInProgress = false;
+          _stopAfterSpeechFailure(error);
+          return;
+        }
+      }
+
       await Future<void>.delayed(
         Duration(
           milliseconds:
-              _speechRestartDelay.inMilliseconds * _consecutiveSpeechRestarts,
+              _speechRestartDelay.inMilliseconds *
+              _consecutiveSpeechRestarts.clamp(1, 5),
         ),
       );
       if (_disposed ||
@@ -574,6 +613,18 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
           !_speechRecoveryInProgress &&
           !_disposed) {
         unawaited(_listenInternal(cycle));
+      }
+    });
+  }
+
+  /// Planifie une remise à zéro du compteur de restarts après une période
+  /// sans erreur. Permet de survivre à de longues phases de silence clinique
+  /// sans jamais atteindre le plafond de restarts.
+  void _scheduleRestartCounterReset() {
+    _restartCounterResetTimer?.cancel();
+    _restartCounterResetTimer = Timer(_restartCounterResetDelay, () {
+      if (!_disposed && _shouldKeepListening) {
+        _consecutiveSpeechRestarts = 0;
       }
     });
   }
@@ -941,6 +992,7 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   @override
   void dispose() {
     _localDraftTimer?.cancel();
+    _restartCounterResetTimer?.cancel();
     if (!_captureCompleted &&
         (_segments.isNotEmpty || _currentPartial.trim().isNotEmpty)) {
       unawaited(_draftStore.write(_visitId, _currentDraft()));
