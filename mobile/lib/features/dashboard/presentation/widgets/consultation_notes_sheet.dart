@@ -123,7 +123,8 @@ class _ConsultationNotesSheetState
         if (!mounted) return;
         setState(() {});
         final isFrench = Localizations.localeOf(context).languageCode != 'en';
-        final hasPrescriptions = result.note.prescriptions?.trim().isNotEmpty == true;
+        final hasPrescriptions =
+            result.note.prescriptions?.trim().isNotEmpty == true;
         final hasLabOrders = result.note.labOrders?.trim().isNotEmpty == true;
         final extras = [
           if (hasPrescriptions) (isFrench ? 'ordonnance' : 'prescription'),
@@ -135,7 +136,10 @@ class _ConsultationNotesSheetState
                   ? 'Notes SOAP mises à jour. À saisir séparément : ${extras.join(', ')}.'
                   : 'SOAP notes updated. To enter separately: ${extras.join(', ')}.');
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(message), duration: const Duration(seconds: 5)),
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 5),
+          ),
         );
       },
     );

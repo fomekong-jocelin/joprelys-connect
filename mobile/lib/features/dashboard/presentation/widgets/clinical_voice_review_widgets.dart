@@ -321,7 +321,11 @@ class ClinicalAcceptedPreview extends StatelessWidget {
       (l10n.consultationAdviceLabel, note.advice, 'text'),
       (l10n.consultationFollowUpLabel, note.followUp, 'text'),
       ('Prescription', note.prescriptions, 'prescription'),
-      (isFrench ? 'Examens demandés' : 'Lab orders', note.labOrders, 'labOrders'),
+      (
+        isFrench ? 'Examens demandés' : 'Lab orders',
+        note.labOrders,
+        'labOrders',
+      ),
     ];
 
     return Column(

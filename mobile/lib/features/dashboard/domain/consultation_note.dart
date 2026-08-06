@@ -36,8 +36,10 @@ final class ConsultationNote {
   final String? conclusion;
   final String? advice;
   final String? followUp;
+
   /// JSON array string des médicaments prescrits (format prompt IA).
   final String? prescriptions;
+
   /// JSON array string des examens demandés.
   final String? labOrders;
   final DateTime? updatedAt;

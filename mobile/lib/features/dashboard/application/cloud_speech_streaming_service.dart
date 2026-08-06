@@ -176,22 +176,19 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         ),
       );
 
-      _audioStreamSubscription = stream.listen(
-        (audioChunk) {
-          if (!_isStreaming || _wsChannel == null) return;
-          try {
-            _wsChannel!.sink.add(
-              jsonEncode(<String, Object?>{
-                'type': 'audio',
-                'data': base64Encode(audioChunk),
-              }),
-            );
-          } catch (error) {
-            debugPrint('Erreur envoi audio chunk: $error');
-          }
-        },
-        onError: _handleStreamError,
-      );
+      _audioStreamSubscription = stream.listen((audioChunk) {
+        if (!_isStreaming || _wsChannel == null) return;
+        try {
+          _wsChannel!.sink.add(
+            jsonEncode(<String, Object?>{
+              'type': 'audio',
+              'data': base64Encode(audioChunk),
+            }),
+          );
+        } catch (error) {
+          debugPrint('Erreur envoi audio chunk: $error');
+        }
+      }, onError: _handleStreamError);
     } catch (error) {
       debugPrint('Erreur démarrage capture audio: $error');
       _stopAfterFailure(error);
@@ -536,9 +533,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
     if (sendStopMessage && wasStreaming && _wsChannel != null) {
       try {
-        _wsChannel!.sink.add(
-          jsonEncode(<String, Object?>{'type': 'stop'}),
-        );
+        _wsChannel!.sink.add(jsonEncode(<String, Object?>{'type': 'stop'}));
       } catch (_) {
         // Le canal peut être déjà fermé.
       }
@@ -693,11 +688,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     try {
       final existing = await _gateway.getSession(_visitId);
       if (existing == null) {
-        await _gateway.startSession(
-          _visitId,
-          _initialDraft,
-          locale: _locale,
-        );
+        await _gateway.startSession(_visitId, _initialDraft, locale: _locale);
       }
       final state = await _gateway.analyzeTranscript(_visitId, transcript);
       if (!_disposed) _applyAiState(state);
