@@ -31,9 +31,9 @@ public class OpenAiStreamingTranscriptionService {
 
     public OpenAiStreamingTranscriptionService(
             RestClient restClient,
-            AiProperties.OpenAiProperties config) {
+            AiProperties properties) {
         this.restClient = restClient;
-        this.config = config;
+        this.config = properties.openai();
     }
 
     /**
