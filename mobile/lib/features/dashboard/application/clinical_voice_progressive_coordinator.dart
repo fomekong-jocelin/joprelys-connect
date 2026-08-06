@@ -2,12 +2,15 @@
 
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
+
 import '../data/clinical_voice_ai_api.dart';
 import '../data/clinical_voice_capture_api.dart';
 import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
 import 'clinical_dictation_parser.dart';
 import 'clinical_speech_service.dart';
+import 'clinical_voice_state.dart';
 
 /// Coordinates the non-blocking mobile voice pipeline:
 ///
@@ -18,7 +21,7 @@ import 'clinical_speech_service.dart';
 /// a terminal speech-recognition error while the clinician is still speaking.
 final class ClinicalVoiceProgressiveCoordinator {
   ClinicalVoiceProgressiveCoordinator({
-    required ClinicalSpeechService speechService,
+    required ValueNotifier<RealtimeSpeechState> speechService,
     required ClinicalVoiceAiGateway aiGateway,
     required ClinicalVoiceCaptureGateway captureGateway,
     required String visitId,
@@ -33,7 +36,7 @@ final class ClinicalVoiceProgressiveCoordinator {
 
   static const Duration _syncDebounce = Duration(milliseconds: 450);
 
-  final ClinicalSpeechService _speechService;
+  final ValueNotifier<RealtimeSpeechState> _speechService;
   final ClinicalVoiceAiGateway _aiGateway;
   final ClinicalVoiceCaptureGateway _captureGateway;
   final String _visitId;
@@ -112,7 +115,8 @@ final class ClinicalVoiceProgressiveCoordinator {
       _syncedTextBySegmentId.clear();
     });
     if (!remoteCleared || _disposed) return false;
-    return _speechService.clearTranscript();
+    // Dynamic call for both ClinicalSpeechService and CloudSpeechStreamingService
+    return await (_speechService as dynamic).clearTranscript();
   }
 
   /// Seals the assistant result locally but deliberately keeps durable intake rows
@@ -123,7 +127,8 @@ final class ClinicalVoiceProgressiveCoordinator {
     if (!synchronized || _disposed) return false;
 
     try {
-      await _speechService.completeCapture();
+      // Dynamic call for both ClinicalSpeechService and CloudSpeechStreamingService
+      await (_speechService as dynamic).completeCapture();
     } catch (error) {
       _publishSynchronizationFailure(error);
       return false;

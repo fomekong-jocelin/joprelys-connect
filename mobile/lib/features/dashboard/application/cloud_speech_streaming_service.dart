@@ -435,6 +435,36 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     );
   }
 
+  Future<bool> clearTranscript() async {
+    if (_disposed) return false;
+    _segments.clear();
+    _currentPartial = '';
+    _currentPartialOffset = Duration.zero;
+    await _draftStore.write(
+      _visitId,
+      const ClinicalTranscriptDraft(
+        segments: [],
+        partialTranscript: '',
+        partialOffset: Duration.zero,
+        explicitlyCleared: true,
+      ),
+    );
+    value = value.copyWith(
+      status: SpeechStatus.idle,
+      transcript: '',
+      segments: const [],
+      clearPartial: true,
+    );
+    return true;
+  }
+
+  Future<void> completeCapture() async {
+    if (_disposed) return;
+    await stopListening();
+  }
+
+  Future<bool> discardCurrentCapture() => clearTranscript();
+
   @override
   void dispose() {
     _disposed = true;
