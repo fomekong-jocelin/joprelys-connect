@@ -1,6 +1,5 @@
 package com.joprelys.backend.ai.infrastructure.websocket;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.joprelys.backend.ai.application.VoiceStreamingService;
 import java.io.IOException;
 import java.util.Base64;
@@ -16,6 +15,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 import reactor.core.Disposable;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * WebSocket handler pour le streaming vocal temps réel.
