@@ -18,7 +18,7 @@ import reactor.core.publisher.Mono;
  *
  * <p>Utilise l'API Whisper pour transcription temps réel avec latence optimisée.</p>
  *
- * <p>Activé uniquement si joprelys.ai.enabled=true et joprelys.ai.provider=openai</p>
+ * <p>Activé uniquement si joprelys.ai.enabled=true.</p>
  */
 @Service
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
@@ -29,11 +29,14 @@ public class OpenAiStreamingTranscriptionService {
     private final RestClient restClient;
     private final AiProperties.OpenAiProperties config;
 
-    public OpenAiStreamingTranscriptionService(
-            RestClient restClient,
-            AiProperties properties) {
-        this.restClient = restClient;
+    public OpenAiStreamingTranscriptionService(AiProperties properties) {
         this.config = properties.openai();
+        this.restClient = isConfigured(config)
+                ? RestClient.builder()
+                        .baseUrl(config.baseUrl())
+                        .defaultHeader("Authorization", "Bearer " + config.apiKey())
+                        .build()
+                : null;
     }
 
     /**
@@ -49,6 +52,10 @@ public class OpenAiStreamingTranscriptionService {
             if (audioData == null || audioData.length == 0) {
                 log.warn("Chunk audio vide, skip transcription");
                 return new AiTranscription("", locale, 1.0);
+            }
+            if (restClient == null || config == null || isBlank(config.transcribeModel())) {
+                throw new IllegalStateException(
+                        "Configuration OpenAI indisponible pour la transcription streaming");
             }
 
             // Si PCM brut, encoder en WAV pour compatibilité Whisper
@@ -110,6 +117,16 @@ public class OpenAiStreamingTranscriptionService {
                 extractConfidence(response)
             );
         });
+    }
+
+    private boolean isConfigured(AiProperties.OpenAiProperties openAi) {
+        return openAi != null
+                && !isBlank(openAi.apiKey())
+                && !isBlank(openAi.baseUrl());
+    }
+
+    private boolean isBlank(String value) {
+        return value == null || value.isBlank();
     }
 
     private String resolveExtension(String mimeType) {
