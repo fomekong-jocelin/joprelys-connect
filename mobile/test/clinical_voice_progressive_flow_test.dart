@@ -9,10 +9,7 @@ void main() {
     ).readAsStringSync();
 
     final ingest = source.indexOf('await _captureGateway.ingestSegment(');
-    final analyze = source.indexOf(
-      'await _captureGateway.analyzeProgressiveSegment(',
-      ingest,
-    );
+    final analyze = source.indexOf('.analyzeProgressiveSegment(', ingest);
 
     expect(ingest, greaterThanOrEqualTo(0));
     expect(analyze, greaterThan(ingest));

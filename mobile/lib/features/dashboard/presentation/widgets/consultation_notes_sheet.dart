@@ -117,7 +117,7 @@ class _ConsultationNotesSheetState
     ClinicalVoiceProgressiveAssistantSheet.show(
       context,
       visit: widget.visit,
-      initialDraft: _controllers.toAiDraft(),
+      initialDraft: const <String, String>{},
       onExtracted: (result) {
         _controllers.applyAcceptedDraft(result.note);
         if (!mounted) return;
