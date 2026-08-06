@@ -9,6 +9,7 @@ import '../data/clinical_transcript_draft_store.dart';
 import '../data/clinical_voice_ai_api.dart';
 import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
+import 'clinical_dictation_parser.dart';
 import 'clinical_voice_error_message.dart';
 import 'clinical_voice_state.dart';
 
@@ -17,11 +18,9 @@ export 'clinical_voice_state.dart';
 
 /// Service de dictée clinique utilisant le streaming cloud via WebSocket.
 ///
-/// Architecture production-ready avec :
-/// - Reconnexion automatique WebSocket
-/// - Gestion erreurs robuste
-/// - Buffer audio avec flush automatique
-/// - Persistance locale en cas de panne réseau
+/// Le service conserve le même contrat fonctionnel que le moteur local :
+/// capture, sauvegarde du brouillon, correction des segments, cycle de vie,
+/// revue des propositions IA et nettoyage après application.
 class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   CloudSpeechStreamingService({
     required ClinicalVoiceAiGateway gateway,
@@ -31,26 +30,31 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     required String backendWsUrl,
     required String jwtToken,
     ClinicalTranscriptDraftGateway? draftStore,
-  })  : _gateway = gateway,
-        _visitId = visitId,
-        _initialDraft = Map<String, String>.unmodifiable(initialDraft),
-        _locale = locale,
-        _backendWsUrl = backendWsUrl,
-        _jwtToken = jwtToken,
-        _draftStore = draftStore ?? const SecureClinicalTranscriptDraftStore(),
-        super(
-          const RealtimeSpeechState(
-            status: SpeechStatus.idle,
-            stage: ClinicalVoiceStage.capture,
-            transcript: '',
-            segments: <ClinicalTranscriptSegment>[],
-            partialTranscript: '',
-            partialOffset: Duration.zero,
-            vitals: PatientVitals(),
-            note: ConsultationNote(),
-            revisions: <ClinicalAiRevision>[],
-          ),
-        );
+  }) : _gateway = gateway,
+       _visitId = visitId,
+       _initialDraft = Map<String, String>.unmodifiable(initialDraft),
+       _locale = locale,
+       _backendWsUrl = backendWsUrl,
+       _jwtToken = jwtToken,
+       _draftStore = draftStore ?? const SecureClinicalTranscriptDraftStore(),
+       super(
+         const RealtimeSpeechState(
+           status: SpeechStatus.idle,
+           stage: ClinicalVoiceStage.capture,
+           transcript: '',
+           segments: <ClinicalTranscriptSegment>[],
+           partialTranscript: '',
+           partialOffset: Duration.zero,
+           vitals: PatientVitals(),
+           note: ConsultationNote(),
+           revisions: <ClinicalAiRevision>[],
+         ),
+       );
+
+  static const int _maxReconnectAttempts = 5;
+  static const Duration _initialReconnectDelay = Duration(seconds: 1);
+  static const Duration _maxReconnectDelay = Duration(seconds: 30);
+  static const Duration _draftDebounce = Duration(milliseconds: 700);
 
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
@@ -59,39 +63,56 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   final String _backendWsUrl;
   final String _jwtToken;
   final ClinicalTranscriptDraftGateway _draftStore;
-
+  final ClinicalDictationParser _parser = const ClinicalDictationParser();
   final AudioRecorder _recorder = AudioRecorder();
+
+  final List<ClinicalTranscriptSegment> _segments =
+      <ClinicalTranscriptSegment>[];
+
   WebSocketChannel? _wsChannel;
   StreamSubscription<Uint8List>? _audioStreamSubscription;
   StreamSubscription<dynamic>? _wsStreamSubscription;
+  Timer? _reconnectTimer;
+  Timer? _draftTimer;
+  Future<void> _draftPersistence = Future<void>.value();
+
   bool _disposed = false;
   bool _isStreaming = false;
   bool _shouldReconnect = false;
+  bool _reconnectScheduled = false;
+  bool _resumeAfterLifecycle = false;
+  bool _localDraftRestored = false;
+  bool _captureCompleted = false;
   DateTime? _captureStartedAt;
   int _reconnectAttempts = 0;
-  Timer? _reconnectTimer;
-
-  static const int _maxReconnectAttempts = 5;
-  static const Duration _initialReconnectDelay = Duration(seconds: 1);
-  static const Duration _maxReconnectDelay = Duration(seconds: 30);
-
-  final List<ClinicalTranscriptSegment> _segments = <ClinicalTranscriptSegment>[];
   String _currentPartial = '';
   Duration _currentPartialOffset = Duration.zero;
 
   Future<void> initialize() async {
     if (_disposed) return;
     await _restoreLocalDraft();
-    value = value.copyWith(status: SpeechStatus.idle, clearError: true);
+    if (_disposed) return;
+
+    value = value.copyWith(
+      status: value.hasTranscript
+          ? SpeechStatus.transcriptReview
+          : SpeechStatus.idle,
+      stage: ClinicalVoiceStage.capture,
+      clearError: true,
+    );
   }
 
   Future<void> startRealtimeListening() async {
-    if (_disposed || _isStreaming) return;
+    if (_disposed || _isStreaming || value.stage == ClinicalVoiceStage.review) {
+      return;
+    }
 
     _captureStartedAt ??= DateTime.now();
     _isStreaming = true;
     _shouldReconnect = true;
+    _resumeAfterLifecycle = false;
     _reconnectAttempts = 0;
+    _reconnectScheduled = false;
 
     value = value.copyWith(
       status: SpeechStatus.listening,
@@ -104,33 +125,36 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> _connectWebSocket() async {
-    if (_disposed || !_shouldReconnect) return;
+    if (_disposed || !_shouldReconnect || !_isStreaming) return;
 
     try {
-      // 1. Connecter WebSocket avec auth JWT
       final wsUrl = '$_backendWsUrl/api/voice/stream?token=$_jwtToken';
       _wsChannel = WebSocketChannel.connect(Uri.parse(wsUrl));
 
-      // 2. Envoyer message START
-      _wsChannel!.sink.add(jsonEncode({
-        'type': 'start',
-        'visitId': _visitId,
-        'locale': _locale,
-      }));
-
-      // 3. Écouter les transcriptions du backend
       _wsStreamSubscription = _wsChannel!.stream.listen(
         _handleWebSocketMessage,
         onError: _handleWebSocketError,
         onDone: _handleWebSocketClosed,
       );
 
-      // 4. Démarrer capture audio
+      _wsChannel!.sink.add(
+        jsonEncode(<String, Object?>{
+          'type': 'start',
+          'visitId': _visitId,
+          'locale': _locale,
+        }),
+      );
+
       await _startAudioCapture();
+      if (_disposed || !_isStreaming) return;
 
-      // Reset reconnect counter on successful connection
       _reconnectAttempts = 0;
-
+      _reconnectScheduled = false;
+      value = value.copyWith(
+        status: SpeechStatus.listening,
+        stage: ClinicalVoiceStage.capture,
+        clearError: true,
+      );
       debugPrint('WebSocket connecté : visitId=$_visitId');
     } catch (error) {
       debugPrint('Erreur connexion WebSocket: $error');
@@ -139,6 +163,9 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> _startAudioCapture() async {
+    await _cleanupAudioCapture();
+    if (_disposed || !_isStreaming) return;
+
     try {
       final stream = await _recorder.startStream(
         const RecordConfig(
@@ -151,21 +178,19 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
       _audioStreamSubscription = stream.listen(
         (audioChunk) {
-          if (_isStreaming && _wsChannel != null) {
-            try {
-              _wsChannel!.sink.add(jsonEncode({
+          if (!_isStreaming || _wsChannel == null) return;
+          try {
+            _wsChannel!.sink.add(
+              jsonEncode(<String, Object?>{
                 'type': 'audio',
                 'data': base64Encode(audioChunk),
-              }));
-            } catch (e) {
-              debugPrint('Erreur envoi audio chunk: $e');
-            }
+              }),
+            );
+          } catch (error) {
+            debugPrint('Erreur envoi audio chunk: $error');
           }
         },
-        onError: (error) {
-          debugPrint('Erreur stream audio: $error');
-          _handleStreamError(error);
-        },
+        onError: _handleStreamError,
       );
     } catch (error) {
       debugPrint('Erreur démarrage capture audio: $error');
@@ -177,20 +202,21 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (_disposed || !_isStreaming) return;
 
     try {
-      final data = jsonDecode(message as String) as Map<String, dynamic>;
-      final type = data['type'] as String?;
+      final decoded = jsonDecode(message as String);
+      if (decoded is! Map) return;
+      final data = Map<String, dynamic>.from(decoded);
+      final type = data['type']?.toString();
 
       switch (type) {
         case 'transcript':
-          final text = (data['text'] as String? ?? '').trim();
-          final isFinal = data['isFinal'] as bool? ?? false;
+          final text = (data['text']?.toString() ?? '').trim();
+          final isFinal = data['isFinal'] == true;
           if (text.isNotEmpty) {
             _ingestTranscript(text, isFinal: isFinal);
           }
           break;
         case 'error':
-          final error = data['error'] as String? ?? 'UNKNOWN_ERROR';
-          _setError(error);
+          _stopAfterFailure(data['error']?.toString() ?? 'UNKNOWN_ERROR');
           break;
         case 'ack':
           debugPrint('WebSocket ACK: ${data['status']}');
@@ -203,7 +229,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   void _handleWebSocketError(Object error) {
     debugPrint('WebSocket erreur: $error');
-    if (_shouldReconnect && !_disposed) {
+    if (_shouldReconnect && !_disposed && _isStreaming) {
       unawaited(_scheduleReconnect());
     }
   }
@@ -216,57 +242,92 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> _scheduleReconnect() async {
-    if (_disposed || !_shouldReconnect || _reconnectAttempts >= _maxReconnectAttempts) {
-      if (_reconnectAttempts >= _maxReconnectAttempts) {
-        _setError('RECONNECT_MAX_ATTEMPTS_REACHED');
-        await stopListening();
-      }
+    if (_disposed ||
+        !_shouldReconnect ||
+        !_isStreaming ||
+        _reconnectScheduled) {
       return;
     }
 
-    _reconnectAttempts++;
-    final delayMs = _initialReconnectDelay.inMilliseconds *
-        (1 << (_reconnectAttempts - 1)).clamp(1, 32);
-    final delay = Duration(milliseconds: delayMs.clamp(
-      _initialReconnectDelay.inMilliseconds,
-      _maxReconnectDelay.inMilliseconds,
-    ));
+    if (_reconnectAttempts >= _maxReconnectAttempts) {
+      await _stopStreaming(sendStopMessage: false);
+      _setError('RECONNECT_MAX_ATTEMPTS_REACHED');
+      return;
+    }
 
-    debugPrint('Reconnexion dans ${delay.inSeconds}s (tentative $_reconnectAttempts/$_maxReconnectAttempts)');
+    _reconnectAttempts += 1;
+    _reconnectScheduled = true;
+    final factor = 1 << (_reconnectAttempts - 1).clamp(0, 5).toInt();
+    final delayMs = (_initialReconnectDelay.inMilliseconds * factor)
+        .clamp(
+          _initialReconnectDelay.inMilliseconds,
+          _maxReconnectDelay.inMilliseconds,
+        )
+        .toInt();
+    final delay = Duration(milliseconds: delayMs);
+
+    debugPrint(
+      'Reconnexion dans ${delay.inSeconds}s '
+      '(tentative $_reconnectAttempts/$_maxReconnectAttempts)',
+    );
 
     value = value.copyWith(
       status: SpeechStatus.processing,
-      errorMessage: 'Reconnexion en cours...',
+      errorMessage: _locale.toLowerCase().startsWith('en')
+          ? 'Reconnecting...'
+          : 'Reconnexion en cours...',
     );
 
     _reconnectTimer?.cancel();
     _reconnectTimer = Timer(delay, () async {
-      if (!_disposed && _shouldReconnect) {
-        await _cleanupWebSocket();
-        await _connectWebSocket();
-      }
+      _reconnectScheduled = false;
+      if (_disposed || !_shouldReconnect || !_isStreaming) return;
+      await _cleanupAudioCapture();
+      await _cleanupWebSocket();
+      await _connectWebSocket();
     });
   }
 
+  Future<void> _cleanupAudioCapture() async {
+    try {
+      await _audioStreamSubscription?.cancel();
+    } catch (_) {
+      // La plateforme peut avoir déjà fermé le flux.
+    }
+    _audioStreamSubscription = null;
+
+    try {
+      await _recorder.stop();
+    } catch (_) {
+      // Aucun enregistrement actif.
+    }
+  }
+
   Future<void> _cleanupWebSocket() async {
-    await _wsStreamSubscription?.cancel();
-    await _wsChannel?.sink.close();
-    _wsChannel = null;
+    try {
+      await _wsStreamSubscription?.cancel();
+    } catch (_) {
+      // Le canal peut être déjà fermé.
+    }
     _wsStreamSubscription = null;
+
+    try {
+      await _wsChannel?.sink.close();
+    } catch (_) {
+      // Le canal peut être déjà fermé.
+    }
+    _wsChannel = null;
   }
 
   void _ingestTranscript(String text, {required bool isFinal}) {
     if (_currentPartial.isEmpty) {
       _currentPartialOffset = _elapsedCaptureTime();
-      _currentPartial = text;
-    } else {
-      if (isFinal) {
-        _commitCurrentPartial();
-        _currentPartialOffset = _elapsedCaptureTime();
-        _currentPartial = text;
-      } else {
-        _currentPartial = text;
-      }
+    }
+    _currentPartial = text.trim();
+
+    if (isFinal) {
+      _commitCurrentPartial();
+      return;
     }
 
     _publishCaptureState();
@@ -293,7 +354,9 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   Duration _elapsedCaptureTime() {
     final startedAt = _captureStartedAt;
-    return startedAt == null ? Duration.zero : DateTime.now().difference(startedAt);
+    return startedAt == null
+        ? Duration.zero
+        : DateTime.now().difference(startedAt);
   }
 
   void _publishCaptureState() {
@@ -306,51 +369,128 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     ].join(separator).trim();
 
     value = value.copyWith(
-      status: _isStreaming ? SpeechStatus.listening : SpeechStatus.transcriptReview,
+      status: _isStreaming
+          ? SpeechStatus.listening
+          : (transcript.isEmpty
+                ? SpeechStatus.idle
+                : SpeechStatus.transcriptReview),
       stage: ClinicalVoiceStage.capture,
       transcript: transcript,
       segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
       partialTranscript: partial,
       partialOffset: _currentPartialOffset,
-      clearError: true,
+      clearError: !value.hasTranscriptSyncFailure,
     );
   }
 
-  Timer? _draftTimer;
+  void _publishReviewedTranscript({bool clearError = true}) {
+    final transcript = clinicalTranscriptFromSegments(_segments);
+    value = value.copyWith(
+      status: transcript.isEmpty
+          ? SpeechStatus.idle
+          : SpeechStatus.transcriptReview,
+      stage: ClinicalVoiceStage.capture,
+      transcript: transcript,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      vitals: const PatientVitals(),
+      note: const ConsultationNote(),
+      revisions: const <ClinicalAiRevision>[],
+      needsClarification: false,
+      clearPartial: true,
+      clearAssistant: true,
+      clearError: clearError,
+    );
+  }
+
+  ClinicalTranscriptDraft _currentDraft({bool explicitlyCleared = false}) {
+    return ClinicalTranscriptDraft(
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      partialTranscript: _currentPartial.trim(),
+      partialOffset: _currentPartialOffset,
+      explicitlyCleared: explicitlyCleared,
+    );
+  }
+
   void _scheduleDraftSave() {
+    if (_disposed) return;
     _draftTimer?.cancel();
-    _draftTimer = Timer(const Duration(milliseconds: 700), () {
-      unawaited(_persistCurrentTranscript());
+    _draftTimer = Timer(_draftDebounce, () {
+      unawaited(_persistCurrentTranscript(silent: true));
     });
   }
 
-  Future<void> _persistCurrentTranscript() async {
-    if (_disposed) return;
-    try {
-      await _draftStore.write(
-        _visitId,
-        ClinicalTranscriptDraft(
-          segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
-          partialTranscript: _currentPartial.trim(),
-          partialOffset: _currentPartialOffset,
-          explicitlyCleared: false,
-        ),
+  Future<bool> _persistCurrentTranscript({
+    bool silent = false,
+    bool explicitlyCleared = false,
+  }) {
+    if (_disposed) return Future<bool>.value(false);
+    _draftTimer?.cancel();
+    final snapshot = _currentDraft(explicitlyCleared: explicitlyCleared);
+    final completion = Completer<bool>();
+
+    if (!silent) {
+      value = value.copyWith(
+        transcriptSyncStatus: TranscriptSyncStatus.syncing,
+        clearError: true,
       );
-    } catch (_) {
-      // Log mais ne pas bloquer
     }
+
+    _draftPersistence = _draftPersistence.then((_) async {
+      try {
+        await _draftStore.write(_visitId, snapshot);
+        if (!_disposed) {
+          value = value.copyWith(
+            transcriptSyncStatus: TranscriptSyncStatus.synced,
+          );
+        }
+        completion.complete(true);
+      } catch (_) {
+        if (!_disposed) {
+          value = value.copyWith(
+            transcriptSyncStatus: TranscriptSyncStatus.failed,
+          );
+        }
+        completion.complete(false);
+      }
+    });
+
+    return completion.future;
+  }
+
+  Future<bool> _ensureTranscriptPersisted() async {
+    _draftTimer?.cancel();
+    await _draftPersistence;
+    if (_disposed) return false;
+    if (!value.hasTranscript && _currentPartial.trim().isEmpty) return true;
+    return _persistCurrentTranscript();
   }
 
   Future<void> _restoreLocalDraft() async {
-    if (_disposed) return;
+    if (_localDraftRestored || _disposed) return;
+    _localDraftRestored = true;
+
     try {
       final draft = await _draftStore.read(_visitId);
-      if (draft == null) return;
+      if (draft == null || _disposed) return;
 
-      _segments
-        ..clear()
-        ..addAll(draft.segments);
+      _segments.clear();
+      _currentPartial = '';
+      _currentPartialOffset = Duration.zero;
 
+      if (draft.explicitlyCleared) {
+        value = value.copyWith(
+          status: SpeechStatus.idle,
+          stage: ClinicalVoiceStage.capture,
+          transcript: '',
+          segments: const <ClinicalTranscriptSegment>[],
+          transcriptSyncStatus: TranscriptSyncStatus.synced,
+          clearPartial: true,
+          clearError: true,
+        );
+        return;
+      }
+
+      _segments.addAll(draft.segments);
       final partial = draft.partialTranscript.trim();
       if (partial.isNotEmpty) {
         _segments.add(
@@ -362,54 +502,307 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         );
       }
 
-      _currentPartial = '';
-      _currentPartialOffset = Duration.zero;
+      _captureStartedAt = _segments.isEmpty ? null : DateTime.now();
       final transcript = clinicalTranscriptFromSegments(_segments);
       value = value.copyWith(
-        status: transcript.isEmpty ? SpeechStatus.idle : SpeechStatus.transcriptReview,
+        status: transcript.isEmpty
+            ? SpeechStatus.idle
+            : SpeechStatus.transcriptReview,
+        stage: ClinicalVoiceStage.capture,
         transcript: transcript,
         segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+        transcriptSyncStatus: TranscriptSyncStatus.synced,
         clearPartial: true,
+        clearError: true,
       );
     } catch (_) {
-      // Échec de restauration - continuer quand même
+      if (!_disposed) {
+        value = value.copyWith(
+          transcriptSyncStatus: TranscriptSyncStatus.failed,
+        );
+      }
     }
   }
 
-  Future<void> stopListening() async {
-    if (_disposed || !_isStreaming) return;
-
-    _isStreaming = false;
-    _shouldReconnect = false;
+  Future<void> _stopStreaming({bool sendStopMessage = true}) async {
     _reconnectTimer?.cancel();
+    _reconnectScheduled = false;
+    _shouldReconnect = false;
+    final wasStreaming = _isStreaming;
+    _isStreaming = false;
+
     _commitCurrentPartial();
+    await _cleanupAudioCapture();
 
-    // Arrêter capture audio
-    await _audioStreamSubscription?.cancel();
-    await _recorder.stop();
-
-    // Fermer WebSocket proprement
-    if (_wsChannel != null) {
+    if (sendStopMessage && wasStreaming && _wsChannel != null) {
       try {
-        _wsChannel!.sink.add(jsonEncode({'type': 'stop'}));
+        _wsChannel!.sink.add(
+          jsonEncode(<String, Object?>{'type': 'stop'}),
+        );
       } catch (_) {
-        // Ignore si déjà fermé
+        // Le canal peut être déjà fermé.
       }
     }
     await _cleanupWebSocket();
+  }
 
-    await _persistCurrentTranscript();
+  Future<bool> retryDraftSave() => _persistCurrentTranscript();
+
+  Future<bool> saveDictationForReview() async {
+    if (_disposed ||
+        value.stage == ClinicalVoiceStage.review ||
+        value.status == SpeechStatus.processing) {
+      return false;
+    }
+
+    _resumeAfterLifecycle = false;
+    await _stopStreaming();
+    final saved = await _persistCurrentTranscript();
+    if (_disposed) return false;
+
+    final transcript = clinicalTranscriptFromSegments(_segments);
+    value = value.copyWith(
+      status: transcript.isEmpty
+          ? SpeechStatus.idle
+          : SpeechStatus.transcriptReview,
+      stage: ClinicalVoiceStage.capture,
+      transcript: transcript,
+      segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+      soundLevel: 0,
+      transcriptSyncStatus: saved
+          ? TranscriptSyncStatus.synced
+          : TranscriptSyncStatus.failed,
+      clearPartial: true,
+      clearError: saved,
+    );
+    return saved;
+  }
+
+  Future<void> stopListening() async {
+    if (_disposed) return;
+    if (_isStreaming || value.hasTranscript || _currentPartial.isNotEmpty) {
+      await saveDictationForReview();
+      return;
+    }
 
     value = value.copyWith(
-      status: _segments.isEmpty ? SpeechStatus.idle : SpeechStatus.transcriptReview,
+      status: SpeechStatus.idle,
       soundLevel: 0,
       clearPartial: true,
+      clearError: true,
     );
   }
 
+  Future<bool> updateSegment(String segmentId, String text) async {
+    if (_disposed ||
+        value.status == SpeechStatus.listening ||
+        value.status == SpeechStatus.processing) {
+      return false;
+    }
+
+    final index = _segments.indexWhere((segment) => segment.id == segmentId);
+    if (index < 0) return false;
+    final normalized = text.trim();
+    if (normalized.isEmpty) return deleteSegment(segmentId);
+
+    final previous = List<ClinicalTranscriptSegment>.from(_segments);
+    _segments[index] = _segments[index].copyWith(text: normalized);
+    _publishReviewedTranscript();
+    final saved = await _persistCurrentTranscript();
+    if (!saved && !_disposed) {
+      _segments
+        ..clear()
+        ..addAll(previous);
+      _publishReviewedTranscript(clearError: false);
+    }
+    return saved;
+  }
+
+  Future<bool> deleteSegment(String segmentId) async {
+    if (_disposed ||
+        value.status == SpeechStatus.listening ||
+        value.status == SpeechStatus.processing) {
+      return false;
+    }
+
+    final index = _segments.indexWhere((segment) => segment.id == segmentId);
+    if (index < 0) return false;
+
+    final previous = List<ClinicalTranscriptSegment>.from(_segments);
+    _segments.removeAt(index);
+    _publishReviewedTranscript();
+    final saved = await _persistCurrentTranscript();
+    if (!saved && !_disposed) {
+      _segments
+        ..clear()
+        ..addAll(previous);
+      _publishReviewedTranscript(clearError: false);
+    }
+    return saved;
+  }
+
+  Future<bool> clearTranscript() async {
+    if (_disposed || value.status == SpeechStatus.processing) return false;
+    if (_isStreaming) await _stopStreaming();
+
+    final previous = List<ClinicalTranscriptSegment>.from(_segments);
+    final previousPartial = _currentPartial;
+    final previousOffset = _currentPartialOffset;
+
+    _segments.clear();
+    _currentPartial = '';
+    _currentPartialOffset = Duration.zero;
+    _captureStartedAt = null;
+    value = const RealtimeSpeechState(
+      status: SpeechStatus.idle,
+      stage: ClinicalVoiceStage.capture,
+      transcript: '',
+      segments: <ClinicalTranscriptSegment>[],
+      partialTranscript: '',
+      partialOffset: Duration.zero,
+      vitals: PatientVitals(),
+      note: ConsultationNote(),
+      revisions: <ClinicalAiRevision>[],
+      transcriptSyncStatus: TranscriptSyncStatus.syncing,
+    );
+
+    final saved = await _persistCurrentTranscript(explicitlyCleared: true);
+    if (!saved && !_disposed) {
+      _segments
+        ..clear()
+        ..addAll(previous);
+      _currentPartial = previousPartial;
+      _currentPartialOffset = previousOffset;
+      _publishCaptureState();
+    }
+    return saved;
+  }
+
+  Future<void> analyzeTranscript() async {
+    if (_disposed || !value.isTranscriptReadyForAnalysis) return;
+    final transcript = clinicalTranscriptFromSegments(_segments);
+    if (transcript.isEmpty || !await _ensureTranscriptPersisted()) return;
+
+    value = value.copyWith(
+      status: SpeechStatus.processing,
+      stage: ClinicalVoiceStage.capture,
+      clearError: true,
+      clearAssistant: true,
+    );
+
+    try {
+      final existing = await _gateway.getSession(_visitId);
+      if (existing == null) {
+        await _gateway.startSession(
+          _visitId,
+          _initialDraft,
+          locale: _locale,
+        );
+      }
+      final state = await _gateway.analyzeTranscript(_visitId, transcript);
+      if (!_disposed) _applyAiState(state);
+    } catch (error) {
+      _setError(error, fallbackStatus: SpeechStatus.transcriptReview);
+    }
+  }
+
+  void _applyAiState(ClinicalAiState state) {
+    final explicitVitals = _parser.parse(value.transcript).vitals;
+    final aiVitals = state.vitalsFrom(includePending: true);
+    value = value.copyWith(
+      status: state.hasPendingProposals
+          ? SpeechStatus.proposalReview
+          : SpeechStatus.done,
+      stage: ClinicalVoiceStage.review,
+      vitals: explicitVitals.mergePrefer(aiVitals),
+      note: state.noteFrom(includePending: true),
+      revisions: state.revisions,
+      assistantMessage: state.assistantMessage,
+      needsClarification: state.needsClarification,
+      clearPartial: true,
+      clearError: true,
+    );
+  }
+
+  Future<void> decideProposal(
+    ClinicalAiRevision revision,
+    ClinicalAiFieldProposal proposal,
+    ClinicalAiDecision decision,
+  ) async {
+    if (_disposed || !proposal.isPending) return;
+    value = value.copyWith(status: SpeechStatus.processing, clearError: true);
+    try {
+      final state = await _gateway.decideProposal(
+        _visitId,
+        revision.id,
+        proposal.id,
+        decision,
+      );
+      if (!_disposed) _applyAiState(state);
+    } catch (error) {
+      _setError(error, fallbackStatus: SpeechStatus.proposalReview);
+    }
+  }
+
+  Future<void> decideRevision(
+    ClinicalAiRevision revision,
+    ClinicalAiDecision decision,
+  ) async {
+    if (_disposed || !revision.isPending) return;
+    value = value.copyWith(status: SpeechStatus.processing, clearError: true);
+    try {
+      final state = await _gateway.decideRevision(
+        _visitId,
+        revision.id,
+        decision,
+      );
+      if (!_disposed) _applyAiState(state);
+    } catch (error) {
+      _setError(error, fallbackStatus: SpeechStatus.proposalReview);
+    }
+  }
+
+  Future<void> suspendForLifecycle() async {
+    if (_disposed) return;
+    final shouldResume = _isStreaming;
+    _resumeAfterLifecycle = shouldResume;
+    if (!shouldResume) return;
+
+    await _stopStreaming();
+    await _persistCurrentTranscript();
+    if (!_disposed) value = value.copyWith(soundLevel: 0);
+  }
+
+  Future<void> resumeAfterLifecycle() async {
+    if (_disposed || !_resumeAfterLifecycle) return;
+    _resumeAfterLifecycle = false;
+    await startRealtimeListening();
+  }
+
+  Future<bool> prepareForClose() async {
+    if (_disposed || value.status == SpeechStatus.processing) return false;
+    if (_isStreaming) return saveDictationForReview();
+    return _ensureTranscriptPersisted();
+  }
+
+  Future<void> completeCapture() async {
+    if (_disposed) return;
+    if (_isStreaming) await saveDictationForReview();
+    _draftTimer?.cancel();
+    await _draftPersistence;
+    try {
+      await _draftStore.delete(_visitId);
+      _captureCompleted = true;
+    } catch (_) {
+      // La synthèse reste applicable même si le nettoyage local doit être repris.
+    }
+  }
+
+  Future<bool> discardCurrentCapture() => clearTranscript();
+
   void _handleStreamError(Object error) {
     debugPrint('Erreur stream: $error');
-    if (_shouldReconnect && !_disposed) {
+    if (_shouldReconnect && !_disposed && _isStreaming) {
       unawaited(_scheduleReconnect());
     } else {
       _stopAfterFailure(error);
@@ -420,58 +813,40 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (_disposed) return;
     _isStreaming = false;
     _shouldReconnect = false;
-    unawaited(_audioStreamSubscription?.cancel());
-    unawaited(_recorder.stop());
+    _reconnectScheduled = false;
+    _reconnectTimer?.cancel();
+    unawaited(_cleanupAudioCapture());
     unawaited(_cleanupWebSocket());
     _setError(error);
+    _scheduleDraftSave();
   }
 
-  void _setError(Object error) {
+  void _setError(
+    Object error, {
+    SpeechStatus fallbackStatus = SpeechStatus.error,
+  }) {
     if (_disposed) return;
     value = value.copyWith(
-      status: SpeechStatus.error,
+      status: fallbackStatus,
       soundLevel: 0,
       errorMessage: clinicalVoiceUserMessage(error, locale: _locale),
     );
   }
 
-  Future<bool> clearTranscript() async {
-    if (_disposed) return false;
-    _segments.clear();
-    _currentPartial = '';
-    _currentPartialOffset = Duration.zero;
-    await _draftStore.write(
-      _visitId,
-      const ClinicalTranscriptDraft(
-        segments: [],
-        partialTranscript: '',
-        partialOffset: Duration.zero,
-        explicitlyCleared: true,
-      ),
-    );
-    value = value.copyWith(
-      status: SpeechStatus.idle,
-      transcript: '',
-      segments: const [],
-      clearPartial: true,
-    );
-    return true;
-  }
-
-  Future<void> completeCapture() async {
-    if (_disposed) return;
-    await stopListening();
-  }
-
-  Future<bool> discardCurrentCapture() => clearTranscript();
-
   @override
   void dispose() {
+    if (_disposed) return;
+    _draftTimer?.cancel();
+    _reconnectTimer?.cancel();
+    if (!_captureCompleted &&
+        (_segments.isNotEmpty || _currentPartial.trim().isNotEmpty)) {
+      unawaited(_draftStore.write(_visitId, _currentDraft()));
+    }
+
     _disposed = true;
     _isStreaming = false;
     _shouldReconnect = false;
-    _draftTimer?.cancel();
-    _reconnectTimer?.cancel();
+    _reconnectScheduled = false;
     unawaited(_audioStreamSubscription?.cancel());
     unawaited(_recorder.dispose());
     unawaited(_cleanupWebSocket());
