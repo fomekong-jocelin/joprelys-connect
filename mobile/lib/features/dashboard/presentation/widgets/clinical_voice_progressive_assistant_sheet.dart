@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/config/app_config.dart';
 import '../../../../core/lifecycle/app_activity_registry.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
@@ -71,7 +72,7 @@ class ClinicalVoiceProgressiveAssistantSheet extends ConsumerStatefulWidget {
 class _ClinicalVoiceProgressiveAssistantSheetState
     extends ConsumerState<ClinicalVoiceProgressiveAssistantSheet>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late final dynamic _speechService;
+  late final CloudSpeechStreamingService _speechService;
   late final ClinicalVoiceProgressiveCoordinator _coordinator;
   late final AnimationController _haloController;
   late final AnimationController _waveController;
@@ -104,14 +105,12 @@ class _ClinicalVoiceProgressiveAssistantSheetState
     final authState = ref.read(authControllerProvider).value;
     final jwtToken = authState?.session?.accessToken ?? '';
 
-    // Utiliser CloudSpeechStreamingService (streaming cloud) au lieu de
-    // ClinicalSpeechService (speech_to_text on-device buggy)
     _speechService = CloudSpeechStreamingService(
       gateway: aiGateway,
       visitId: widget.visit.id,
       initialDraft: widget.initialDraft,
       locale: widget.locale,
-      backendWsUrl: 'wss://api-recette.joprelys.com',
+      apiBaseUri: AppConfig.runtime.apiBaseUri,
       jwtToken: jwtToken,
     );
     _coordinator = ClinicalVoiceProgressiveCoordinator(
