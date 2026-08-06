@@ -1,0 +1,675 @@
+name: Apply voice reconnect deadlock fix
+
+on:
+  push:
+    branches: [fix/voice-reconnect-ui-deadlock]
+    paths:
+      - '.github/workflows/apply-voice-reconnect-ui-deadlock.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/voice-reconnect-ui-deadlock
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+      - name: Apply fail-safe voice transport changes
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path: Path, before: str, after: str) -> None:
+              text = path.read_text(encoding='utf-8')
+              if before not in text:
+                  raise SystemExit(f'Pattern not found in {path}: {before[:120]!r}')
+              path.write_text(text.replace(before, after, 1), encoding='utf-8')
+
+          service = Path('mobile/lib/features/dashboard/application/cloud_speech_streaming_service.dart')
+          replace_once(
+              service,
+              """  static const int _maxReconnectAttempts = 5;
+          static const Duration _connectTimeout = Duration(seconds: 12);
+          static const Duration _startAckTimeout = Duration(seconds: 10);
+          static const Duration _stopAckTimeout = Duration(seconds: 20);
+          static const Duration _initialReconnectDelay = Duration(seconds: 1);
+          static const Duration _maxReconnectDelay = Duration(seconds: 16);
+          static const Duration _draftDebounce = Duration(milliseconds: 700);
+          static const Duration _microphoneRetryDelay = Duration(milliseconds: 350);
+          """,
+              """  static const int _maxReconnectAttempts = 3;
+          static const Duration _connectTimeout = Duration(seconds: 8);
+          static const Duration _startAckTimeout = Duration(seconds: 8);
+          static const Duration _stopAckTimeout = Duration(seconds: 5);
+          static const Duration _initialReconnectDelay = Duration(seconds: 1);
+          static const Duration _maxReconnectDelay = Duration(seconds: 4);
+          static const Duration _draftDebounce = Duration(milliseconds: 700);
+          static const Duration _microphoneRetryDelay = Duration(milliseconds: 350);
+          static const Duration _shutdownTimeout = Duration(seconds: 2);
+          """,
+          )
+          replace_once(
+              service,
+              """  Uri get _streamUri => buildClinicalVoiceWebSocketUri(
+              apiBaseUri: _apiBaseUri,
+              jwtToken: _jwtToken,
+            );
+
+          Future<void> initialize() async {
+          """,
+              """  Uri get _streamUri => buildClinicalVoiceWebSocketUri(
+              apiBaseUri: _apiBaseUri,
+              jwtToken: _jwtToken,
+            );
+
+          bool get isConnectingOrReconnecting =>
+              !_disposed &&
+              _isStreaming &&
+              value.stage == ClinicalVoiceStage.capture &&
+              value.status == SpeechStatus.processing;
+
+          Future<void> initialize() async {
+          """,
+          )
+          replace_once(
+              service,
+              """    } catch (error) {
+              debugPrint('Échec connexion WebSocket vocal: $error');
+              await _cleanupAudioCapture();
+              await _cleanupWebSocket();
+              if (_disposed || !_isStreaming || !_shouldReconnect) return;
+          """,
+              """    } catch (error) {
+              debugPrint('Échec connexion WebSocket vocal: $error');
+              await _bestEffortCleanup();
+              if (_disposed || !_isStreaming || !_shouldReconnect) return;
+          """,
+          )
+          replace_once(
+              service,
+              """  Future<void> _recoverTransport(Object error, int generation) async {
+              if (generation != _connectionGeneration || _reconnectScheduled) return;
+              await _cleanupAudioCapture();
+              await _cleanupWebSocket();
+              await _scheduleReconnect(error);
+            }
+          """,
+              """  Future<void> _recoverTransport(Object error, int generation) async {
+              if (generation != _connectionGeneration || _reconnectScheduled) return;
+              await _bestEffortCleanup();
+              await _scheduleReconnect(error);
+            }
+          """,
+          )
+          replace_once(
+              service,
+              """    if (_reconnectAttempts >= _maxReconnectAttempts) {
+              _isStreaming = false;
+              _shouldReconnect = false;
+              await _cleanupAudioCapture();
+              await _cleanupWebSocket();
+              _setError(StateError('VOICE_CONNECTION_UNAVAILABLE: $error'));
+              return;
+            }
+          """,
+              """    if (_reconnectAttempts >= _maxReconnectAttempts) {
+              _isStreaming = false;
+              _shouldReconnect = false;
+              _connecting = false;
+              _connectionGeneration += 1;
+              await _bestEffortCleanup();
+              _setError(StateError('VOICE_CONNECTION_UNAVAILABLE: $error'));
+              return;
+            }
+          """,
+          )
+          replace_once(
+              service,
+              """  Future<void> _cleanupAudioCapture() async {
+              _amplitudeTimer?.cancel();
+              _amplitudeTimer = null;
+              try {
+                await _audioStreamSubscription?.cancel();
+              } catch (_) {
+                // Le flux peut être déjà fermé.
+              }
+              _audioStreamSubscription = null;
+              try {
+                await _recorder.stop();
+              } catch (_) {
+                // Aucun enregistrement actif.
+              }
+            }
+
+            Future<void> _cleanupWebSocket() async {
+              try {
+                await _wsStreamSubscription?.cancel();
+              } catch (_) {
+                // La souscription peut être déjà fermée.
+              }
+              _wsStreamSubscription = null;
+              try {
+                await _wsChannel?.sink.close();
+              } catch (_) {
+                // Le canal peut être déjà fermé.
+              }
+              _wsChannel = null;
+            }
+          """,
+              """  Future<void> _cleanupAudioCapture() async {
+              _amplitudeTimer?.cancel();
+              _amplitudeTimer = null;
+              final subscription = _audioStreamSubscription;
+              _audioStreamSubscription = null;
+              try {
+                if (subscription != null) {
+                  await subscription.cancel().timeout(_shutdownTimeout);
+                }
+              } on TimeoutException {
+                debugPrint('Timeout arrêt du flux microphone');
+              } catch (_) {
+                // Le flux peut être déjà fermé.
+              }
+              try {
+                await _recorder.stop().timeout(_shutdownTimeout);
+              } on TimeoutException {
+                debugPrint('Timeout arrêt du microphone');
+              } catch (_) {
+                // Aucun enregistrement actif.
+              }
+            }
+
+            Future<void> _cleanupWebSocket() async {
+              final subscription = _wsStreamSubscription;
+              final channel = _wsChannel;
+              _wsStreamSubscription = null;
+              _wsChannel = null;
+              try {
+                if (subscription != null) {
+                  await subscription.cancel().timeout(_shutdownTimeout);
+                }
+              } on TimeoutException {
+                debugPrint('Timeout annulation de la souscription WebSocket');
+              } catch (_) {
+                // La souscription peut être déjà fermée.
+              }
+              try {
+                if (channel != null) {
+                  await channel.sink.close().timeout(_shutdownTimeout);
+                }
+              } on TimeoutException {
+                debugPrint('Timeout fermeture du canal WebSocket');
+              } catch (_) {
+                // Le canal peut être déjà fermé.
+              }
+            }
+
+            Future<void> _bestEffortCleanup() async {
+              await _cleanupAudioCapture();
+              await _cleanupWebSocket();
+            }
+          """,
+          )
+          replace_once(
+              service,
+              """  Future<bool> retryDraftSave() => _persistCurrentTranscript();
+          """,
+              """  Future<void> cancelPendingListening() async {
+              if (_disposed) return;
+              _resumeAfterLifecycle = false;
+              _reconnectTimer?.cancel();
+              _reconnectScheduled = false;
+              _shouldReconnect = false;
+              _isStreaming = false;
+              _connecting = false;
+              _connectionGeneration += 1;
+              _failStartWaiter(StateError('VOICE_CONNECTION_CANCELLED'));
+              _startAckCompleter = null;
+              _completeStopWaiter();
+              _stopAckCompleter = null;
+
+              await _bestEffortCleanup();
+              _commitCurrentPartial();
+              if (_disposed) return;
+
+              final transcript = clinicalTranscriptFromSegments(_segments);
+              value = value.copyWith(
+                status: transcript.isEmpty
+                    ? SpeechStatus.idle
+                    : SpeechStatus.transcriptReview,
+                stage: ClinicalVoiceStage.capture,
+                transcript: transcript,
+                segments: List<ClinicalTranscriptSegment>.unmodifiable(_segments),
+                soundLevel: 0,
+                clearPartial: true,
+                clearError: true,
+              );
+              _scheduleDraftSave();
+            }
+
+            Future<bool> retryDraftSave() => _persistCurrentTranscript();
+          """,
+          )
+          replace_once(
+              service,
+              """  Future<bool> prepareForClose() async {
+              if (_disposed || value.status == SpeechStatus.processing) return false;
+              if (_isStreaming) return saveDictationForReview();
+              return _ensureTranscriptPersisted();
+            }
+          """,
+              """  Future<bool> prepareForClose() async {
+              if (_disposed) return false;
+              _resumeAfterLifecycle = false;
+              if (_isStreaming || _connecting || _reconnectScheduled) {
+                await cancelPendingListening();
+              }
+              try {
+                await _ensureTranscriptPersisted().timeout(_shutdownTimeout);
+              } catch (_) {
+                // La fermeture de l'UI ne dépend jamais du réseau ni du stockage.
+              }
+              return true;
+            }
+          """,
+          )
+          replace_once(
+              service,
+              """    _connecting = false;
+              _reconnectTimer?.cancel();
+              unawaited(_cleanupAudioCapture());
+          """,
+              """    _connecting = false;
+              _connectionGeneration += 1;
+              _reconnectTimer?.cancel();
+              unawaited(_cleanupAudioCapture());
+          """,
+          )
+
+          sheet = Path('mobile/lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sheet.dart')
+          replace_once(
+              sheet,
+              """  late final AppForegroundActivityController _activityController;
+
+            bool get _isFrench => widget.locale == 'fr';
+          """,
+              """  late final AppForegroundActivityController _activityController;
+              bool _closing = false;
+
+            bool get _isFrench => widget.locale == 'fr';
+          """,
+          )
+          replace_once(
+              sheet,
+              """  Future<void> _toggleListening() async {
+              final state = _speechService.value;
+              if (state.status == SpeechStatus.processing ||
+                  state.stage == ClinicalVoiceStage.review) {
+                return;
+              }
+              if (state.status == SpeechStatus.listening) {
+                await _speechService.saveDictationForReview();
+                await _coordinator.synchronizeNow();
+              } else {
+                await _speechService.startRealtimeListening();
+              }
+            }
+
+            Future<void> _close() async {
+              final safeToClose = await _speechService.prepareForClose();
+              if (!safeToClose) return;
+              await _coordinator.synchronizeNow();
+              if (mounted) Navigator.of(context).pop();
+            }
+          """,
+              """  Future<void> _toggleListening() async {
+              final state = _speechService.value;
+              if (state.stage == ClinicalVoiceStage.review) return;
+              if (_speechService.isConnectingOrReconnecting) {
+                await _speechService.cancelPendingListening();
+                return;
+              }
+              if (state.status == SpeechStatus.processing) return;
+              if (state.status == SpeechStatus.listening) {
+                await _speechService.saveDictationForReview();
+                await _coordinator.synchronizeNow();
+              } else {
+                await _speechService.startRealtimeListening();
+              }
+            }
+
+            Future<void> _close() async {
+              if (_closing) return;
+              setState(() => _closing = true);
+              try {
+                await _speechService.prepareForClose();
+              } catch (_) {
+                // La fermeture reste prioritaire même si un nettoyage échoue.
+              } finally {
+                if (mounted) Navigator.of(context).pop();
+              }
+            }
+          """,
+          )
+          replace_once(
+              sheet,
+              """        final colors = Theme.of(context).colorScheme;
+                final processing = state.status == SpeechStatus.processing;
+                return Container(
+          """,
+              """        final colors = Theme.of(context).colorScheme;
+                return Container(
+          """,
+          )
+          replace_once(
+              sheet,
+              """              _Header(
+                            patientName: widget.visit.patientName,
+                            reference: _reference(),
+                            processing: processing || state.isSynchronizingTranscript,
+                            onClose: _close,
+                          ),
+          """,
+              """              _Header(
+                            patientName: widget.visit.patientName,
+                            reference: _reference(),
+                            processing: _closing,
+                            onClose: _close,
+                          ),
+          """,
+          )
+          replace_once(
+              sheet,
+              """                    ? ClinicalVoiceProgressiveCaptureBody(
+                                    state: state,
+                                    haloController: _haloController,
+          """,
+              """                    ? ClinicalVoiceProgressiveCaptureBody(
+                                    state: state,
+                                    connectionPending:
+                                        _speechService.isConnectingOrReconnecting,
+                                    haloController: _haloController,
+          """,
+          )
+
+          sections = Path('mobile/lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sections.dart')
+          replace_once(
+              sections,
+              """    required this.state,
+              required this.haloController,
+          """,
+              """    required this.state,
+              required this.connectionPending,
+              required this.haloController,
+          """,
+          )
+          replace_once(
+              sections,
+              """  final RealtimeSpeechState state;
+            final AnimationController haloController;
+          """,
+              """  final RealtimeSpeechState state;
+            final bool connectionPending;
+            final AnimationController haloController;
+          """,
+          )
+          replace_once(
+              sections,
+              """    final listening = state.status == SpeechStatus.listening;
+              final processing = state.status == SpeechStatus.processing;
+              final editable =
+          """,
+              """    final listening = state.status == SpeechStatus.listening;
+              final processing = state.status == SpeechStatus.processing;
+              final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+              final connectionBadge = isEnglish
+                  ? 'Voice connection'
+                  : 'Connexion vocale';
+              final connectionStatus = state.errorMessage ??
+                  (isEnglish
+                      ? 'Connecting to the voice service…'
+                      : 'Connexion au service vocal…');
+              final editable =
+          """,
+          )
+          replace_once(
+              sections,
+              """                ClinicalVoiceListeningSurface(
+                              active: listening,
+                              soundLevel: state.soundLevel,
+                              haloController: haloController,
+                              waveController: waveController,
+                              badgeText: listening
+                                  ? l10n.voiceCaptureBadge
+                                  : l10n.voiceIdleBadge,
+                              statusText: listening
+                                  ? l10n.voiceCaptureStatus
+                                  : state.hasTranscript
+                                  ? l10n.voiceCapturePausedStatus
+                                  : l10n.voiceStartNewDictation,
+                              tipText: l10n.voiceCaptureTip,
+                              stopLabel: l10n.voiceSaveDictation,
+                              startLabel: state.hasTranscript
+                                  ? l10n.voiceResumeDictation
+                                  : l10n.assistantStartDictation,
+                              onToggleListening: onToggleListening,
+                            ),
+          """,
+              """                ClinicalVoiceListeningSurface(
+                              active: listening || connectionPending,
+                              soundLevel: state.soundLevel,
+                              haloController: haloController,
+                              waveController: waveController,
+                              badgeText: connectionPending
+                                  ? connectionBadge
+                                  : listening
+                                  ? l10n.voiceCaptureBadge
+                                  : l10n.voiceIdleBadge,
+                              statusText: connectionPending
+                                  ? connectionStatus
+                                  : listening
+                                  ? l10n.voiceCaptureStatus
+                                  : state.hasTranscript
+                                  ? l10n.voiceCapturePausedStatus
+                                  : l10n.voiceStartNewDictation,
+                              tipText: l10n.voiceCaptureTip,
+                              stopLabel: connectionPending
+                                  ? l10n.voiceCancel
+                                  : l10n.voiceSaveDictation,
+                              startLabel: state.hasTranscript
+                                  ? l10n.voiceResumeDictation
+                                  : l10n.assistantStartDictation,
+                              onToggleListening: onToggleListening,
+                            ),
+          """,
+          )
+          replace_once(
+              sections,
+              """                  Text(
+                                l10n.voiceAnalyzingBody,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                            if (state.errorMessage != null) ...[
+          """,
+              """                  Text(
+                                state.errorMessage ?? l10n.voiceAnalyzingBody,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ],
+                            if (state.errorMessage != null && !processing) ...[
+          """,
+          )
+
+          coordinator = Path('mobile/lib/features/dashboard/application/clinical_voice_progressive_coordinator.dart')
+          replace_once(
+              coordinator,
+              """    if (!_disposed) {
+              _speechService.value = _speechService.value.copyWith(
+                transcriptSyncStatus: TranscriptSyncStatus.synced,
+                clearError: true,
+              );
+            }
+          """,
+              """    if (!_disposed) {
+              final current = _speechService.value;
+              _speechService.value = current.copyWith(
+                transcriptSyncStatus: TranscriptSyncStatus.synced,
+                clearError: _canClearTransportMessage(current),
+              );
+            }
+          """,
+          )
+          replace_once(
+              coordinator,
+              """      transcriptSyncStatus: TranscriptSyncStatus.synced,
+              clearError: true,
+            );
+          """,
+              """      transcriptSyncStatus: TranscriptSyncStatus.synced,
+              clearError: finalReview || _canClearTransportMessage(current),
+            );
+          """,
+          )
+          replace_once(
+              coordinator,
+              """      transcriptSyncStatus: TranscriptSyncStatus.synced,
+              clearAssistant: true,
+              clearError: true,
+            );
+          """,
+              """      transcriptSyncStatus: TranscriptSyncStatus.synced,
+              clearAssistant: true,
+              clearError: _canClearTransportMessage(current),
+            );
+          """,
+          )
+          replace_once(
+              coordinator,
+              """  void _publishSynchronizationStart() {
+              if (_disposed) return;
+              _speechService.value = _speechService.value.copyWith(
+                transcriptSyncStatus: TranscriptSyncStatus.syncing,
+                clearError: true,
+              );
+            }
+          """,
+              """  void _publishSynchronizationStart() {
+              if (_disposed) return;
+              final current = _speechService.value;
+              _speechService.value = current.copyWith(
+                transcriptSyncStatus: TranscriptSyncStatus.syncing,
+                clearError: _canClearTransportMessage(current),
+              );
+            }
+
+            bool _canClearTransportMessage(RealtimeSpeechState state) {
+              return state.status != SpeechStatus.processing &&
+                  state.status != SpeechStatus.error;
+            }
+          """,
+          )
+
+          test = Path('mobile/test/clinical_voice_reconnect_escape_test.dart')
+          test.write_text("""import 'package:flutter/material.dart';
+          import 'package:flutter_localizations/flutter_localizations.dart';
+          import 'package:flutter_test/flutter_test.dart';
+          import 'package:joprelys_mobile/features/dashboard/application/clinical_voice_state.dart';
+          import 'package:joprelys_mobile/features/dashboard/domain/consultation_note.dart';
+          import 'package:joprelys_mobile/features/dashboard/domain/patient_vitals.dart';
+          import 'package:joprelys_mobile/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sections.dart';
+          import 'package:joprelys_mobile/l10n/app_localizations.dart';
+
+          void main() {
+            testWidgets('reconnecting voice surface stays interruptible', (tester) async {
+              final halo = AnimationController(vsync: tester);
+              final wave = AnimationController(vsync: tester);
+              addTearDown(halo.dispose);
+              addTearDown(wave.dispose);
+              var cancelled = false;
+
+              const state = RealtimeSpeechState(
+                status: SpeechStatus.processing,
+                stage: ClinicalVoiceStage.capture,
+                transcript: '',
+                segments: <ClinicalTranscriptSegment>[],
+                partialTranscript: '',
+                partialOffset: Duration.zero,
+                vitals: PatientVitals(),
+                note: ConsultationNote(),
+                revisions: <ClinicalAiRevision>[],
+                errorMessage: 'Connexion vocale interrompue. Reconnexion (2/3)…',
+              );
+
+              await tester.pumpWidget(
+                _TestApp(
+                  child: ClinicalVoiceProgressiveCaptureBody(
+                    state: state,
+                    connectionPending: true,
+                    haloController: halo,
+                    waveController: wave,
+                    onToggleListening: () => cancelled = true,
+                    onClearAll: () {},
+                    onFinalize: () {},
+                    onRetrySynchronization: () {},
+                    onSegmentChanged: (_, __) async => true,
+                    onSegmentDeleted: (_) async => true,
+                  ),
+                ),
+              );
+
+              expect(find.text('Connexion vocale'), findsOneWidget);
+              expect(find.byIcon(Icons.stop_rounded), findsOneWidget);
+              await tester.tap(find.byIcon(Icons.stop_rounded));
+              expect(cancelled, isTrue);
+            });
+          }
+
+          class _TestApp extends StatelessWidget {
+            const _TestApp({required this.child});
+
+            final Widget child;
+
+            @override
+            Widget build(BuildContext context) {
+              return MaterialApp(
+                locale: const Locale('fr'),
+                supportedLocales: AppLocalizations.supportedLocales,
+                localizationsDelegates: const [
+                  AppLocalizations.delegate,
+                  GlobalMaterialLocalizations.delegate,
+                  GlobalWidgetsLocalizations.delegate,
+                  GlobalCupertinoLocalizations.delegate,
+                ],
+                home: Scaffold(body: child),
+              );
+            }
+          }
+          """, encoding='utf-8')
+          PY
+      - name: Validate Flutter
+        working-directory: mobile
+        shell: bash
+        run: |
+          flutter pub get
+          dart format lib test
+          dart format --output=none --set-exit-if-changed lib test
+          flutter analyze --no-pub
+          flutter test --no-pub
+      - name: Commit tested fix
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile docs/ai/tickets/BUG-20260806-VOICE-RECONNECT-UI-DEADLOCK.md
+          git commit -m "fix(mobile): garantir la sortie des reconnexions vocales"
+          git push origin HEAD:fix/voice-reconnect-ui-deadlock
