@@ -9,6 +9,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
@@ -26,8 +27,11 @@ import reactor.core.Disposable;
  *   <li>Serveur → Client : JSON {"type":"transcript", "text":"...", "confidence":0.95, "isFinal":false}</li>
  *   <li>Client → Serveur : JSON {"type":"stop"}</li>
  * </ul>
+ *
+ * <p>Activé uniquement si joprelys.ai.enabled=true</p>
  */
 @Component
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
 
     private static final Logger log = LoggerFactory.getLogger(VoiceStreamingWebSocketHandler.class);

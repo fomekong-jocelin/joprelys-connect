@@ -6,6 +6,7 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Sinks;
@@ -15,8 +16,11 @@ import reactor.core.publisher.Sinks;
  *
  * <p>Gère les sessions de streaming audio par visitId, buffer les chunks audio
  * et coordonne la transcription via OpenAI Whisper.</p>
+ *
+ * <p>Activé uniquement si joprelys.ai.enabled=true</p>
  */
 @Service
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class VoiceStreamingService {
 
     private static final Logger log = LoggerFactory.getLogger(VoiceStreamingService.class);

@@ -5,6 +5,7 @@ import com.joprelys.backend.ai.infrastructure.AiProperties;
 import java.util.Map;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.ByteArrayResource;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Service;
@@ -16,8 +17,11 @@ import reactor.core.publisher.Mono;
  * Service de transcription streaming via OpenAI Whisper API.
  *
  * <p>Utilise l'API Whisper pour transcription temps réel avec latence optimisée.</p>
+ *
+ * <p>Activé uniquement si joprelys.ai.enabled=true et joprelys.ai.provider=openai</p>
  */
 @Service
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 public class OpenAiStreamingTranscriptionService {
 
     private static final Logger log = LoggerFactory.getLogger(OpenAiStreamingTranscriptionService.class);
