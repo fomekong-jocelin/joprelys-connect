@@ -57,6 +57,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   static const Duration _initialReconnectDelay = Duration(seconds: 1);
   static const Duration _maxReconnectDelay = Duration(seconds: 30);
   static const Duration _draftDebounce = Duration(milliseconds: 700);
+  static const Duration _stopAckTimeout = Duration(seconds: 15);
 
   final ClinicalVoiceAiGateway _gateway;
   final String _visitId;
@@ -76,6 +77,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   StreamSubscription<dynamic>? _wsStreamSubscription;
   Timer? _reconnectTimer;
   Timer? _draftTimer;
+  Completer<void>? _stopAckCompleter;
   Future<void> _draftPersistence = Future<void>.value();
 
   bool _disposed = false;
@@ -215,10 +217,15 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
           }
           break;
         case 'error':
+          _completeStopWaiter();
           _stopAfterFailure(data['error']?.toString() ?? 'UNKNOWN_ERROR');
           break;
         case 'ack':
-          debugPrint('WebSocket ACK: ${data['status']}');
+          final status = data['status']?.toString() ?? '';
+          debugPrint('WebSocket ACK: $status');
+          if (status == 'STREAMING_STOPPED') {
+            _completeStopWaiter();
+          }
           break;
       }
     } catch (error) {
@@ -228,15 +235,30 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   void _handleWebSocketError(Object error) {
     debugPrint('WebSocket erreur: $error');
-    if (_shouldReconnect && !_disposed && _isStreaming) {
+    if (!_shouldReconnect) {
+      _completeStopWaiter();
+      return;
+    }
+    if (!_disposed && _isStreaming) {
       unawaited(_scheduleReconnect());
     }
   }
 
   void _handleWebSocketClosed() {
     debugPrint('WebSocket fermé');
-    if (_shouldReconnect && !_disposed && _isStreaming) {
+    if (!_shouldReconnect) {
+      _completeStopWaiter();
+      return;
+    }
+    if (!_disposed && _isStreaming) {
       unawaited(_scheduleReconnect());
+    }
+  }
+
+  void _completeStopWaiter() {
+    final completer = _stopAckCompleter;
+    if (completer != null && !completer.isCompleted) {
+      completer.complete();
     }
   }
 
@@ -289,17 +311,17 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<void> _cleanupAudioCapture() async {
     try {
+      await _recorder.stop();
+    } catch (_) {
+      // Aucun enregistrement actif.
+    }
+
+    try {
       await _audioStreamSubscription?.cancel();
     } catch (_) {
       // La plateforme peut avoir déjà fermé le flux.
     }
     _audioStreamSubscription = null;
-
-    try {
-      await _recorder.stop();
-    } catch (_) {
-      // Aucun enregistrement actif.
-    }
   }
 
   Future<void> _cleanupWebSocket() async {
@@ -528,18 +550,30 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _reconnectScheduled = false;
     _shouldReconnect = false;
     final wasStreaming = _isStreaming;
-    _isStreaming = false;
 
-    _commitCurrentPartial();
+    // Garder _isStreaming=true jusqu'à l'accusé final permet de recevoir et
+    // d'intégrer les dernières transcriptions envoyées après le message stop.
     await _cleanupAudioCapture();
 
     if (sendStopMessage && wasStreaming && _wsChannel != null) {
+      final stopAck = Completer<void>();
+      _stopAckCompleter = stopAck;
       try {
         _wsChannel!.sink.add(jsonEncode(<String, Object?>{'type': 'stop'}));
-      } catch (_) {
-        // Le canal peut être déjà fermé.
+        await stopAck.future.timeout(_stopAckTimeout);
+      } on TimeoutException {
+        debugPrint('Timeout de finalisation du streaming vocal');
+      } catch (error) {
+        debugPrint('Erreur finalisation du streaming vocal: $error');
+      } finally {
+        if (identical(_stopAckCompleter, stopAck)) {
+          _stopAckCompleter = null;
+        }
       }
     }
+
+    _isStreaming = false;
+    _commitCurrentPartial();
     await _cleanupWebSocket();
   }
 
@@ -798,12 +832,14 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (_shouldReconnect && !_disposed && _isStreaming) {
       unawaited(_scheduleReconnect());
     } else {
+      _completeStopWaiter();
       _stopAfterFailure(error);
     }
   }
 
   void _stopAfterFailure(Object error) {
     if (_disposed) return;
+    _completeStopWaiter();
     _isStreaming = false;
     _shouldReconnect = false;
     _reconnectScheduled = false;
@@ -831,6 +867,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (_disposed) return;
     _draftTimer?.cancel();
     _reconnectTimer?.cancel();
+    _completeStopWaiter();
     if (!_captureCompleted &&
         (_segments.isNotEmpty || _currentPartial.trim().isNotEmpty)) {
       unawaited(_draftStore.write(_visitId, _currentDraft()));
