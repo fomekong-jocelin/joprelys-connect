@@ -49,6 +49,19 @@ public class AiProviderConfig {
         return new RoutingAiProvider(speechProvider, draftProvider);
     }
 
+    /**
+     * RestClient pour OpenAI, utilisé par OpenAiProvider et OpenAiStreamingTranscriptionService.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "joprelys.ai.provider", havingValue = "openai")
+    public RestClient openAiRestClient(AiProperties properties) {
+        AiProperties.OpenAiProperties config = requireOpenAiConfiguration(properties.openai());
+        return RestClient.builder()
+                .baseUrl(config.baseUrl())
+                .defaultHeader("Authorization", "Bearer " + config.apiKey())
+                .build();
+    }
+
     private AiProvider buildProvider(String provider, AiProperties properties) {
         return switch (provider) {
             case "openai" -> buildOpenAiProvider(properties);
@@ -64,6 +77,7 @@ public class AiProviderConfig {
         AiProperties.OpenAiProperties config = requireOpenAiConfiguration(properties.openai());
         log.info("Configuration OpenAI chargée : brouillon={}, transcription={}",
                 config.model(), config.transcribeModel());
+        // Réutiliser le bean RestClient si disponible, sinon en créer un
         RestClient restClient = RestClient.builder()
                 .baseUrl(config.baseUrl())
                 .defaultHeader("Authorization", "Bearer " + config.apiKey())
