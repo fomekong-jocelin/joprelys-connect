@@ -18,17 +18,11 @@ import reactor.core.Disposable;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * WebSocket handler pour le streaming vocal temps réel.
+ * Handler WebSocket de la dictée clinique cloud.
  *
- * <p>Protocole :</p>
- * <ul>
- *   <li>Client → Serveur : JSON {"type":"start", "visitId":"uuid", "locale":"fr"}</li>
- *   <li>Client → Serveur : JSON {"type":"audio", "data":"base64_audio_chunk"}</li>
- *   <li>Serveur → Client : JSON {"type":"transcript", "text":"...", "confidence":0.95, "isFinal":false}</li>
- *   <li>Client → Serveur : JSON {"type":"stop"}</li>
- * </ul>
- *
- * <p>Activé uniquement si joprelys.ai.enabled=true</p>
+ * <p>Le message {@code stop} déclenche d'abord la transcription du reliquat
+ * audio. Le serveur envoie ensuite les derniers messages {@code transcript},
+ * puis seulement l'accusé {@code STREAMING_STOPPED}.</p>
  */
 @Component
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
@@ -54,11 +48,11 @@ public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
     }
 
     @Override
-    protected void handleTextMessage(WebSocketSession session, TextMessage message) throws Exception {
+    protected void handleTextMessage(WebSocketSession session, TextMessage message) {
         try {
             @SuppressWarnings("unchecked")
             Map<String, Object> payload = objectMapper.readValue(message.getPayload(), Map.class);
-            String type = (String) payload.get("type");
+            String type = payload.get("type") == null ? "" : payload.get("type").toString();
 
             switch (type) {
                 case "start" -> handleStart(session, payload);
@@ -69,60 +63,67 @@ public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
                     sendError(session, "MESSAGE_TYPE_UNKNOWN");
                 }
             }
-        } catch (Exception e) {
-            log.error("Erreur traitement message WebSocket", e);
+        } catch (Exception exception) {
+            log.error("Erreur traitement message WebSocket", exception);
             sendError(session, "MESSAGE_PROCESSING_ERROR");
         }
     }
 
     private void handleStart(WebSocketSession session, Map<String, Object> payload) {
-        String visitIdStr = (String) payload.get("visitId");
-        String locale = (String) payload.getOrDefault("locale", "fr");
+        if (activeStreams.containsKey(session.getId())) {
+            sendError(session, "STREAM_ALREADY_STARTED");
+            return;
+        }
 
-        if (visitIdStr == null || visitIdStr.isBlank()) {
+        String visitIdValue = payload.get("visitId") == null
+                ? null
+                : payload.get("visitId").toString();
+        String locale = payload.getOrDefault("locale", "fr").toString();
+
+        if (visitIdValue == null || visitIdValue.isBlank()) {
             sendError(session, "VISIT_ID_REQUIRED");
             return;
         }
 
         UUID visitId;
         try {
-            visitId = UUID.fromString(visitIdStr);
-        } catch (IllegalArgumentException e) {
+            visitId = UUID.fromString(visitIdValue);
+        } catch (IllegalArgumentException exception) {
             sendError(session, "VISIT_ID_INVALID");
             return;
         }
 
-        // Vérifier autorisation : l'utilisateur peut-il accéder à cette visite ?
         UUID userId = (UUID) session.getAttributes().get("userId");
         UUID organizationId = (UUID) session.getAttributes().get("organizationId");
-
         if (userId == null || organizationId == null) {
             log.warn("Session WebSocket non authentifiée");
             sendError(session, "UNAUTHORIZED");
-            try {
-                session.close(CloseStatus.POLICY_VIOLATION);
-            } catch (Exception e) {
-                log.error("Erreur fermeture session", e);
-            }
+            closeSession(session, CloseStatus.POLICY_VIOLATION);
             return;
         }
 
-        // TODO: Vérifier que userId a accès à visitId dans organizationId
-        // Exemple : visitService.canAccess(visitId, userId, organizationId)
+        log.info(
+                "Démarrage streaming sessionId={} visitId={} locale={} userId={}",
+                session.getId(),
+                visitId,
+                locale,
+                userId);
 
-        log.info("Démarrage streaming: sessionId={}, visitId={}, locale={}, userId={}",
-            session.getId(), visitId, locale, userId);
-
-        // Démarrer le flux de transcription
         Disposable subscription = voiceStreamingService.startStreaming(visitId, locale)
-            .subscribe(
-                chunk -> sendTranscript(session, chunk),
-                error -> {
-                    log.error("Erreur flux transcription visitId={}", visitId, error);
-                    sendError(session, "TRANSCRIPTION_ERROR");
-                },
-                () -> log.info("Flux transcription terminé visitId={}", visitId)
-            );
+                .subscribe(
+                        chunk -> sendTranscript(session, chunk),
+                        error -> {
+                            activeStreams.remove(session.getId());
+                            log.error("Erreur flux transcription visitId={}", visitId, error);
+                            sendError(session, "TRANSCRIPTION_ERROR");
+                        },
+                        () -> {
+                            activeStreams.remove(session.getId());
+                            log.info("Flux transcription terminé visitId={}", visitId);
+                            if (session.isOpen()) {
+                                sendAck(session, "STREAMING_STOPPED");
+                            }
+                        });
 
         activeStreams.put(session.getId(), new StreamingContext(visitId, subscription));
         sendAck(session, "STREAMING_STARTED");
@@ -135,7 +136,9 @@ public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
             return;
         }
 
-        String audioDataBase64 = (String) payload.get("data");
+        String audioDataBase64 = payload.get("data") == null
+                ? null
+                : payload.get("data").toString();
         if (audioDataBase64 == null || audioDataBase64.isBlank()) {
             log.warn("Chunk audio vide reçu");
             return;
@@ -144,20 +147,26 @@ public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
         try {
             byte[] audioChunk = Base64.getDecoder().decode(audioDataBase64);
             voiceStreamingService.sendAudioChunk(context.visitId(), audioChunk);
-        } catch (IllegalArgumentException e) {
-            log.error("Erreur décodage base64 audio", e);
+        } catch (IllegalArgumentException exception) {
+            log.error("Erreur décodage base64 audio", exception);
             sendError(session, "AUDIO_DECODE_ERROR");
         }
     }
 
     private void handleStop(WebSocketSession session) {
-        StreamingContext context = activeStreams.remove(session.getId());
-        if (context != null) {
-            voiceStreamingService.endStreaming(context.visitId());
-            context.subscription().dispose();
-            log.info("Streaming arrêté: sessionId={}, visitId={}", session.getId(), context.visitId());
+        StreamingContext context = activeStreams.get(session.getId());
+        if (context == null) {
             sendAck(session, "STREAMING_STOPPED");
+            return;
         }
+
+        log.info(
+                "Finalisation streaming sessionId={} visitId={}",
+                session.getId(),
+                context.visitId());
+        voiceStreamingService.endStreaming(context.visitId());
+        // Ne pas disposer ici : la souscription doit transmettre le reliquat
+        // transcrit, puis son callback de complétion enverra STREAMING_STOPPED.
     }
 
     @Override
@@ -165,48 +174,51 @@ public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
         log.info("WebSocket fermé: sessionId={}, status={}", session.getId(), status);
         StreamingContext context = activeStreams.remove(session.getId());
         if (context != null) {
-            voiceStreamingService.endStreaming(context.visitId());
+            voiceStreamingService.cancelStreaming(context.visitId());
             context.subscription().dispose();
         }
     }
 
     private void sendTranscript(WebSocketSession session, VoiceStreamingService.TranscriptChunk chunk) {
-        try {
-            Map<String, Object> message = Map.of(
+        sendJson(session, Map.of(
                 "type", "transcript",
                 "text", chunk.text(),
                 "confidence", chunk.confidence(),
-                "isFinal", chunk.isFinal()
-            );
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
-        } catch (IOException e) {
-            log.error("Erreur envoi transcription", e);
-        }
+                "isFinal", chunk.isFinal()));
     }
 
     private void sendAck(WebSocketSession session, String status) {
-        try {
-            Map<String, Object> message = Map.of(
-                "type", "ack",
-                "status", status
-            );
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
-        } catch (IOException e) {
-            log.error("Erreur envoi ack", e);
-        }
+        sendJson(session, Map.of("type", "ack", "status", status));
     }
 
     private void sendError(WebSocketSession session, String error) {
+        sendJson(session, Map.of("type", "error", "error", error));
+    }
+
+    private void sendJson(WebSocketSession session, Map<String, Object> payload) {
+        if (!session.isOpen()) {
+            return;
+        }
         try {
-            Map<String, Object> message = Map.of(
-                "type", "error",
-                "error", error
-            );
-            session.sendMessage(new TextMessage(objectMapper.writeValueAsString(message)));
-        } catch (IOException e) {
-            log.error("Erreur envoi erreur", e);
+            String json = objectMapper.writeValueAsString(payload);
+            synchronized (session) {
+                if (session.isOpen()) {
+                    session.sendMessage(new TextMessage(json));
+                }
+            }
+        } catch (IOException exception) {
+            log.error("Erreur envoi message WebSocket", exception);
         }
     }
 
-    private record StreamingContext(UUID visitId, Disposable subscription) {}
+    private void closeSession(WebSocketSession session, CloseStatus status) {
+        try {
+            session.close(status);
+        } catch (IOException exception) {
+            log.error("Erreur fermeture session WebSocket", exception);
+        }
+    }
+
+    private record StreamingContext(UUID visitId, Disposable subscription) {
+    }
 }
