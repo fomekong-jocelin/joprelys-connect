@@ -185,8 +185,8 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (_disposed || !_shouldReconnect || !_isStreaming || _connecting) return;
 
     _connecting = true;
-    final generation = ++_connectionGeneration;
     await _cleanupWebSocket();
+    final generation = ++_connectionGeneration;
 
     try {
       final channel = _channelFactory(_streamUri);
@@ -262,7 +262,9 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (!hasPermission) {
       throw StateError('MICROPHONE_PERMISSION_DENIED');
     }
-    final supported = await _recorder.isEncoderSupported(AudioEncoder.pcm16bits);
+    final supported = await _recorder.isEncoderSupported(
+      AudioEncoder.pcm16bits,
+    );
     if (!supported) {
       throw StateError('MICROPHONE_PCM_UNSUPPORTED');
     }
@@ -292,7 +294,10 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   void _sendAudioChunk(Uint8List audioChunk) {
-    if (_disposed || !_isStreaming || _wsChannel == null || audioChunk.isEmpty) {
+    if (_disposed ||
+        !_isStreaming ||
+        _wsChannel == null ||
+        audioChunk.isEmpty) {
       return;
     }
     try {
@@ -331,8 +336,12 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   void _startAmplitudeMonitoring() {
     _amplitudeTimer?.cancel();
-    _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 160), (_) async {
-      if (_disposed || !_isStreaming || value.status != SpeechStatus.listening) {
+    _amplitudeTimer = Timer.periodic(const Duration(milliseconds: 160), (
+      _,
+    ) async {
+      if (_disposed ||
+          !_isStreaming ||
+          value.status != SpeechStatus.listening) {
         return;
       }
       try {
@@ -413,7 +422,9 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _failStartWaiter(StateError('VOICE_SOCKET_CLOSED'));
     _completeStopWaiter();
     if (!_connecting && _shouldReconnect && _isStreaming) {
-      unawaited(_recoverTransport(StateError('VOICE_SOCKET_CLOSED'), generation));
+      unawaited(
+        _recoverTransport(StateError('VOICE_SOCKET_CLOSED'), generation),
+      );
     }
   }
 
@@ -503,7 +514,6 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> _cleanupWebSocket() async {
-    _connectionGeneration += 1;
     try {
       await _wsStreamSubscription?.cancel();
     } catch (_) {
