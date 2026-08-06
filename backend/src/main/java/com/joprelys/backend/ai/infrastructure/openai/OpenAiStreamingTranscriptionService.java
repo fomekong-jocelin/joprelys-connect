@@ -12,13 +12,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.web.client.RestClient;
 import reactor.core.publisher.Mono;
+import reactor.core.scheduler.Schedulers;
 
 /**
- * Service de transcription streaming via OpenAI Whisper API.
+ * Service de transcription streaming via OpenAI.
  *
- * <p>Utilise l'API Whisper pour transcription temps réel avec latence optimisée.</p>
- *
- * <p>Activé uniquement si joprelys.ai.enabled=true.</p>
+ * <p>L'appel HTTP est bloquant. Il est donc exécuté sur le scheduler borné
+ * élastique afin de ne jamais bloquer le thread qui reçoit les paquets
+ * WebSocket du mobile.</p>
  */
 @Service
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
@@ -39,84 +40,87 @@ public class OpenAiStreamingTranscriptionService {
                 : null;
     }
 
-    /**
-     * Transcrit un chunk audio de manière asynchrone.
-     *
-     * @param audioData données audio PCM 16-bit 16kHz mono
-     * @param mimeType type MIME (ex: audio/pcm, audio/wav)
-     * @param locale langue (fr, en)
-     * @return transcription asynchrone
-     */
     public Mono<AiTranscription> transcribe(byte[] audioData, String mimeType, String locale) {
-        return Mono.fromCallable(() -> {
-            if (audioData == null || audioData.length == 0) {
-                log.warn("Chunk audio vide, skip transcription");
-                return new AiTranscription("", locale, 1.0);
+        return Mono.fromCallable(() -> transcribeBlocking(audioData, mimeType, locale))
+                .subscribeOn(Schedulers.boundedElastic());
+    }
+
+    private AiTranscription transcribeBlocking(
+            byte[] audioData,
+            String mimeType,
+            String locale) {
+        if (audioData == null || audioData.length == 0) {
+            log.warn("Chunk audio vide, skip transcription");
+            return new AiTranscription("", locale, 1.0);
+        }
+        if (restClient == null || config == null || isBlank(config.transcribeModel())) {
+            throw new IllegalStateException(
+                    "Configuration OpenAI indisponible pour la transcription streaming");
+        }
+
+        byte[] processedAudio = audioData;
+        String actualMimeType = mimeType;
+        if ("audio/pcm".equalsIgnoreCase(mimeType) && !WavEncoder.hasWavHeader(audioData)) {
+            log.debug("Encodage PCM vers WAV ({} octets)", audioData.length);
+            processedAudio = WavEncoder.encodePcm16MonoToWav(audioData, 16_000);
+            actualMimeType = "audio/wav";
+        }
+
+        log.debug(
+                "Transcription streaming chunk taille={} type={} locale={}",
+                processedAudio.length,
+                actualMimeType,
+                locale);
+
+        String extension = resolveExtension(actualMimeType);
+        byte[] finalAudio = processedAudio;
+        ByteArrayResource audioResource = new ByteArrayResource(finalAudio) {
+            @Override
+            public String getFilename() {
+                return "chunk." + extension;
             }
-            if (restClient == null || config == null || isBlank(config.transcribeModel())) {
-                throw new IllegalStateException(
-                        "Configuration OpenAI indisponible pour la transcription streaming");
-            }
+        };
 
-            // Si PCM brut, encoder en WAV pour compatibilité Whisper
-            byte[] processedAudio = audioData;
-            String actualMimeType = mimeType;
-            if ("audio/pcm".equalsIgnoreCase(mimeType) && !WavEncoder.hasWavHeader(audioData)) {
-                log.debug("Encodage PCM → WAV ({}o)", audioData.length);
-                processedAudio = WavEncoder.encodePcm16MonoToWav(audioData, 16000);
-                actualMimeType = "audio/wav";
-            }
+        var formData = new LinkedMultiValueMap<String, Object>();
+        formData.add("file", audioResource);
+        formData.add("model", config.transcribeModel());
+        formData.add("language", locale);
+        formData.add("response_format", "json");
+        formData.add("temperature", 0.0);
 
-            log.debug("Transcription streaming chunk (taille={}o, type={}, locale={})",
-                processedAudio.length, actualMimeType, locale);
+        if (locale != null && locale.equalsIgnoreCase("fr")) {
+            formData.add(
+                    "prompt",
+                    "Dictée médicale clinique : consultation, examen, diagnostic, "
+                            + "antécédents, traitement, constantes vitales, auscultation, palpation.");
+        }
 
-            String extension = resolveExtension(actualMimeType);
-            ByteArrayResource audioResource = new ByteArrayResource(processedAudio) {
-                @Override
-                public String getFilename() {
-                    return "chunk." + extension;
-                }
-            };
+        @SuppressWarnings("unchecked")
+        Map<String, Object> response = restClient.post()
+                .uri("/audio/transcriptions")
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(formData)
+                .retrieve()
+                .body(Map.class);
 
-            var formData = new LinkedMultiValueMap<String, Object>();
-            formData.add("file", audioResource);
-            formData.add("model", config.transcribeModel());
-            formData.add("language", locale);
-            formData.add("response_format", "json");
-            formData.add("temperature", 0.0); // Déterministe pour meilleure cohérence
+        if (response == null) {
+            throw new IllegalStateException("Réponse vide de l'API de transcription");
+        }
 
-            // Prompt pour vocabulaire médical français
-            if (locale.equalsIgnoreCase("fr")) {
-                formData.add("prompt",
-                    "Dictée médicale clinique : consultation, examen, diagnostic, " +
-                    "antécédents, traitement, constantes vitales, auscultation, palpation.");
-            }
+        String text = response.get("text") == null ? "" : response.get("text").toString();
+        String detectedLanguage = response.get("language") == null
+                ? locale
+                : response.get("language").toString();
 
-            @SuppressWarnings("unchecked")
-            Map<String, Object> response = restClient.post()
-                    .uri("/audio/transcriptions")
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(formData)
-                    .retrieve()
-                    .body(Map.class);
-
-            if (response == null) {
-                throw new IllegalStateException("Réponse vide de Whisper API");
-            }
-
-            String text = (String) response.get("text");
-            String detectedLanguage = (String) response.getOrDefault("language", locale);
-
-            log.debug("Transcription reçue: text=\"{}\" ({}o audio)",
-                text != null ? text.substring(0, Math.min(50, text.length())) : "",
+        log.debug(
+                "Transcription reçue text=\"{}\" audio={} octets",
+                text.substring(0, Math.min(50, text.length())),
                 audioData.length);
 
-            return new AiTranscription(
-                text != null ? text.trim() : "",
+        return new AiTranscription(
+                text.trim(),
                 detectedLanguage,
-                extractConfidence(response)
-            );
-        });
+                extractConfidence(response));
     }
 
     private boolean isConfigured(AiProperties.OpenAiProperties openAi) {
@@ -130,21 +134,20 @@ public class OpenAiStreamingTranscriptionService {
     }
 
     private String resolveExtension(String mimeType) {
-        if (mimeType == null) return "wav";
+        if (mimeType == null) {
+            return "wav";
+        }
         return switch (mimeType.toLowerCase()) {
             case "audio/webm" -> "webm";
             case "audio/mp4", "audio/m4a" -> "m4a";
             case "audio/mpeg", "audio/mp3" -> "mp3";
-            case "audio/wav", "audio/wave" -> "wav";
-            case "audio/pcm" -> "wav"; // PCM encapsulé en WAV
+            case "audio/wav", "audio/wave", "audio/pcm" -> "wav";
             case "audio/ogg" -> "ogg";
             default -> "wav";
         };
     }
 
     private Double extractConfidence(Map<String, Object> response) {
-        // Whisper ne retourne pas toujours de confidence
-        // On peut l'inférer des logprobs si disponibles
-        return 0.95; // Placeholder - à affiner
+        return 0.95;
     }
 }
