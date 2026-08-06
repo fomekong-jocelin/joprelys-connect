@@ -92,8 +92,9 @@ public class AiClinicalCaptureRebuildService {
     }
 
     /**
-     * Regroupe les segments en chunks sans jamais couper un segment en deux.
-     * Un segment trop long pour tenir seul est envoyé dans son propre chunk.
+     * Regroupe les segments dans des requêtes bornées. Les segments ordinaires ne
+     * sont pas coupés ; un segment exceptionnellement supérieur à la limite est
+     * découpé sans perte afin qu'aucun appel au modèle ne dépasse la taille maximale.
      */
     private List<String> chunks(List<IntakeView> capture) {
         List<String> result = new ArrayList<>();
@@ -101,25 +102,37 @@ public class AiClinicalCaptureRebuildService {
         for (IntakeView item : capture) {
             String text = item.transcript() == null ? "" : item.transcript().trim();
             if (text.isBlank()) continue;
-            // Flush avant d'ajouter si le segment ferait déborder le chunk courant.
-            if (current.length() > 0 && current.length() + 1 + text.length() > MAX_MODEL_CHUNK_CHARS) {
-                result.add(current.toString());
-                current.setLength(0);
-            }
-            // Un segment plus grand que la limite est envoyé seul (jamais coupé).
-            if (current.length() > 0) current.append('\n');
-            current.append(text);
-            // Si le segment seul dépasse la limite, on le flush immédiatement.
-            if (current.length() >= MAX_MODEL_CHUNK_CHARS) {
-                result.add(current.toString());
-                current.setLength(0);
-            }
+            appendBounded(result, current, text);
         }
         flush(result, current);
         if (result.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_CAPTURE_EMPTY");
         }
         return List.copyOf(result);
+    }
+
+    private void appendBounded(List<String> result, StringBuilder current, String text) {
+        int offset = 0;
+        while (offset < text.length()) {
+            int separatorLength = current.length() == 0 ? 0 : 1;
+            int available = MAX_MODEL_CHUNK_CHARS - current.length() - separatorLength;
+            if (available <= 0) {
+                flush(result, current);
+                continue;
+            }
+
+            int remaining = text.length() - offset;
+            int length = Math.min(available, remaining);
+            if (separatorLength > 0) {
+                current.append('\n');
+            }
+            current.append(text, offset, offset + length);
+            offset += length;
+
+            if (current.length() >= MAX_MODEL_CHUNK_CHARS) {
+                flush(result, current);
+            }
+        }
     }
 
     private void flush(List<String> result, StringBuilder current) {

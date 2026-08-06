@@ -95,9 +95,11 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
   static const Duration _draftDebounce = Duration(milliseconds: 700);
   static const Duration _speechRestartDelay = Duration(milliseconds: 450);
   static const int _maximumConsecutiveSpeechRestarts = 20;
+
   /// Nombre de restarts consécutifs après lequel le moteur est réinitialisé
   /// complètement (initialize) avant de retenter listen().
   static const int _reinitializeAfterConsecutiveRestarts = 3;
+
   /// Durée sans erreur après laquelle le compteur de restarts est remis à zéro,
   /// même si aucune reconnaissance n'a eu lieu (silence prolongé légitime).
   static const Duration _restartCounterResetDelay = Duration(seconds: 60);
@@ -549,10 +551,8 @@ class ClinicalSpeechService extends ValueNotifier<RealtimeSpeechState> {
         try {
           _speechReady = await _speech.initialize(
             onStatus: _handleSpeechStatus,
-            onError: (error) => _handleSpeechError(
-              error.errorMsg,
-              permanent: error.permanent,
-            ),
+            onError: (error) =>
+                _handleSpeechError(error.errorMsg, permanent: error.permanent),
           );
         } catch (_) {
           _speechReady = false;
