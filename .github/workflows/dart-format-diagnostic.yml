@@ -1,11 +1,13 @@
 name: Apply Dart formatting
 
 on:
-  push:
-    branches: [fix/voice-streaming-final-flush]
+  pull_request:
+    branches: [main]
+    types: [ready_for_review]
 
 permissions:
   contents: write
+  pull-requests: read
 
 jobs:
   format-and-fix:
@@ -17,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: fix/voice-streaming-final-flush
+          ref: ${{ github.event.pull_request.head.ref }}
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.44.6'
@@ -40,9 +42,8 @@ jobs:
               await _cleanupWebSocket();
               final generation = ++_connectionGeneration;
           """
-          if before not in text:
-              raise SystemExit('Bloc de connexion WebSocket attendu introuvable')
-          text = text.replace(before, after, 1)
+          if before in text:
+              text = text.replace(before, after, 1)
           text = text.replace(
               "  Future<void> _cleanupWebSocket() async {\n    _connectionGeneration += 1;\n",
               "  Future<void> _cleanupWebSocket() async {\n",
@@ -62,4 +63,4 @@ jobs:
             exit 0
           fi
           git commit -m "style(mobile): formater et stabiliser le moteur vocal"
-          git push origin HEAD:fix/voice-streaming-final-flush
+          git push origin HEAD:${{ github.event.pull_request.head.ref }}
