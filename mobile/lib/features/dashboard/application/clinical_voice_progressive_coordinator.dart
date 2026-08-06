@@ -10,7 +10,6 @@ import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
 import 'clinical_dictation_parser.dart';
 import 'clinical_speech_service.dart';
-import 'clinical_voice_state.dart';
 
 /// Coordinates the non-blocking mobile voice pipeline:
 ///

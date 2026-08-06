@@ -8,7 +8,6 @@ import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/clinical_dictation_parser.dart';
-import '../../application/clinical_speech_service.dart';
 import '../../application/cloud_speech_streaming_service.dart';
 import '../../application/clinical_voice_progressive_coordinator.dart';
 import '../../data/clinical_voice_ai_api.dart';
