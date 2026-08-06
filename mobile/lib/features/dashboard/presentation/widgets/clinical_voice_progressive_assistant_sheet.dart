@@ -9,6 +9,7 @@ import '../../../../l10n/app_localizations.dart';
 import '../../../auth/application/auth_controller.dart';
 import '../../application/clinical_dictation_parser.dart';
 import '../../application/clinical_speech_service.dart';
+import '../../application/cloud_speech_streaming_service.dart';
 import '../../application/clinical_voice_progressive_coordinator.dart';
 import '../../data/clinical_voice_ai_api.dart';
 import '../../data/clinical_voice_capture_api.dart';
@@ -71,7 +72,7 @@ class ClinicalVoiceProgressiveAssistantSheet extends ConsumerStatefulWidget {
 class _ClinicalVoiceProgressiveAssistantSheetState
     extends ConsumerState<ClinicalVoiceProgressiveAssistantSheet>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  late final ClinicalSpeechService _speechService;
+  late final dynamic _speechService;
   late final ClinicalVoiceProgressiveCoordinator _coordinator;
   late final AnimationController _haloController;
   late final AnimationController _waveController;
@@ -101,11 +102,18 @@ class _ClinicalVoiceProgressiveAssistantSheetState
     )..repeat();
 
     final aiGateway = ref.read(clinicalVoiceAiApiProvider);
-    _speechService = ClinicalSpeechService(
+    final authState = ref.read(authControllerProvider).value;
+    final jwtToken = authState?.session?.accessToken ?? '';
+
+    // Utiliser CloudSpeechStreamingService (streaming cloud) au lieu de
+    // ClinicalSpeechService (speech_to_text on-device buggy)
+    _speechService = CloudSpeechStreamingService(
       gateway: aiGateway,
       visitId: widget.visit.id,
       initialDraft: widget.initialDraft,
       locale: widget.locale,
+      backendWsUrl: 'wss://api-recette.joprelys.com',
+      jwtToken: jwtToken,
     );
     _coordinator = ClinicalVoiceProgressiveCoordinator(
       speechService: _speechService,
