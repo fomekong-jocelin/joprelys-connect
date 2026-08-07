@@ -58,6 +58,7 @@ public class VoiceStreamingWebSocketHandler extends TextWebSocketHandler {
                 case "start" -> handleStart(session, payload);
                 case "audio" -> handleAudio(session, payload);
                 case "stop" -> handleStop(session);
+                case "ping" -> sendAck(session, "STREAMING_ALIVE");
                 default -> {
                     log.warn("Type de message inconnu: {}", type);
                     sendError(session, "MESSAGE_TYPE_UNKNOWN");
