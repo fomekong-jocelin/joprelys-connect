@@ -79,4 +79,7 @@ final class _FakeConsultationGateway implements ConsultationGateway {
   ) async {
     return SavedConsultationNote(consultationId: 'consultation-1', note: note);
   }
+
+  @override
+  Future<void> consumeVoiceWorkingSet(String visitId) async {}
 }
