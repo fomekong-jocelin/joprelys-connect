@@ -367,10 +367,7 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: onClose,
-            icon: const Icon(Icons.close_rounded),
-          ),
+          IconButton(onPressed: onClose, icon: const Icon(Icons.close_rounded)),
         ],
       ),
     );
