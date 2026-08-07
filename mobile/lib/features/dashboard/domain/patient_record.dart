@@ -108,6 +108,8 @@ final class PatientLabOrderSummary {
     this.createdAt,
     this.priority,
     this.practitioner,
+    this.examType,
+    this.reason,
   });
 
   final String id;
@@ -117,6 +119,8 @@ final class PatientLabOrderSummary {
   final DateTime? createdAt;
   final String? priority;
   final String? practitioner;
+  final String? examType;
+  final String? reason;
 
   factory PatientLabOrderSummary.fromJson(Map<String, dynamic> json) {
     final rawExams = json['exams'];
@@ -137,6 +141,8 @@ final class PatientLabOrderSummary {
         'requesterPractitionerName',
         'practitionerName',
       ]),
+      examType: _firstString(json, const ['examType', 'type']),
+      reason: _firstString(json, const ['reason', 'clinicalReason']),
     );
   }
 }
