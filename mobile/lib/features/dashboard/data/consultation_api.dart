@@ -1,12 +1,24 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_providers.dart';
 import '../domain/consultation_note.dart';
 
+@immutable
+final class SavedConsultationNote {
+  const SavedConsultationNote({
+    required this.consultationId,
+    required this.note,
+  });
+
+  final String consultationId;
+  final ConsultationNote note;
+}
+
 abstract interface class ConsultationGateway {
   Future<ConsultationNote?> getConsultationNote(String visitId);
-  Future<ConsultationNote> saveConsultationNote(
+  Future<SavedConsultationNote> saveConsultationNote(
     String visitId,
     ConsultationNote note,
   );
@@ -40,7 +52,7 @@ final class ConsultationApi implements ConsultationGateway {
   }
 
   @override
-  Future<ConsultationNote> saveConsultationNote(
+  Future<SavedConsultationNote> saveConsultationNote(
     String visitId,
     ConsultationNote note,
   ) async {
@@ -52,7 +64,12 @@ final class ConsultationApi implements ConsultationGateway {
     if (data is! Map) {
       throw const FormatException('Invalid save consultation note response');
     }
-    final saved = ConsultationNote.fromJson(Map<String, dynamic>.from(data));
+    final json = Map<String, dynamic>.from(data);
+    final consultationId = json['id']?.toString().trim() ?? '';
+    if (consultationId.isEmpty) {
+      throw const FormatException('Missing consultation id in save response');
+    }
+    final saved = ConsultationNote.fromJson(json);
 
     // The durable voice working set remains recoverable until the clinical note
     // itself is saved. Cleanup is deliberately best-effort: a cleanup outage must
@@ -64,6 +81,9 @@ final class ConsultationApi implements ConsultationGateway {
     } catch (_) {
       // A later save or explicit clear retries cleanup; clinical persistence wins.
     }
-    return saved;
+    return SavedConsultationNote(
+      consultationId: consultationId,
+      note: saved,
+    );
   }
 }
