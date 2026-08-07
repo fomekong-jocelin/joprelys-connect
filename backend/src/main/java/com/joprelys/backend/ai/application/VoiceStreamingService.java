@@ -34,6 +34,7 @@ public class VoiceStreamingService {
     private static final int WINDOW_OVERLAP_SECONDS = 1;
     private static final int SAMPLE_RATE = 16_000;
     private static final int BYTES_PER_SAMPLE = 2;
+    private static final int TRANSCRIPTION_RETRY_ATTEMPTS = 2;
     private static final int MAX_CONSECUTIVE_TRANSCRIPTION_FAILURES = 4;
     private static final Duration TRANSCRIPTION_RETRY_DELAY = Duration.ofMillis(250);
 
@@ -95,7 +96,7 @@ public class VoiceStreamingService {
         }
 
         return transcriptionService.transcribe(audioChunk, "audio/pcm", session.locale)
-                .retryWhen(Retry.backoff(1, TRANSCRIPTION_RETRY_DELAY)
+                .retryWhen(Retry.backoff(TRANSCRIPTION_RETRY_ATTEMPTS, TRANSCRIPTION_RETRY_DELAY)
                         .maxBackoff(Duration.ofSeconds(1))
                         .jitter(0.15d))
                 .doOnSuccess(ignored -> session.resetTranscriptionFailures())
@@ -152,7 +153,7 @@ public class VoiceStreamingService {
         StreamingSession session = activeSessions.remove(visitId);
         if (session != null) {
             session.cancel();
-            log.info("Session streaming annulée pour visite={}", visitId);
+            log.info("Session streaming annulée visite={}", visitId);
         }
     }
 
