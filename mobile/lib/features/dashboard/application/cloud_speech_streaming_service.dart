@@ -380,9 +380,11 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     final buffered = _pendingAudio.drain();
     for (var index = 0; index < buffered.length; index++) {
       if (!_transportReady || _wsChannel == null) {
-        for (var pendingIndex = index;
-            pendingIndex < buffered.length;
-            pendingIndex++) {
+        for (
+          var pendingIndex = index;
+          pendingIndex < buffered.length;
+          pendingIndex++
+        ) {
           _pendingAudio.add(buffered[pendingIndex]);
         }
         return;
@@ -417,9 +419,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     if (_audioRecoveryAttempts > 3) {
       _audioRecoveryInProgress = false;
       _stopAfterFailure(
-        StateError(
-          'MICROPHONE_INITIALIZATION_FAILED: ${reason ?? 'stalled'}',
-        ),
+        StateError('MICROPHONE_INITIALIZATION_FAILED: ${reason ?? 'stalled'}'),
       );
       return;
     }
@@ -509,9 +509,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         )) {
           _lastHeartbeatAt = now;
           try {
-            _wsChannel!.sink.add(
-              jsonEncode(<String, Object?>{'type': 'ping'}),
-            );
+            _wsChannel!.sink.add(jsonEncode(<String, Object?>{'type': 'ping'}));
           } catch (error) {
             _handleWebSocketError(error, _connectionGeneration);
           }

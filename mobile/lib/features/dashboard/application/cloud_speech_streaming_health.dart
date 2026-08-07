@@ -26,9 +26,7 @@ class BoundedAudioReplayBuffer {
   }
 
   List<Uint8List> snapshot() {
-    return List<Uint8List>.unmodifiable(
-      _chunks.map(Uint8List.fromList),
-    );
+    return List<Uint8List>.unmodifiable(_chunks.map(Uint8List.fromList));
   }
 
   List<Uint8List> drain() {

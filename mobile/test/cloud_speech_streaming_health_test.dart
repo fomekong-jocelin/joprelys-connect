@@ -13,13 +13,10 @@ void main() {
       buffer.add(Uint8List.fromList([7, 8]));
 
       expect(buffer.lengthInBytes, 5);
-      expect(
-        buffer.drain().map((chunk) => chunk.toList()).toList(),
-        [
-          [4, 5, 6],
-          [7, 8],
-        ],
-      );
+      expect(buffer.drain().map((chunk) => chunk.toList()).toList(), [
+        [4, 5, 6],
+        [7, 8],
+      ]);
       expect(buffer.isEmpty, isTrue);
     });
   });
