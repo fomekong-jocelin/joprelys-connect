@@ -32,6 +32,20 @@ void main() {
       expect(note.toJson().containsKey('finalDiagnosis'), isFalse);
     });
 
+    test('keeps AI extras out of the canonical SOAP payload', () {
+      const note = ConsultationNote(
+        symptoms: 'Toux sèche',
+        prescriptions: '[{"drugName":"inhalateur"}]',
+        labOrders: '["radiographie du thorax"]',
+      );
+
+      expect(note.toJson(), contains('prescriptions'));
+      expect(note.toJson(), contains('labOrders'));
+      expect(note.toSoapJson(), containsPair('symptoms', 'Toux sèche'));
+      expect(note.toSoapJson().containsKey('prescriptions'), isFalse);
+      expect(note.toSoapJson().containsKey('labOrders'), isFalse);
+    });
+
     test('detects empty notes correctly', () {
       expect(const ConsultationNote().isEmpty, isTrue);
       expect(
@@ -66,15 +80,20 @@ void main() {
       expect(await api.getConsultationNote('visit-123'), isNull);
     });
 
-    test('saves the detailed SOAP fields on the canonical endpoint', () async {
+    test('saves SOAP only and exposes the consultation id', () async {
       final adapter = QueueHttpClientAdapter(
         (_, _) => jsonResponse(200, consultationJson()),
       );
       final api = buildConsultationApi(adapter);
-      final note = ConsultationNote.fromJson(consultationJson());
+      final source = ConsultationNote.fromJson(consultationJson());
+      final note = source.copyWith(
+        prescriptions: '[{"drugName":"inhalateur"}]',
+        labOrders: '["radiographie du thorax"]',
+      );
 
-      await api.saveConsultationNote('visit-123', note);
+      final saved = await api.saveConsultationNote('visit-123', note);
 
+      expect(saved.consultationId, 'consultation-456');
       expect(adapter.requests, hasLength(2));
       final request = adapter.requests.first;
       final requestData = Map<String, dynamic>.from(request.data as Map);
@@ -83,6 +102,8 @@ void main() {
       expect(requestData, containsPair('symptoms', note.symptoms));
       expect(requestData, containsPair('clinicalExam', note.clinicalExam));
       expect(requestData, containsPair('diagnosis', note.diagnosis));
+      expect(requestData.containsKey('prescriptions'), isFalse);
+      expect(requestData.containsKey('labOrders'), isFalse);
       expect(requestData.containsKey('suspectedDiagnosis'), isFalse);
       expect(requestData.containsKey('finalDiagnosis'), isFalse);
       expect(requestData.containsKey('subjective'), isFalse);
@@ -90,6 +111,22 @@ void main() {
       expect(
         adapter.requests.last.path,
         '/api/ai/consultations/visit-123/realtime-intake/consume',
+      );
+    });
+
+    test('rejects a save response without consultation id', () async {
+      final payload = consultationJson()..remove('id');
+      final adapter = QueueHttpClientAdapter(
+        (_, _) => jsonResponse(200, payload),
+      );
+      final api = buildConsultationApi(adapter);
+
+      await expectLater(
+        api.saveConsultationNote(
+          'visit-123',
+          const ConsultationNote(symptoms: 'Toux sèche'),
+        ),
+        throwsA(isA<FormatException>()),
       );
     });
 
@@ -133,6 +170,7 @@ ResponseBody jsonResponse(int statusCode, Map<String, dynamic> payload) {
 
 Map<String, dynamic> consultationJson() {
   return <String, dynamic>{
+    'id': 'consultation-456',
     'symptoms': 'Douleur thoracique depuis deux heures',
     'clinicalExam': 'Auscultation normale',
     'diagnosis': 'Reflux gastro-œsophagien',
