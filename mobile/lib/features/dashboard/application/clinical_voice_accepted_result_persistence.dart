@@ -30,8 +30,7 @@ final class ClinicalVoiceAcceptedResultPersistence {
     );
 
     final prescription = _normalized(prescriptionJson);
-    if (prescription != null &&
-        prescription != _savedPrescriptionFingerprint) {
+    if (prescription != null && prescription != _savedPrescriptionFingerprint) {
       await structuredGateway.savePrescriptionDraft(
         consultationId: saved.consultationId,
         prescriptionJson: prescription,
