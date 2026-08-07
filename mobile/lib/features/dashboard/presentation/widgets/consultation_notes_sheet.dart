@@ -5,6 +5,8 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../application/clinical_voice_accepted_result_persistence.dart';
+import '../../data/clinical_voice_structured_api.dart';
 import '../../data/consultation_api.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
@@ -50,10 +52,19 @@ class _ConsultationNotesSheetState
   final _formKey = GlobalKey<FormState>();
   final _controllers = ConsultationNoteFormControllers();
 
+  ClinicalVoiceAcceptedResultPersistence? _acceptedResultPersistence;
   bool _isSaving = false;
   bool _isLoading = true;
   bool _didFailToLoad = false;
   String? _error;
+
+  ClinicalVoiceAcceptedResultPersistence get _persistence {
+    return _acceptedResultPersistence ??=
+        ClinicalVoiceAcceptedResultPersistence(
+          consultationGateway: ref.read(consultationApiProvider),
+          structuredGateway: ref.read(clinicalVoiceStructuredApiProvider),
+        );
+  }
 
   @override
   void initState() {
@@ -94,10 +105,11 @@ class _ConsultationNotesSheetState
     });
 
     try {
-      final gateway = ref.read(consultationApiProvider);
-      await gateway.saveConsultationNote(
-        widget.visit.id,
-        _controllers.toConsultationNote(),
+      await _persistence.save(
+        visit: widget.visit,
+        note: _controllers.toConsultationNote(),
+        prescriptionJson: _controllers.acceptedPrescriptions,
+        labOrdersJson: _controllers.acceptedLabOrders,
       );
       if (!mounted) return;
       final l10n = AppLocalizations.of(context);
@@ -122,23 +134,12 @@ class _ConsultationNotesSheetState
         _controllers.applyAcceptedDraft(result.note);
         if (!mounted) return;
         setState(() {});
-        final isFrench = Localizations.localeOf(context).languageCode != 'en';
-        final hasPrescriptions =
-            result.note.prescriptions?.trim().isNotEmpty == true;
-        final hasLabOrders = result.note.labOrders?.trim().isNotEmpty == true;
-        final extras = [
-          if (hasPrescriptions) (isFrench ? 'ordonnance' : 'prescription'),
-          if (hasLabOrders) (isFrench ? 'examens' : 'lab orders'),
-        ];
-        final message = extras.isEmpty
-            ? (isFrench ? 'Notes SOAP mises à jour.' : 'SOAP notes updated.')
-            : (isFrench
-                  ? 'Notes SOAP mises à jour. À saisir séparément : ${extras.join(', ')}.'
-                  : 'SOAP notes updated. To enter separately: ${extras.join(', ')}.');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(message),
-            duration: const Duration(seconds: 5),
+            content: Text(
+              AppLocalizations.of(context).assistantExtractedSummary,
+            ),
+            duration: const Duration(seconds: 4),
           ),
         );
       },

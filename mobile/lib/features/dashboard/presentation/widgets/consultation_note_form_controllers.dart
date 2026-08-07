@@ -12,6 +12,15 @@ final class ConsultationNoteFormControllers {
   final advice = TextEditingController();
   final followUp = TextEditingController();
 
+  String? _acceptedPrescriptions;
+  String? _acceptedLabOrders;
+
+  String? get acceptedPrescriptions => _acceptedPrescriptions;
+  String? get acceptedLabOrders => _acceptedLabOrders;
+
+  bool get hasAcceptedStructuredExtras =>
+      _isPresent(_acceptedPrescriptions) || _isPresent(_acceptedLabOrders);
+
   void populate(ConsultationNote note) {
     symptoms.text = note.symptoms ?? '';
     clinicalExam.text = note.clinicalExam ?? '';
@@ -19,9 +28,11 @@ final class ConsultationNoteFormControllers {
     conclusion.text = note.conclusion ?? '';
     advice.text = note.advice ?? '';
     followUp.text = note.followUp ?? '';
+    _acceptedPrescriptions = _normalized(note.prescriptions);
+    _acceptedLabOrders = _normalized(note.labOrders);
   }
 
-  /// Remplace le brouillon SOAP courant par le brouillon IA explicitement accepté.
+  /// Remplace le brouillon courant par le résultat IA explicitement accepté.
   bool applyAcceptedDraft(ConsultationNote note) {
     var changed = false;
     changed = _replace(symptoms, note.symptoms) || changed;
@@ -30,6 +41,17 @@ final class ConsultationNoteFormControllers {
     changed = _replace(conclusion, note.conclusion) || changed;
     changed = _replace(advice, note.advice) || changed;
     changed = _replace(followUp, note.followUp) || changed;
+
+    final prescriptions = _normalized(note.prescriptions);
+    final labOrders = _normalized(note.labOrders);
+    if (_acceptedPrescriptions != prescriptions) {
+      _acceptedPrescriptions = prescriptions;
+      changed = true;
+    }
+    if (_acceptedLabOrders != labOrders) {
+      _acceptedLabOrders = labOrders;
+      changed = true;
+    }
     return changed;
   }
 
@@ -41,9 +63,13 @@ final class ConsultationNoteFormControllers {
     _putWhenPresent(draft, 'conclusion', conclusion.text);
     _putWhenPresent(draft, 'advice', advice.text);
     _putWhenPresent(draft, 'followUp', followUp.text);
+    _putWhenPresent(draft, 'prescription', _acceptedPrescriptions ?? '');
+    _putWhenPresent(draft, 'labOrders', _acceptedLabOrders ?? '');
     return draft;
   }
 
+  /// Le contrat consultation reste strictement SOAP. Les extras structurés sont
+  /// persistés séparément par ClinicalVoiceAcceptedResultPersistence.
   ConsultationNote toConsultationNote() {
     return ConsultationNote(
       symptoms: symptoms.text.trim(),
@@ -77,4 +103,11 @@ final class ConsultationNoteFormControllers {
       target[field] = trimmed;
     }
   }
+
+  String? _normalized(String? value) {
+    final normalized = value?.trim() ?? '';
+    return normalized.isEmpty ? null : normalized;
+  }
+
+  bool _isPresent(String? value) => value != null && value.trim().isNotEmpty;
 }

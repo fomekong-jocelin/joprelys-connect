@@ -84,18 +84,21 @@ void main() {
   });
 
   test(
-    'voice working set is consumed only after consultation save response',
+    'voice working set is consumed only after SOAP and accepted extras persist',
     () {
       final source = File(
-        'lib/features/dashboard/data/consultation_api.dart',
+        'lib/features/dashboard/application/clinical_voice_accepted_result_persistence.dart',
       ).readAsStringSync();
 
-      final saveResponse = source.indexOf(
-        'final saved = ConsultationNote.fromJson',
-      );
-      final consume = source.indexOf('realtime-intake/consume', saveResponse);
-      expect(saveResponse, greaterThanOrEqualTo(0));
-      expect(consume, greaterThan(saveResponse));
+      final save = source.indexOf('saveConsultationNote(');
+      final prescription = source.indexOf('savePrescriptionDraft(', save);
+      final labOrders = source.indexOf('saveLabOrders(', save);
+      final consume = source.indexOf('consumeVoiceWorkingSet(', save);
+
+      expect(save, greaterThanOrEqualTo(0));
+      expect(prescription, greaterThan(save));
+      expect(labOrders, greaterThan(prescription));
+      expect(consume, greaterThan(labOrders));
     },
   );
 

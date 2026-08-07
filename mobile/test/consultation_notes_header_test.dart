@@ -73,8 +73,13 @@ final class _FakeConsultationGateway implements ConsultationGateway {
   Future<ConsultationNote?> getConsultationNote(String visitId) async => null;
 
   @override
-  Future<ConsultationNote> saveConsultationNote(
+  Future<SavedConsultationNote> saveConsultationNote(
     String visitId,
     ConsultationNote note,
-  ) async => note;
+  ) async {
+    return SavedConsultationNote(consultationId: 'consultation-1', note: note);
+  }
+
+  @override
+  Future<void> consumeVoiceWorkingSet(String visitId) async {}
 }

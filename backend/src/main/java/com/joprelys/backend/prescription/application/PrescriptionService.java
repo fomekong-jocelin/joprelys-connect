@@ -105,6 +105,7 @@ public class PrescriptionService {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance au statut DRAFT peut être finalisée.");
 		}
 
+		validateDraftCompleteness(prescription);
 		prescription.setStatus("ACTIVE");
 		prescription.setIssuedAt(Instant.now());
 		prescription = prescriptionRepository.save(prescription);
@@ -229,6 +230,16 @@ public class PrescriptionService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Patient introuvable."));
 
 		return transmitPrescription(id, patient.getId(), null, globalPatientNumber, true);
+	}
+
+	private void validateDraftCompleteness(PrescriptionEntity prescription) {
+		boolean missingDosage = prescription.getItems().stream()
+				.anyMatch(item -> item.getDosage() == null || item.getDosage().isBlank());
+		if (missingDosage) {
+			throw new ResponseStatusException(
+					HttpStatus.BAD_REQUEST,
+					"Complétez le dosage de chaque médicament avant de finaliser l’ordonnance.");
+		}
 	}
 
 	private String generateRandomPin() {

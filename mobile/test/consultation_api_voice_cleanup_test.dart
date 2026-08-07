@@ -11,7 +11,7 @@ import 'support/queue_http_client_adapter.dart';
 
 void main() {
   test(
-    'consumes voice intake only after the consultation save succeeds',
+    'keeps voice intake after SOAP save until cleanup is explicitly requested',
     () async {
       var requestIndex = 0;
       final adapter = QueueHttpClientAdapter((options, _) {
@@ -28,54 +28,51 @@ void main() {
         );
         return ResponseBody.fromString('', 204);
       });
+      final api = buildApi(adapter);
 
-      final saved = await buildApi(adapter).saveConsultationNote(
+      final saved = await api.saveConsultationNote(
         'visit-123',
         const ConsultationNote(symptoms: 'Toux depuis trois jours'),
       );
 
-      expect(saved.symptoms, 'Toux depuis trois jours');
+      expect(saved.note.symptoms, 'Toux depuis trois jours');
+      expect(adapter.requests, hasLength(1));
+
+      await api.consumeVoiceWorkingSet('visit-123');
       expect(adapter.requests, hasLength(2));
     },
   );
 
   test(
-    'does not report a saved consultation as failed when cleanup fails',
-    () async {
-      var requestIndex = 0;
-      final adapter = QueueHttpClientAdapter((options, _) {
-        requestIndex++;
-        if (requestIndex == 1) return jsonResponse(200, noteJson());
-        return jsonResponse(503, <String, dynamic>{'message': 'Unavailable'});
-      });
-
-      final saved = await buildApi(adapter).saveConsultationNote(
-        'visit-123',
-        const ConsultationNote(symptoms: 'Toux depuis trois jours'),
-      );
-
-      expect(saved.symptoms, 'Toux depuis trois jours');
-      expect(adapter.requests, hasLength(2));
-    },
-  );
-
-  test(
-    'never consumes voice intake when consultation persistence fails',
+    'does not report persisted resources as failed when cleanup fails',
     () async {
       final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(500, <String, dynamic>{'message': 'Failure'}),
+        (_, _) =>
+            jsonResponse(503, <String, dynamic>{'message': 'Unavailable'}),
       );
+      final api = buildApi(adapter);
 
-      await expectLater(
-        buildApi(adapter).saveConsultationNote(
-          'visit-123',
-          const ConsultationNote(symptoms: 'Toux depuis trois jours'),
-        ),
-        throwsA(anything),
-      );
+      await api.consumeVoiceWorkingSet('visit-123');
+
       expect(adapter.requests, hasLength(1));
     },
   );
+
+  test('a failed SOAP persistence never triggers cleanup on its own', () async {
+    final adapter = QueueHttpClientAdapter(
+      (_, _) => jsonResponse(500, <String, dynamic>{'message': 'Failure'}),
+    );
+    final api = buildApi(adapter);
+
+    await expectLater(
+      api.saveConsultationNote(
+        'visit-123',
+        const ConsultationNote(symptoms: 'Toux depuis trois jours'),
+      ),
+      throwsA(anything),
+    );
+    expect(adapter.requests, hasLength(1));
+  });
 }
 
 ConsultationApi buildApi(QueueHttpClientAdapter adapter) {
@@ -98,6 +95,7 @@ ResponseBody jsonResponse(int statusCode, Object payload) {
 
 Map<String, dynamic> noteJson() {
   return <String, dynamic>{
+    'id': 'consultation-123',
     'symptoms': 'Toux depuis trois jours',
     'clinicalExam': null,
     'diagnosis': null,

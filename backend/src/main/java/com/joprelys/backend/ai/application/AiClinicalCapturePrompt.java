@@ -31,8 +31,9 @@ final class AiClinicalCapturePrompt {
             - Never invent, complete, medically improve or infer a fact.
             - Never turn a symptom into a diagnosis or strengthen the clinician's stated certainty.
             - Keep negations, uncertainty, chronology, numbers, units, medication names, doses, routes, frequencies and durations faithful to the transcript.
-            - For text fields, produce concise professional clinical sentences by reorganizing, punctuating and minimally correcting grammar only when meaning is unchanged.
-            - Controlled reformulation may add harmless grammatical linking such as "Le patient rapporte" or "The patient reports", but may not add a new clinical token, interpretation or medical synonym absent from CURRENT TRANSCRIPT.
+            - For SOAP text fields, transform conversational speech into concise declarative clinical prose. Reorder and punctuate supported source wording; remove greetings, filler, duplicated restatements and clinician questions when they only provide context for an explicit answer.
+            - Do NOT merely copy the dialogue line by line when a safe declarative representation is possible.
+            - You may add only harmless grammatical function words or neutral reporting frames such as "Le patient rapporte" / "The patient reports". Do not add a new clinical concept, interpretation or medical synonym absent from CURRENT TRANSCRIPT.
             - Do not replace a spoken expression with a medical synonym that is absent from CURRENT TRANSCRIPT; for example, do not replace "maux de tête" with "céphalée" unless "céphalée" was actually spoken.
             - Preserve literal wording instead of guessing whenever an ASR phrase is malformed and correcting it could alter a dose, frequency, duration, negation or level of certainty.
             - A malformed or uncertain attribute must never make another safe fact disappear.
@@ -43,6 +44,16 @@ final class AiClinicalCapturePrompt {
             - Return only facts from CURRENT TRANSCRIPT. Joprelys merges chunks and deduplicates them deterministically after safety checks.
             - For every change, evidence is mandatory and contains 1 to 4 short exact contiguous quotes copied from CURRENT TRANSCRIPT.
             - If a clinical fact cannot be supported by an exact quote, do not emit it.
+
+            DIALOGUE TO NOTE REFORMULATION
+            - The final SOAP value is a clinical note, not a transcript. Prefer short declarative sentences and remove question marks unless a question itself is clinically relevant as an unresolved uncertainty.
+            - When an immediately associated answer explicitly resolves a clinician question, the question may provide grammatical context for the answer. Example: "Avez-vous des frissons ? Pas de frissons." -> "Pas de frissons."
+            - A short positive answer may reuse the exact clinical term from its immediately preceding question when the answer clearly refers to that term. Example: "Vous êtes essoufflé ? Oui, un peu, quand je monte les escaliers." may be rendered as "Essoufflé un peu quand je monte les escaliers." Do not replace it with "dyspnée d'effort" unless those words were spoken.
+            - Never convert an unanswered part of a multiple question into a positive or negative fact. If the transcript asks about chills, night sweats and weight loss but only answers chills and sweating, emit nothing about weight loss.
+            - Preserve the scope of negation. "Non, aucune douleur, seulement une sensation d'oppression de temps en temps" may become "Aucune douleur, seulement une sensation d'oppression de temps en temps"; it must not become "absence de symptôme thoracique".
+            - Remove conversational acknowledgements such as yes/okay when their clinical content is fully represented by the associated supported statement.
+            - For evidence, quote the smallest exact answer or factual clause that proves the statement. Do not include the whole clinician question in evidence unless words from that question are necessary to establish the explicit answer context.
+            - Keep significant words from each evidence quote represented in the proposed value whenever possible so deterministic factuality checks can validate the reformulation instead of falling back to verbatim evidence.
 
             FIELD MAPPING
             - symptoms: complaint, symptoms, history of present illness, treatment adherence, functional impact, associated symptoms, denied symptoms and other subjective facts.
@@ -70,9 +81,10 @@ final class AiClinicalCapturePrompt {
 
             STRUCTURED FIELD ENCODING
             The JSON Schema requires change.value to be a string. For structured fields, put compact JSON inside that string:
-            - prescription: JSON array of objects using only drugName, dosage, posology, duration, quantity, instructions, form, route, frequency, substitutionAllowed.
+            - prescription: JSON array of objects using only drugName, dosage, posology, duration, quantity, instructions, form, route, frequency, substitutionAllowed. Omit attributes that were not spoken; a medication name may remain as a draft item even when dosage was not stated.
             - labOrders: JSON array of strings.
             - vitals: JSON object using only temperature, weight, height, pulse, systolic, diastolic, spo2, glycemia, respiratoryRate, painScale.
+            Structured fields are factual data, not prose: never stylistically reformulate medication names, doses, examination names or vital values.
             Do not manufacture grammatical corrections to make a value look cleaner. In particular, do not silently change an uncertain ASR phrase such as "1 fois pas jour" into "1 fois par jour".
 
             COMPLETENESS CHECK BEFORE RETURNING

@@ -44,6 +44,67 @@ class AiClinicalReformulationContractTest {
     }
 
     @Test
+    void shouldAllowDialogueAnswerToBecomeADeclarativeClinicalStatement() {
+        String source = "Vous êtes essoufflé ? Oui, un peu, quand je monte les escaliers. "
+                + "J'ai besoin de reprendre mon souffle.";
+        ParsedResponse response = new ParsedResponse(
+                List.of(new ParsedChange(
+                        "symptoms",
+                        "SET",
+                        "Essoufflé un peu quand je monte les escaliers. Besoin de reprendre mon souffle.",
+                        "Dialogue converted to a declarative note",
+                        "LOW",
+                        List.of(
+                                "un peu, quand je monte les escaliers",
+                                "besoin de reprendre mon souffle"))),
+                "ignored",
+                false,
+                null);
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                source,
+                Map.of(),
+                "CAPTURE",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        assertEquals(
+                "Essoufflé un peu quand je monte les escaliers. Besoin de reprendre mon souffle.",
+                checked.changes().getFirst().proposedValue());
+        assertFalse(checked.changes().getFirst().proposedValue().contains("?"));
+    }
+
+    @Test
+    void shouldAllowNegativeAnswerWithoutCopyingTheQuestion() {
+        String source = "Avez-vous une douleur dans la poitrine ? "
+                + "Aucune douleur, seulement une sensation d'oppression de temps en temps.";
+        ParsedResponse response = new ParsedResponse(
+                List.of(new ParsedChange(
+                        "symptoms",
+                        "SET",
+                        "Aucune douleur dans la poitrine, seulement une sensation d'oppression de temps en temps.",
+                        "Explicit negative answer",
+                        "LOW",
+                        List.of("Aucune douleur, seulement une sensation d'oppression de temps en temps"))),
+                "ignored",
+                false,
+                null);
+
+        ParsedResponse checked = guard.enforce(
+                response,
+                source,
+                Map.of(),
+                "CAPTURE",
+                "fr");
+
+        assertEquals(1, checked.changes().size());
+        assertEquals(
+                "Aucune douleur dans la poitrine, seulement une sensation d'oppression de temps en temps.",
+                checked.changes().getFirst().proposedValue());
+    }
+
+    @Test
     void shouldKeepExactEvidenceWhenAReformulationIntroducesMedicalMeaning() {
         ParsedResponse response = new ParsedResponse(
                 List.of(new ParsedChange(
@@ -72,7 +133,7 @@ class AiClinicalReformulationContractTest {
     }
 
     @Test
-    void promptsShouldRequestControlledRewritingAndExactEvidence() {
+    void promptsShouldRequestDialogueToNoteRewritingAndExactEvidence() {
         assertTrue(AiClinicalFidelityContract.SYSTEM_INSTRUCTION.contains(
                 "grammatically reformulate"));
         assertTrue(AiClinicalFidelityContract.SYSTEM_INSTRUCTION.contains(
@@ -80,8 +141,12 @@ class AiClinicalReformulationContractTest {
         assertTrue(AiClinicalFidelityContract.SYSTEM_INSTRUCTION.contains(
                 "EXACT quotes copied from the CURRENT input"));
         assertTrue(AiClinicalCapturePrompt.SYSTEM_PROMPT.contains(
-                "concise professional clinical sentences"));
+                "transform conversational speech into concise declarative clinical prose"));
         assertTrue(AiClinicalCapturePrompt.SYSTEM_PROMPT.contains(
-                "may not add a new clinical token"));
+                "Do NOT merely copy the dialogue line by line"));
+        assertTrue(AiClinicalCapturePrompt.SYSTEM_PROMPT.contains(
+                "Never convert an unanswered part of a multiple question"));
+        assertTrue(AiClinicalCapturePrompt.SYSTEM_PROMPT.contains(
+                "Structured fields are factual data, not prose"));
     }
 }
