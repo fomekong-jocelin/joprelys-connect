@@ -58,7 +58,7 @@ final class ConsultationApi implements ConsultationGateway {
   ) async {
     final response = await _client.post<dynamic>(
       '/api/visits/$visitId/consultation',
-      data: note.toJson(),
+      data: note.toSoapJson(),
     );
     final data = response.data;
     if (data is! Map) {
