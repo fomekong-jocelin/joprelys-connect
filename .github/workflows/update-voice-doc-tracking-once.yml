@@ -77,3 +77,5 @@ jobs:
           git add docs/ai/CHANGELOG.md docs/ai/PROJECT-TRACKING.md
           git commit -m "docs: clôturer le suivi du correctif vocal"
           git push origin HEAD:fix/voice-persistence-reformulation
+
+# trigger-existing-workflow
