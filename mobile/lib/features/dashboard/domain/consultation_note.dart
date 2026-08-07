@@ -54,7 +54,17 @@ final class ConsultationNote {
       _isBlank(prescriptions) &&
       _isBlank(labOrders);
 
+  /// Représentation complète utile aux flux IA et aux tests de domaine.
   Map<String, dynamic> toJson() {
+    return {
+      ...toSoapJson(),
+      if (prescriptions != null) 'prescriptions': prescriptions,
+      if (labOrders != null) 'labOrders': labOrders,
+    };
+  }
+
+  /// Contrat canonique de `POST /api/visits/{id}/consultation`.
+  Map<String, dynamic> toSoapJson() {
     return {
       if (symptoms != null) 'symptoms': symptoms,
       if (clinicalExam != null) 'clinicalExam': clinicalExam,
@@ -62,8 +72,6 @@ final class ConsultationNote {
       if (conclusion != null) 'conclusion': conclusion,
       if (advice != null) 'advice': advice,
       if (followUp != null) 'followUp': followUp,
-      if (prescriptions != null) 'prescriptions': prescriptions,
-      if (labOrders != null) 'labOrders': labOrders,
     };
   }
 
