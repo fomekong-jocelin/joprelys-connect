@@ -1,8 +1,8 @@
 import 'dart:collection';
 import 'dart:typed_data';
 
-/// Tampon borné conservant les derniers paquets PCM pendant une courte coupure
-/// réseau. Les paquets les plus anciens sont évincés en premier.
+/// Tampon borné conservant des paquets PCM récents. Les paquets les plus
+/// anciens sont évincés en premier afin de borner strictement la mémoire.
 class BoundedAudioReplayBuffer {
   BoundedAudioReplayBuffer({required this.maxBytes})
     : assert(maxBytes > 0, 'maxBytes must be positive');
@@ -25,8 +25,14 @@ class BoundedAudioReplayBuffer {
     }
   }
 
+  List<Uint8List> snapshot() {
+    return List<Uint8List>.unmodifiable(
+      _chunks.map(Uint8List.fromList),
+    );
+  }
+
   List<Uint8List> drain() {
-    final result = List<Uint8List>.unmodifiable(_chunks);
+    final result = snapshot();
     clear();
     return result;
   }
@@ -41,8 +47,8 @@ class CloudSpeechHealthPolicy {
   const CloudSpeechHealthPolicy._();
 
   static const Duration audioStallTimeout = Duration(seconds: 3);
-  static const Duration heartbeatInterval = Duration(seconds: 10);
-  static const Duration serverStallTimeout = Duration(seconds: 32);
+  static const Duration heartbeatInterval = Duration(seconds: 6);
+  static const Duration serverStallTimeout = Duration(seconds: 18);
   static const Duration stableConnectionDelay = Duration(seconds: 45);
 
   static bool audioIsStalled({
