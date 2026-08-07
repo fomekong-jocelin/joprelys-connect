@@ -1,6 +1,7 @@
 package com.joprelys.backend.prescription.api;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 
 public record PrescriptionItemRequest(
@@ -8,7 +9,7 @@ public record PrescriptionItemRequest(
 		@Size(max = 200)
 		String drugName,
 
-		@NotBlank(message = "Le dosage est obligatoire.")
+		@NotNull(message = "Le champ dosage est obligatoire, même vide dans un brouillon.")
 		@Size(max = 200)
 		String dosage,
 
