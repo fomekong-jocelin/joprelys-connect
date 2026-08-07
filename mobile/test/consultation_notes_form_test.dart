@@ -6,7 +6,7 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/consulta
 import 'package:joprelys_mobile/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('renders the six canonical fields and validates required ones', (
+  testWidgets('requires history but allows a draft without diagnosis', (
     tester,
   ) async {
     final formKey = GlobalKey<FormState>();
@@ -27,17 +27,19 @@ void main() {
     expect(formKey.currentState?.validate(), isFalse);
     await tester.pump();
     expect(find.text('L’histoire de la maladie est requise.'), findsOneWidget);
-    expect(find.text('Le diagnostic est requis.'), findsOneWidget);
+    expect(find.text('Le diagnostic est requis.'), findsNothing);
 
-    await tester.enterText(find.byType(TextFormField).at(0), 'Fièvre');
     await tester.enterText(
-      find.byType(TextFormField).at(2),
-      'Syndrome fébrile',
+      find.byType(TextFormField).at(0),
+      'Fatigue depuis trois semaines et toux sèche.',
     );
 
     expect(formKey.currentState?.validate(), isTrue);
-    expect(controllers.toConsultationNote().symptoms, 'Fièvre');
-    expect(controllers.toConsultationNote().diagnosis, 'Syndrome fébrile');
+    expect(
+      controllers.toConsultationNote().symptoms,
+      'Fatigue depuis trois semaines et toux sèche.',
+    );
+    expect(controllers.toConsultationNote().diagnosis, isEmpty);
   });
 
   testWidgets('renders the same SOAP sections in English', (tester) async {
