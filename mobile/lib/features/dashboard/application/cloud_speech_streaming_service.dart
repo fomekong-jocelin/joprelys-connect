@@ -13,8 +13,10 @@ import '../data/clinical_voice_ai_api.dart';
 import '../domain/consultation_note.dart';
 import '../domain/patient_vitals.dart';
 import 'clinical_dictation_parser.dart';
+import 'clinical_speech_hypothesis.dart';
 import 'clinical_voice_error_message.dart';
 import 'clinical_voice_state.dart';
+import 'cloud_speech_streaming_health.dart';
 
 export 'clinical_voice_error_message.dart';
 export 'clinical_voice_state.dart';
@@ -49,10 +51,10 @@ Uri buildClinicalVoiceWebSocketUri({
 
 /// Dictée clinique cloud via WebSocket.
 ///
-/// Le moteur attend une connexion réellement établie et l'accusé serveur avant
-/// d'ouvrir le microphone. Il conserve le même contrat fonctionnel que l'ancien
-/// moteur local : brouillon durable, correction des segments, revue IA et
-/// reprise après interruption du cycle de vie.
+/// La capture microphone et le transport réseau sont volontairement découplés.
+/// Une courte rupture WebSocket ne stoppe donc plus le microphone : les paquets
+/// récents sont conservés localement puis rejoués après reconnexion. Un watchdog
+/// contrôle séparément la santé du microphone et celle du WebSocket.
 class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   CloudSpeechStreamingService({
     required ClinicalVoiceAiGateway gateway,
@@ -87,12 +89,14 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
          ),
        );
 
-  static const int _maxReconnectAttempts = 5;
+  static const int _maxReconnectAttempts = 6;
+  static const int _maxPendingAudioBytes = 16_000 * 2 * 20;
+  static const int _recentReplayAudioBytes = 16_000 * 2 * 3;
   static const Duration _connectTimeout = Duration(seconds: 12);
   static const Duration _startAckTimeout = Duration(seconds: 10);
   static const Duration _stopAckTimeout = Duration(seconds: 20);
-  static const Duration _initialReconnectDelay = Duration(seconds: 1);
-  static const Duration _maxReconnectDelay = Duration(seconds: 16);
+  static const Duration _initialReconnectDelay = Duration(milliseconds: 500);
+  static const Duration _maxReconnectDelay = Duration(seconds: 4);
   static const Duration _draftDebounce = Duration(milliseconds: 700);
   static const Duration _microphoneRetryDelay = Duration(milliseconds: 350);
 
@@ -106,9 +110,14 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   final ClinicalDictationParser _parser = const ClinicalDictationParser();
   final AudioRecorder _recorder;
   final WebSocketChannel Function(Uri uri) _channelFactory;
-
   final List<ClinicalTranscriptSegment> _segments =
       <ClinicalTranscriptSegment>[];
+  final BoundedAudioReplayBuffer _pendingAudio = BoundedAudioReplayBuffer(
+    maxBytes: _maxPendingAudioBytes,
+  );
+  final BoundedAudioReplayBuffer _recentAudio = BoundedAudioReplayBuffer(
+    maxBytes: _recentReplayAudioBytes,
+  );
 
   WebSocketChannel? _wsChannel;
   StreamSubscription<Uint8List>? _audioStreamSubscription;
@@ -116,6 +125,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   Timer? _reconnectTimer;
   Timer? _draftTimer;
   Timer? _amplitudeTimer;
+  Timer? _healthTimer;
   Completer<void>? _startAckCompleter;
   Completer<void>? _stopAckCompleter;
   Future<void> _draftPersistence = Future<void>.value();
@@ -125,13 +135,21 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   bool _shouldReconnect = false;
   bool _reconnectScheduled = false;
   bool _connecting = false;
+  bool _transportReady = false;
+  bool _audioRecoveryInProgress = false;
   bool _resumeAfterLifecycle = false;
   bool _localDraftRestored = false;
   bool _captureCompleted = false;
   DateTime? _captureStartedAt;
+  DateTime? _lastAudioChunkAt;
+  DateTime? _lastServerMessageAt;
+  DateTime? _lastHeartbeatAt;
+  DateTime? _connectedAt;
+  DateTime? _lastAudioRecoveryAt;
   int _reconnectAttempts = 0;
   int _connectionGeneration = 0;
   int _audioRecoveryAttempts = 0;
+  int _replaySeededGeneration = -1;
   String _currentPartial = '';
   Duration _currentPartialOffset = Duration.zero;
 
@@ -172,6 +190,15 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _reconnectAttempts = 0;
     _reconnectScheduled = false;
     _audioRecoveryAttempts = 0;
+    _replaySeededGeneration = -1;
+    _transportReady = false;
+    _pendingAudio.clear();
+    _recentAudio.clear();
+    _lastAudioChunkAt = null;
+    _lastServerMessageAt = null;
+    _lastHeartbeatAt = null;
+    _connectedAt = null;
+    _lastAudioRecoveryAt = null;
 
     value = value.copyWith(
       status: SpeechStatus.processing,
@@ -217,21 +244,30 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
       await startAck.future.timeout(_startAckTimeout);
       if (!_isCurrentConnection(generation)) return;
 
-      await _startAudioCapture();
+      _transportReady = true;
+      _lastServerMessageAt = DateTime.now();
+      _lastHeartbeatAt = DateTime.now();
+      _connectedAt = DateTime.now();
+
+      if (_audioStreamSubscription == null) {
+        await _startAudioCapture();
+      } else {
+        _flushBufferedAudio();
+      }
       if (!_isCurrentConnection(generation)) return;
 
-      _reconnectAttempts = 0;
       _reconnectScheduled = false;
+      _startHealthMonitoring();
       value = value.copyWith(
         status: SpeechStatus.listening,
         stage: ClinicalVoiceStage.capture,
-        soundLevel: 12,
+        soundLevel: value.soundLevel <= 0 ? 12 : value.soundLevel,
         clearError: true,
       );
       debugPrint('WebSocket vocal prêt : $_streamUri');
     } catch (error) {
       debugPrint('Échec connexion WebSocket vocal: $error');
-      await _cleanupAudioCapture();
+      _transportReady = false;
       await _cleanupWebSocket();
       if (_disposed || !_isStreaming || !_shouldReconnect) return;
       if (error is _VoiceSocketException && !error.retryable) {
@@ -257,7 +293,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<void> _startAudioCapture({bool fallback = false}) async {
     await _cleanupAudioCapture();
-    if (_disposed || !_isStreaming || _wsChannel == null) return;
+    if (_disposed || !_isStreaming || !_shouldReconnect) return;
 
     final hasPermission = await _recorder.hasPermission();
     if (!hasPermission) {
@@ -288,21 +324,34 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _audioStreamSubscription = stream.listen(
       _sendAudioChunk,
       onError: _handleAudioStreamError,
+      onDone: _handleAudioStreamDone,
       cancelOnError: true,
     );
+    _lastAudioChunkAt = DateTime.now();
     _startAmplitudeMonitoring();
-    _audioRecoveryAttempts = 0;
+    _startHealthMonitoring();
   }
 
   void _sendAudioChunk(Uint8List audioChunk) {
-    if (_disposed ||
-        !_isStreaming ||
-        _wsChannel == null ||
-        audioChunk.isEmpty) {
+    if (_disposed || !_isStreaming || audioChunk.isEmpty) return;
+    _lastAudioChunkAt = DateTime.now();
+    _recentAudio.add(audioChunk);
+
+    if (!_transportReady || _wsChannel == null) {
+      _pendingAudio.add(audioChunk);
+      return;
+    }
+    _sendAudioChunkToSocket(audioChunk);
+  }
+
+  void _sendAudioChunkToSocket(Uint8List audioChunk) {
+    final channel = _wsChannel;
+    if (!_transportReady || channel == null) {
+      _pendingAudio.add(audioChunk);
       return;
     }
     try {
-      _wsChannel!.sink.add(
+      channel.sink.add(
         jsonEncode(<String, Object?>{
           'type': 'audio',
           'data': base64Encode(audioChunk),
@@ -313,25 +362,77 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     }
   }
 
-  void _handleAudioStreamError(Object error) {
-    debugPrint('Erreur capture microphone: $error');
-    if (_disposed || !_isStreaming) return;
-    if (_audioRecoveryAttempts >= 1) {
-      _stopAfterFailure(StateError('MICROPHONE_INITIALIZATION_FAILED: $error'));
-      return;
+  void _seedReplayBeforeReconnect(int generation) {
+    if (_replaySeededGeneration == generation) return;
+    _replaySeededGeneration = generation;
+
+    final alreadyPending = _pendingAudio.drain();
+    for (final chunk in _recentAudio.snapshot()) {
+      _pendingAudio.add(chunk);
     }
-    _audioRecoveryAttempts += 1;
-    unawaited(_recoverAudioCapture());
+    for (final chunk in alreadyPending) {
+      _pendingAudio.add(chunk);
+    }
   }
 
-  Future<void> _recoverAudioCapture() async {
-    await _cleanupAudioCapture();
-    await Future<void>.delayed(_microphoneRetryDelay);
-    if (_disposed || !_isStreaming || _wsChannel == null) return;
+  void _flushBufferedAudio() {
+    if (!_transportReady || _wsChannel == null || _pendingAudio.isEmpty) return;
+    final buffered = _pendingAudio.drain();
+    for (var index = 0; index < buffered.length; index++) {
+      if (!_transportReady || _wsChannel == null) {
+        for (var pendingIndex = index;
+            pendingIndex < buffered.length;
+            pendingIndex++) {
+          _pendingAudio.add(buffered[pendingIndex]);
+        }
+        return;
+      }
+      _sendAudioChunkToSocket(buffered[index]);
+    }
+  }
+
+  void _handleAudioStreamError(Object error) {
+    debugPrint('Erreur capture microphone: $error');
+    if (_disposed || !_isStreaming || !_shouldReconnect) return;
+    unawaited(_recoverAudioCapture(error));
+  }
+
+  void _handleAudioStreamDone() {
+    if (_disposed || !_isStreaming || !_shouldReconnect) return;
+    debugPrint('Flux microphone terminé alors que la dictée reste active');
+    unawaited(_recoverAudioCapture(StateError('MICROPHONE_STREAM_ENDED')));
+  }
+
+  Future<void> _recoverAudioCapture([Object? reason]) async {
+    if (_disposed ||
+        !_isStreaming ||
+        !_shouldReconnect ||
+        _audioRecoveryInProgress) {
+      return;
+    }
+    _audioRecoveryInProgress = true;
+    _audioRecoveryAttempts += 1;
+    _lastAudioRecoveryAt = DateTime.now();
+
+    if (_audioRecoveryAttempts > 3) {
+      _audioRecoveryInProgress = false;
+      _stopAfterFailure(
+        StateError(
+          'MICROPHONE_INITIALIZATION_FAILED: ${reason ?? 'stalled'}',
+        ),
+      );
+      return;
+    }
+
     try {
+      await _cleanupAudioCapture();
+      await Future<void>.delayed(_microphoneRetryDelay);
+      if (_disposed || !_isStreaming || !_shouldReconnect) return;
       await _startAudioCapture(fallback: true);
     } catch (error) {
       _stopAfterFailure(StateError('MICROPHONE_INITIALIZATION_FAILED: $error'));
+    } finally {
+      _audioRecoveryInProgress = false;
     }
   }
 
@@ -359,8 +460,77 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     });
   }
 
+  void _startHealthMonitoring() {
+    _healthTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
+      if (_disposed || !_isStreaming) {
+        _healthTimer?.cancel();
+        _healthTimer = null;
+        return;
+      }
+
+      final now = DateTime.now();
+      if (_audioStreamSubscription != null &&
+          !_audioRecoveryInProgress &&
+          CloudSpeechHealthPolicy.audioIsStalled(
+            now: now,
+            lastAudioChunkAt: _lastAudioChunkAt,
+          )) {
+        unawaited(
+          _recoverAudioCapture(StateError('MICROPHONE_STREAM_STALLED')),
+        );
+      }
+
+      final lastRecovery = _lastAudioRecoveryAt;
+      final lastAudio = _lastAudioChunkAt;
+      if (lastRecovery != null &&
+          lastAudio != null &&
+          now.difference(lastRecovery) > const Duration(seconds: 10) &&
+          now.difference(lastAudio) < const Duration(seconds: 2)) {
+        _audioRecoveryAttempts = 0;
+        _lastAudioRecoveryAt = null;
+      }
+
+      if (_transportReady && _wsChannel != null) {
+        if (CloudSpeechHealthPolicy.serverIsStalled(
+          now: now,
+          lastServerMessageAt: _lastServerMessageAt,
+        )) {
+          unawaited(
+            _recoverTransport(
+              StateError('VOICE_SOCKET_STALLED'),
+              _connectionGeneration,
+            ),
+          );
+          return;
+        }
+        if (CloudSpeechHealthPolicy.heartbeatIsDue(
+          now: now,
+          lastHeartbeatAt: _lastHeartbeatAt,
+        )) {
+          _lastHeartbeatAt = now;
+          try {
+            _wsChannel!.sink.add(
+              jsonEncode(<String, Object?>{'type': 'ping'}),
+            );
+          } catch (error) {
+            _handleWebSocketError(error, _connectionGeneration);
+          }
+        }
+      }
+
+      final connectedAt = _connectedAt;
+      if (_transportReady &&
+          connectedAt != null &&
+          now.difference(connectedAt) >=
+              CloudSpeechHealthPolicy.stableConnectionDelay) {
+        _reconnectAttempts = 0;
+      }
+    });
+  }
+
   void _handleWebSocketMessage(dynamic message, int generation) {
     if (!_isCurrentConnection(generation)) return;
+    _lastServerMessageAt = DateTime.now();
     try {
       final decoded = jsonDecode(message as String);
       if (decoded is! Map) return;
@@ -398,7 +568,11 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
           _failStartWaiter(error);
           _completeStopWaiter();
           if (_startAckCompleter == null || _startAckCompleter!.isCompleted) {
-            _stopAfterFailure(error);
+            if (error.retryable) {
+              unawaited(_recoverTransport(error, generation));
+            } else {
+              _stopAfterFailure(error);
+            }
           }
           break;
       }
@@ -431,7 +605,8 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   Future<void> _recoverTransport(Object error, int generation) async {
     if (generation != _connectionGeneration || _reconnectScheduled) return;
-    await _cleanupAudioCapture();
+    _seedReplayBeforeReconnect(generation);
+    _transportReady = false;
     await _cleanupWebSocket();
     await _scheduleReconnect(error);
   }
@@ -465,13 +640,15 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
       _shouldReconnect = false;
       await _cleanupAudioCapture();
       await _cleanupWebSocket();
+      _pendingAudio.clear();
+      _recentAudio.clear();
       _setError(StateError('VOICE_CONNECTION_UNAVAILABLE: $error'));
       return;
     }
 
     _reconnectAttempts += 1;
     _reconnectScheduled = true;
-    final factor = 1 << (_reconnectAttempts - 1).clamp(0, 4).toInt();
+    final factor = 1 << (_reconnectAttempts - 1).clamp(0, 3).toInt();
     final delayMs = (_initialReconnectDelay.inMilliseconds * factor)
         .clamp(
           _initialReconnectDelay.inMilliseconds,
@@ -479,15 +656,20 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         )
         .toInt();
     final delay = Duration(milliseconds: delayMs);
+    final keepsCapturing = _audioStreamSubscription != null;
 
     value = value.copyWith(
-      status: SpeechStatus.processing,
-      soundLevel: 0,
+      status: keepsCapturing ? SpeechStatus.listening : SpeechStatus.processing,
+      soundLevel: keepsCapturing ? value.soundLevel : 0,
       errorMessage: _locale.toLowerCase().startsWith('en')
-          ? 'Voice connection interrupted. Reconnecting '
-                '($_reconnectAttempts/$_maxReconnectAttempts)...'
-          : 'Connexion vocale interrompue. Reconnexion '
-                '($_reconnectAttempts/$_maxReconnectAttempts)…',
+          ? (keepsCapturing
+                ? 'Voice network interrupted. Audio stays buffered locally while reconnecting.'
+                : 'Voice connection interrupted. Reconnecting '
+                      '($_reconnectAttempts/$_maxReconnectAttempts)...')
+          : (keepsCapturing
+                ? 'Réseau vocal interrompu. L’audio reste capturé localement pendant la reconnexion.'
+                : 'Connexion vocale interrompue. Reconnexion '
+                      '($_reconnectAttempts/$_maxReconnectAttempts)…'),
     );
 
     _reconnectTimer?.cancel();
@@ -501,12 +683,13 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   Future<void> _cleanupAudioCapture() async {
     _amplitudeTimer?.cancel();
     _amplitudeTimer = null;
+    final subscription = _audioStreamSubscription;
+    _audioStreamSubscription = null;
     try {
-      await _audioStreamSubscription?.cancel();
+      await subscription?.cancel();
     } catch (_) {
       // Le flux peut être déjà fermé.
     }
-    _audioStreamSubscription = null;
     try {
       await _recorder.stop();
     } catch (_) {
@@ -515,18 +698,22 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> _cleanupWebSocket() async {
+    _transportReady = false;
+    _connectedAt = null;
+    final subscription = _wsStreamSubscription;
+    _wsStreamSubscription = null;
     try {
-      await _wsStreamSubscription?.cancel();
+      await subscription?.cancel();
     } catch (_) {
       // La souscription peut être déjà fermée.
     }
-    _wsStreamSubscription = null;
+    final channel = _wsChannel;
+    _wsChannel = null;
     try {
-      await _wsChannel?.sink.close();
+      await channel?.sink.close();
     } catch (_) {
       // Le canal peut être déjà fermé.
     }
-    _wsChannel = null;
   }
 
   void _ingestTranscript(String text, {required bool isFinal}) {
@@ -545,13 +732,35 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   void _commitCurrentPartial() {
     final text = _currentPartial.trim();
     if (text.isEmpty) return;
-    _segments.add(
-      ClinicalTranscriptSegment(
-        id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
-        offset: _currentPartialOffset,
-        text: text,
-      ),
-    );
+
+    if (_segments.isEmpty) {
+      _segments.add(
+        ClinicalTranscriptSegment(
+          id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
+          offset: _currentPartialOffset,
+          text: text,
+        ),
+      );
+    } else {
+      final last = _segments.last;
+      final merged = mergeClinicalSpeechHypothesis(
+        last.text,
+        text,
+        currentFinalized: true,
+      );
+      if (merged.startsNewSegment) {
+        _segments.add(
+          ClinicalTranscriptSegment(
+            id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
+            offset: _currentPartialOffset,
+            text: text,
+          ),
+        );
+      } else if (merged.text != last.text) {
+        _segments[_segments.length - 1] = last.copyWith(text: merged.text);
+      }
+    }
+
     _currentPartial = '';
     _currentPartialOffset = Duration.zero;
     _publishCaptureState();
@@ -727,12 +936,15 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   Future<void> _stopStreaming({bool sendStopMessage = true}) async {
+    _healthTimer?.cancel();
+    _healthTimer = null;
     _reconnectTimer?.cancel();
     _reconnectScheduled = false;
     _shouldReconnect = false;
     final wasStreaming = _isStreaming;
 
     await _cleanupAudioCapture();
+    if (_transportReady) _flushBufferedAudio();
     if (sendStopMessage && wasStreaming && _wsChannel != null) {
       final stopAck = Completer<void>();
       _stopAckCompleter = stopAck;
@@ -751,6 +963,8 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _isStreaming = false;
     _commitCurrentPartial();
     await _cleanupWebSocket();
+    _pendingAudio.clear();
+    _recentAudio.clear();
   }
 
   Future<bool> retryDraftSave() => _persistCurrentTranscript();
@@ -1004,7 +1218,12 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _shouldReconnect = false;
     _reconnectScheduled = false;
     _connecting = false;
+    _transportReady = false;
     _reconnectTimer?.cancel();
+    _healthTimer?.cancel();
+    _healthTimer = null;
+    _pendingAudio.clear();
+    _recentAudio.clear();
     unawaited(_cleanupAudioCapture());
     unawaited(_cleanupWebSocket());
     _setError(error);
@@ -1029,6 +1248,9 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _draftTimer?.cancel();
     _reconnectTimer?.cancel();
     _amplitudeTimer?.cancel();
+    _healthTimer?.cancel();
+    _pendingAudio.clear();
+    _recentAudio.clear();
     _completeStopWaiter();
     if (!_captureCompleted &&
         (_segments.isNotEmpty || _currentPartial.trim().isNotEmpty)) {
@@ -1040,6 +1262,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     _shouldReconnect = false;
     _reconnectScheduled = false;
     _connecting = false;
+    _transportReady = false;
     unawaited(_audioStreamSubscription?.cancel());
     unawaited(_cleanupWebSocket());
     unawaited(_recorder.dispose());
