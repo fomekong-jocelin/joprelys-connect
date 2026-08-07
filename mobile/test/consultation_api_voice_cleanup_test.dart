@@ -47,7 +47,8 @@ void main() {
     'does not report persisted resources as failed when cleanup fails',
     () async {
       final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(503, <String, dynamic>{'message': 'Unavailable'}),
+        (_, _) =>
+            jsonResponse(503, <String, dynamic>{'message': 'Unavailable'}),
       );
       final api = buildApi(adapter);
 
@@ -57,24 +58,21 @@ void main() {
     },
   );
 
-  test(
-    'a failed SOAP persistence never triggers cleanup on its own',
-    () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(500, <String, dynamic>{'message': 'Failure'}),
-      );
-      final api = buildApi(adapter);
+  test('a failed SOAP persistence never triggers cleanup on its own', () async {
+    final adapter = QueueHttpClientAdapter(
+      (_, _) => jsonResponse(500, <String, dynamic>{'message': 'Failure'}),
+    );
+    final api = buildApi(adapter);
 
-      await expectLater(
-        api.saveConsultationNote(
-          'visit-123',
-          const ConsultationNote(symptoms: 'Toux depuis trois jours'),
-        ),
-        throwsA(anything),
-      );
-      expect(adapter.requests, hasLength(1));
-    },
-  );
+    await expectLater(
+      api.saveConsultationNote(
+        'visit-123',
+        const ConsultationNote(symptoms: 'Toux depuis trois jours'),
+      ),
+      throwsA(anything),
+    );
+    expect(adapter.requests, hasLength(1));
+  });
 }
 
 ConsultationApi buildApi(QueueHttpClientAdapter adapter) {

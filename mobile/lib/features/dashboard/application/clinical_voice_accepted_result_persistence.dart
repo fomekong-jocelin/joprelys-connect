@@ -25,11 +25,13 @@ final class ClinicalVoiceAcceptedResultPersistence {
     String? prescriptionJson,
     String? labOrdersJson,
   }) async {
-    final saved = await _consultationGateway.saveConsultationNote(visit.id, note);
+    final saved = await _consultationGateway.saveConsultationNote(
+      visit.id,
+      note,
+    );
 
     final prescription = _normalized(prescriptionJson);
-    if (prescription != null &&
-        prescription != _savedPrescriptionFingerprint) {
+    if (prescription != null && prescription != _savedPrescriptionFingerprint) {
       await _structuredGateway.savePrescriptionDraft(
         consultationId: saved.consultationId,
         prescriptionJson: prescription,

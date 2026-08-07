@@ -136,7 +136,9 @@ class _ConsultationNotesSheetState
         setState(() {});
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).assistantExtractedSummary),
+            content: Text(
+              AppLocalizations.of(context).assistantExtractedSummary,
+            ),
             duration: const Duration(seconds: 4),
           ),
         );

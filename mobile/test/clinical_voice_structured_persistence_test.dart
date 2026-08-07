@@ -14,29 +14,32 @@ import 'support/queue_http_client_adapter.dart';
 
 void main() {
   group('ClinicalVoiceStructuredApi', () {
-    test('keeps a medication draft without inventing a missing dosage', () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(200, const <String, dynamic>{}),
-      );
-      final api = buildStructuredApi(adapter);
+    test(
+      'keeps a medication draft without inventing a missing dosage',
+      () async {
+        final adapter = QueueHttpClientAdapter(
+          (_, _) => jsonResponse(200, const <String, dynamic>{}),
+        );
+        final api = buildStructuredApi(adapter);
 
-      await api.savePrescriptionDraft(
-        consultationId: 'consultation-1',
-        prescriptionJson: '[{"drugName":"inhalateur"}]',
-      );
+        await api.savePrescriptionDraft(
+          consultationId: 'consultation-1',
+          prescriptionJson: '[{"drugName":"inhalateur"}]',
+        );
 
-      final request = adapter.requests.single;
-      expect(request.path, '/api/consultations/consultation-1/prescription');
-      final payload = Map<String, dynamic>.from(request.data as Map);
-      final items = List<Map<String, dynamic>>.from(
-        (payload['items'] as List).map(
-          (item) => Map<String, dynamic>.from(item as Map),
-        ),
-      );
-      expect(items, hasLength(1));
-      expect(items.single['drugName'], 'inhalateur');
-      expect(items.single['dosage'], '');
-    });
+        final request = adapter.requests.single;
+        expect(request.path, '/api/consultations/consultation-1/prescription');
+        final payload = Map<String, dynamic>.from(request.data as Map);
+        final items = List<Map<String, dynamic>>.from(
+          (payload['items'] as List).map(
+            (item) => Map<String, dynamic>.from(item as Map),
+          ),
+        );
+        expect(items, hasLength(1));
+        expect(items.single['drugName'], 'inhalateur');
+        expect(items.single['dosage'], '');
+      },
+    );
 
     test('preserves explicitly extracted prescription attributes', () async {
       final adapter = QueueHttpClientAdapter(
@@ -68,37 +71,40 @@ void main() {
       expect(item['duration'], '7 jours');
     });
 
-    test('creates a neutral exam request without inferring a specialty', () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(201, const <String, dynamic>{}),
-      );
-      final api = buildStructuredApi(adapter);
+    test(
+      'creates a neutral exam request without inferring a specialty',
+      () async {
+        final adapter = QueueHttpClientAdapter(
+          (_, _) => jsonResponse(201, const <String, dynamic>{}),
+        );
+        final api = buildStructuredApi(adapter);
 
-      await api.saveLabOrders(
-        patientId: 'patient-1',
-        visitId: 'visit-1',
-        labOrdersJson: jsonEncode([
-          'numération complète',
-          'bilan inflammatoire',
-          'radiographie du thorax',
-        ]),
-      );
+        await api.saveLabOrders(
+          patientId: 'patient-1',
+          visitId: 'visit-1',
+          labOrdersJson: jsonEncode([
+            'numération complète',
+            'bilan inflammatoire',
+            'radiographie du thorax',
+          ]),
+        );
 
-      final request = adapter.requests.single;
-      expect(request.path, '/api/lab-orders');
-      final payload = Map<String, dynamic>.from(request.data as Map);
-      expect(payload['patientId'], 'patient-1');
-      expect(payload['visitId'], 'visit-1');
-      expect(payload['examType'], 'AUTRE');
-      expect(
-        payload['exams'],
-        equals([
-          'numération complète',
-          'bilan inflammatoire',
-          'radiographie du thorax',
-        ]),
-      );
-    });
+        final request = adapter.requests.single;
+        expect(request.path, '/api/lab-orders');
+        final payload = Map<String, dynamic>.from(request.data as Map);
+        expect(payload['patientId'], 'patient-1');
+        expect(payload['visitId'], 'visit-1');
+        expect(payload['examType'], 'AUTRE');
+        expect(
+          payload['exams'],
+          equals([
+            'numération complète',
+            'bilan inflammatoire',
+            'radiographie du thorax',
+          ]),
+        );
+      },
+    );
 
     test('rejects malformed structured JSON before network I/O', () async {
       final adapter = QueueHttpClientAdapter(
@@ -142,34 +148,37 @@ void main() {
       expect(structured.lastVisitId, 'visit-1');
     });
 
-    test('keeps voice source and avoids duplicate prescription after lab failure', () async {
-      final consultation = _FakeConsultationGateway();
-      final structured = _FakeStructuredGateway(failFirstLabOrder: true);
-      final persistence = ClinicalVoiceAcceptedResultPersistence(
-        consultationGateway: consultation,
-        structuredGateway: structured,
-      );
-
-      Future<void> save() async {
-        await persistence.save(
-          visit: visit,
-          note: const ConsultationNote(symptoms: 'Toux sèche'),
-          prescriptionJson: '[{"drugName":"inhalateur"}]',
-          labOrdersJson: '["radiographie du thorax"]',
+    test(
+      'keeps voice source and avoids duplicate prescription after lab failure',
+      () async {
+        final consultation = _FakeConsultationGateway();
+        final structured = _FakeStructuredGateway(failFirstLabOrder: true);
+        final persistence = ClinicalVoiceAcceptedResultPersistence(
+          consultationGateway: consultation,
+          structuredGateway: structured,
         );
-      }
 
-      await expectLater(save(), throwsStateError);
-      expect(structured.prescriptionCalls, 1);
-      expect(structured.labOrderCalls, 1);
-      expect(consultation.consumeCalls, 0);
+        Future<void> save() async {
+          await persistence.save(
+            visit: visit,
+            note: const ConsultationNote(symptoms: 'Toux sèche'),
+            prescriptionJson: '[{"drugName":"inhalateur"}]',
+            labOrdersJson: '["radiographie du thorax"]',
+          );
+        }
 
-      await save();
-      expect(consultation.saveCalls, 2);
-      expect(structured.prescriptionCalls, 1);
-      expect(structured.labOrderCalls, 2);
-      expect(consultation.consumeCalls, 1);
-    });
+        await expectLater(save(), throwsStateError);
+        expect(structured.prescriptionCalls, 1);
+        expect(structured.labOrderCalls, 1);
+        expect(consultation.consumeCalls, 0);
+
+        await save();
+        expect(consultation.saveCalls, 2);
+        expect(structured.prescriptionCalls, 1);
+        expect(structured.labOrderCalls, 2);
+        expect(consultation.consumeCalls, 1);
+      },
+    );
 
     test('consumes voice source after SOAP-only accepted result', () async {
       final consultation = _FakeConsultationGateway();
