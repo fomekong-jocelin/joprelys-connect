@@ -8,13 +8,12 @@ import '../domain/consultation_note.dart';
 /// les APIs backend dédiées.
 final class ClinicalVoiceAcceptedResultPersistence {
   ClinicalVoiceAcceptedResultPersistence({
-    required ConsultationGateway consultationGateway,
-    required ClinicalVoiceStructuredGateway structuredGateway,
-  }) : _consultationGateway = consultationGateway,
-       _structuredGateway = structuredGateway;
+    required this.consultationGateway,
+    required this.structuredGateway,
+  });
 
-  final ConsultationGateway _consultationGateway;
-  final ClinicalVoiceStructuredGateway _structuredGateway;
+  final ConsultationGateway consultationGateway;
+  final ClinicalVoiceStructuredGateway structuredGateway;
 
   String? _savedPrescriptionFingerprint;
   String? _savedLabOrdersFingerprint;
@@ -25,14 +24,14 @@ final class ClinicalVoiceAcceptedResultPersistence {
     String? prescriptionJson,
     String? labOrdersJson,
   }) async {
-    final saved = await _consultationGateway.saveConsultationNote(
+    final saved = await consultationGateway.saveConsultationNote(
       visit.id,
       note,
     );
 
     final prescription = _normalized(prescriptionJson);
     if (prescription != null && prescription != _savedPrescriptionFingerprint) {
-      await _structuredGateway.savePrescriptionDraft(
+      await structuredGateway.savePrescriptionDraft(
         consultationId: saved.consultationId,
         prescriptionJson: prescription,
       );
@@ -41,7 +40,7 @@ final class ClinicalVoiceAcceptedResultPersistence {
 
     final labOrders = _normalized(labOrdersJson);
     if (labOrders != null && labOrders != _savedLabOrdersFingerprint) {
-      await _structuredGateway.saveLabOrders(
+      await structuredGateway.saveLabOrders(
         patientId: visit.patientId,
         visitId: visit.id,
         labOrdersJson: labOrders,
@@ -51,7 +50,7 @@ final class ClinicalVoiceAcceptedResultPersistence {
 
     // Only consume the durable voice source after every accepted clinical
     // resource has been persisted. A partial structured failure remains retryable.
-    await _consultationGateway.consumeVoiceWorkingSet(visit.id);
+    await consultationGateway.consumeVoiceWorkingSet(visit.id);
     return saved;
   }
 
