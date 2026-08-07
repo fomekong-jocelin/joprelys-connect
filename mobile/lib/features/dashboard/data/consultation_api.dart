@@ -22,6 +22,7 @@ abstract interface class ConsultationGateway {
     String visitId,
     ConsultationNote note,
   );
+  Future<void> consumeVoiceWorkingSet(String visitId);
 }
 
 final consultationApiProvider = Provider<ConsultationGateway>((ref) {
@@ -69,21 +70,22 @@ final class ConsultationApi implements ConsultationGateway {
     if (consultationId.isEmpty) {
       throw const FormatException('Missing consultation id in save response');
     }
-    final saved = ConsultationNote.fromJson(json);
+    return SavedConsultationNote(
+      consultationId: consultationId,
+      note: ConsultationNote.fromJson(json),
+    );
+  }
 
-    // The durable voice working set remains recoverable until the clinical note
-    // itself is saved. Cleanup is deliberately best-effort: a cleanup outage must
-    // never make the UI report that an already persisted consultation has failed.
+  @override
+  Future<void> consumeVoiceWorkingSet(String visitId) async {
+    // Cleanup is best-effort and deliberately separate from SOAP persistence so
+    // structured prescription/exam retries keep their durable voice source.
     try {
       await _client.post<void>(
         '/api/ai/consultations/$visitId/realtime-intake/consume',
       );
     } catch (_) {
-      // A later save or explicit clear retries cleanup; clinical persistence wins.
+      // Clinical resources are already persisted; cleanup can be retried later.
     }
-    return SavedConsultationNote(
-      consultationId: consultationId,
-      note: saved,
-    );
   }
 }
