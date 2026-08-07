@@ -5,6 +5,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.audit.application.AuditService;
@@ -59,7 +60,6 @@ class PrescriptionDraftCompletenessTest {
 
         assertEquals(HttpStatus.BAD_REQUEST, error.getStatusCode());
         verify(prescriptionRepository, never()).save(prescription);
-        verify(documentService, never()).generatePrescriptionDocument(
-                prescription.getId(), UUID.randomUUID());
+        verifyNoInteractions(documentService);
     }
 }
