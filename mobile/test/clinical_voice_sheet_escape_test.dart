@@ -13,7 +13,14 @@ void main() {
     expect(source, contains('enableDrag: true'));
     expect(source, contains('onPressed: onClose'));
     expect(source, isNot(contains('onPressed: processing ? null : onClose')));
-    expect(source, isNot(contains('await _coordinator.synchronizeNow();\n'
-        '    if (mounted) Navigator.of(context).pop();')));
+    expect(
+      source,
+      isNot(
+        contains(
+          'await _coordinator.synchronizeNow();\n'
+          '    if (mounted) Navigator.of(context).pop();',
+        ),
+      ),
+    );
   });
 }
