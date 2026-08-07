@@ -75,30 +75,21 @@ final class ClinicalVoiceStructuredApi
             );
           }
           final source = Map<String, dynamic>.from(value);
-          final drugName = _requiredText(source['drugName'], 'drugName');
-          final dosage = _optionalText(source['dosage'], 'dosage') ?? '';
-          return <String, dynamic>{
-            'drugName': drugName,
-            'dosage': dosage,
-            if (_optionalText(source['posology'], 'posology') case final value?)
-              'posology': value,
-            if (_optionalText(source['duration'], 'duration') case final value?)
-              'duration': value,
-            if (_optionalText(source['quantity'], 'quantity') case final value?)
-              'quantity': value,
-            if (_optionalText(source['instructions'], 'instructions')
-                case final value?)
-              'instructions': value,
-            if (_optionalText(source['form'], 'form') case final value?)
-              'form': value,
-            if (_optionalText(source['route'], 'route') case final value?)
-              'route': value,
-            if (_optionalText(source['frequency'], 'frequency')
-                case final value?)
-              'frequency': value,
-            if (source['substitutionAllowed'] case final bool value)
-              'substitutionAllowed': value,
+          final item = <String, dynamic>{
+            'drugName': _requiredText(source['drugName'], 'drugName'),
+            'dosage': _optionalText(source['dosage'], 'dosage') ?? '',
           };
+          _putOptionalText(item, source, 'posology');
+          _putOptionalText(item, source, 'duration');
+          _putOptionalText(item, source, 'quantity');
+          _putOptionalText(item, source, 'instructions');
+          _putOptionalText(item, source, 'form');
+          _putOptionalText(item, source, 'route');
+          _putOptionalText(item, source, 'frequency');
+          if (source['substitutionAllowed'] case final bool value) {
+            item['substitutionAllowed'] = value;
+          }
+          return item;
         })
         .toList(growable: false);
   }
@@ -116,6 +107,17 @@ final class ClinicalVoiceStructuredApi
           return value.trim();
         })
         .toList(growable: false);
+  }
+
+  void _putOptionalText(
+    Map<String, dynamic> target,
+    Map<String, dynamic> source,
+    String field,
+  ) {
+    final value = _optionalText(source[field], field);
+    if (value != null) {
+      target[field] = value;
+    }
   }
 
   String _requiredText(Object? value, String field) {
