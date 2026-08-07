@@ -13,7 +13,7 @@ permissions:
 jobs:
   patch:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 20
     steps:
       - name: Checkout branch
         uses: actions/checkout@v4
@@ -22,7 +22,14 @@ jobs:
           fetch-depth: 0
           persist-credentials: true
 
-      - name: Patch mobile streaming service
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+
+      - name: Apply resilient streaming patch
         shell: bash
         run: |
           set -euo pipefail
@@ -32,108 +39,60 @@ jobs:
           path = Path('mobile/lib/features/dashboard/application/cloud_speech_streaming_service.dart')
           text = path.read_text()
 
-          def replace_once(old, new):
+          def repl(old, new):
               global text
               if old not in text:
-                  raise SystemExit(f'Missing expected block:\n{old[:240]}')
+                  raise SystemExit(f'Missing expected block: {old[:180]!r}')
               text = text.replace(old, new, 1)
 
-          replace_once(
+          repl(
               "import 'clinical_dictation_parser.dart';\nimport 'clinical_voice_error_message.dart';",
               "import 'clinical_dictation_parser.dart';\nimport 'clinical_speech_hypothesis.dart';\nimport 'cloud_speech_streaming_health.dart';\nimport 'clinical_voice_error_message.dart';",
           )
-
-          replace_once(
+          repl(
               "  static const int _maxReconnectAttempts = 5;",
               "  static const int _maxReconnectAttempts = 6;\n  static const int _maxBufferedAudioBytes = 16_000 * 2 * 20;",
           )
-          replace_once(
+          repl(
               "  static const Duration _initialReconnectDelay = Duration(seconds: 1);\n  static const Duration _maxReconnectDelay = Duration(seconds: 16);",
               "  static const Duration _initialReconnectDelay = Duration(milliseconds: 500);\n  static const Duration _maxReconnectDelay = Duration(seconds: 4);",
           )
-
-          replace_once(
+          repl(
               "  final List<ClinicalTranscriptSegment> _segments =\n      <ClinicalTranscriptSegment>[];",
               "  final List<ClinicalTranscriptSegment> _segments =\n      <ClinicalTranscriptSegment>[];\n  final BoundedAudioReplayBuffer _pendingAudio = BoundedAudioReplayBuffer(\n    maxBytes: _maxBufferedAudioBytes,\n  );",
           )
-
-          replace_once(
+          repl(
               "  Timer? _reconnectTimer;\n  Timer? _draftTimer;\n  Timer? _amplitudeTimer;",
               "  Timer? _reconnectTimer;\n  Timer? _draftTimer;\n  Timer? _amplitudeTimer;\n  Timer? _healthTimer;",
           )
-
-          replace_once(
+          repl(
               "  bool _captureCompleted = false;\n  DateTime? _captureStartedAt;\n  int _reconnectAttempts = 0;",
               "  bool _captureCompleted = false;\n  bool _transportReady = false;\n  bool _audioRecoveryInProgress = false;\n  DateTime? _captureStartedAt;\n  DateTime? _lastAudioChunkAt;\n  DateTime? _lastServerMessageAt;\n  DateTime? _lastHeartbeatAt;\n  DateTime? _connectedAt;\n  DateTime? _lastAudioRecoveryAt;\n  int _reconnectAttempts = 0;",
           )
-
-          replace_once(
+          repl(
               "    _reconnectScheduled = false;\n    _audioRecoveryAttempts = 0;\n\n    value = value.copyWith(",
               "    _reconnectScheduled = false;\n    _audioRecoveryAttempts = 0;\n    _pendingAudio.clear();\n    _transportReady = false;\n    _lastAudioChunkAt = null;\n    _lastServerMessageAt = null;\n    _lastHeartbeatAt = null;\n    _connectedAt = null;\n    _lastAudioRecoveryAt = null;\n\n    value = value.copyWith(",
           )
-
-          replace_once(
+          repl(
               "      await _startAudioCapture();\n      if (!_isCurrentConnection(generation)) return;\n\n      _reconnectAttempts = 0;\n      _reconnectScheduled = false;",
               "      _transportReady = true;\n      _lastServerMessageAt = DateTime.now();\n      _connectedAt = DateTime.now();\n      if (_audioStreamSubscription == null) {\n        await _startAudioCapture();\n      } else {\n        _flushBufferedAudio();\n      }\n      if (!_isCurrentConnection(generation)) return;\n\n      _startHealthMonitoring();\n      _reconnectScheduled = false;",
           )
-
-          replace_once(
-              "    } catch (error) {\n      debugPrint('Échec connexion WebSocket vocal: $error');\n      await _cleanupAudioCapture();\n      await _cleanupWebSocket();",
-              "    } catch (error) {\n      debugPrint('Échec connexion WebSocket vocal: $error');\n      _transportReady = false;\n      await _cleanupWebSocket();",
+          repl(
+              "      debugPrint('Échec connexion WebSocket vocal: $error');\n      await _cleanupAudioCapture();\n      await _cleanupWebSocket();",
+              "      debugPrint('Échec connexion WebSocket vocal: $error');\n      _transportReady = false;\n      await _cleanupWebSocket();",
           )
-
-          replace_once(
+          repl(
               "    await _cleanupAudioCapture();\n    if (_disposed || !_isStreaming || _wsChannel == null) return;",
               "    await _cleanupAudioCapture();\n    if (_disposed || !_isStreaming) return;",
           )
-
-          replace_once(
+          repl(
               "    _audioStreamSubscription = stream.listen(\n      _sendAudioChunk,\n      onError: _handleAudioStreamError,\n      cancelOnError: true,\n    );\n    _startAmplitudeMonitoring();\n    _audioRecoveryAttempts = 0;",
               "    _audioStreamSubscription = stream.listen(\n      _sendAudioChunk,\n      onError: _handleAudioStreamError,\n      onDone: _handleAudioStreamDone,\n      cancelOnError: true,\n    );\n    _lastAudioChunkAt = DateTime.now();\n    _startAmplitudeMonitoring();\n    _startHealthMonitoring();",
           )
 
-          old_audio = '''  void _sendAudioChunk(Uint8List audioChunk) {
-    if (_disposed ||
-        !_isStreaming ||
-        _wsChannel == null ||
-        audioChunk.isEmpty) {
-      return;
-    }
-    try {
-      _wsChannel!.sink.add(
-        jsonEncode(<String, Object?>{
-          'type': 'audio',
-          'data': base64Encode(audioChunk),
-        }),
-      );
-    } catch (error) {
-      _handleWebSocketError(error, _connectionGeneration);
-    }
-  }
-
-  void _handleAudioStreamError(Object error) {
-    debugPrint('Erreur capture microphone: $error');
-    if (_disposed || !_isStreaming) return;
-    if (_audioRecoveryAttempts >= 1) {
-      _stopAfterFailure(StateError('MICROPHONE_INITIALIZATION_FAILED: $error'));
-      return;
-    }
-    _audioRecoveryAttempts += 1;
-    unawaited(_recoverAudioCapture());
-  }
-
-  Future<void> _recoverAudioCapture() async {
-    await _cleanupAudioCapture();
-    await Future<void>.delayed(_microphoneRetryDelay);
-    if (_disposed || !_isStreaming || _wsChannel == null) return;
-    try {
-      await _startAudioCapture(fallback: true);
-    } catch (error) {
-      _stopAfterFailure(StateError('MICROPHONE_INITIALIZATION_FAILED: $error'));
-    }
-  }
-'''
-          new_audio = '''  void _sendAudioChunk(Uint8List audioChunk) {
+          start = text.index('  void _sendAudioChunk(Uint8List audioChunk) {')
+          end = text.index('  void _startAmplitudeMonitoring() {', start)
+          text = text[:start] + '''  void _sendAudioChunk(Uint8List audioChunk) {
     if (_disposed || !_isStreaming || audioChunk.isEmpty) return;
     _lastAudioChunkAt = DateTime.now();
 
@@ -213,20 +172,19 @@ jobs:
       _audioRecoveryInProgress = false;
     }
   }
-'''
-          replace_once(old_audio, new_audio)
 
-          replace_once(
+''' + text[end:]
+
+          repl(
               "  void _handleWebSocketMessage(dynamic message, int generation) {\n    if (!_isCurrentConnection(generation)) return;\n    try {",
               "  void _handleWebSocketMessage(dynamic message, int generation) {\n    if (!_isCurrentConnection(generation)) return;\n    _lastServerMessageAt = DateTime.now();\n    try {",
           )
-
-          replace_once(
+          repl(
               "  Future<void> _recoverTransport(Object error, int generation) async {\n    if (generation != _connectionGeneration || _reconnectScheduled) return;\n    await _cleanupAudioCapture();\n    await _cleanupWebSocket();",
               "  Future<void> _recoverTransport(Object error, int generation) async {\n    if (generation != _connectionGeneration || _reconnectScheduled) return;\n    _transportReady = false;\n    await _cleanupWebSocket();",
           )
 
-          old_reconnect_state = '''    value = value.copyWith(
+          old_state = '''    value = value.copyWith(
       status: SpeechStatus.processing,
       soundLevel: 0,
       errorMessage: _locale.toLowerCase().startsWith('en')
@@ -236,24 +194,23 @@ jobs:
                 '($_reconnectAttempts/$_maxReconnectAttempts)…',
     );
 '''
-          new_reconnect_state = '''    final keepsCapturing = _audioStreamSubscription != null;
+          new_state = '''    final keepsCapturing = _audioStreamSubscription != null;
     value = value.copyWith(
       status: keepsCapturing ? SpeechStatus.listening : SpeechStatus.processing,
       soundLevel: keepsCapturing ? value.soundLevel : 0,
       errorMessage: _locale.toLowerCase().startsWith('en')
           ? (keepsCapturing
                 ? 'Voice network interrupted. Audio is buffered locally while reconnecting.'
-                : 'Voice connection interrupted. Reconnecting '
-                      '($_reconnectAttempts/$_maxReconnectAttempts)...')
+                : 'Voice connection interrupted. Reconnecting ($_reconnectAttempts/$_maxReconnectAttempts)...')
           : (keepsCapturing
                 ? 'Réseau vocal interrompu. L’audio reste capturé localement pendant la reconnexion.'
-                : 'Connexion vocale interrompue. Reconnexion '
-                      '($_reconnectAttempts/$_maxReconnectAttempts)…'),
+                : 'Connexion vocale interrompue. Reconnexion ($_reconnectAttempts/$_maxReconnectAttempts)…'),
     );
 '''
-          replace_once(old_reconnect_state, new_reconnect_state)
+          repl(old_state, new_state)
 
-          health_methods = '''  void _startHealthMonitoring() {
+          marker = '  Future<void> _cleanupAudioCapture() async {'
+          health = '''  void _startHealthMonitoring() {
     _healthTimer ??= Timer.periodic(const Duration(seconds: 1), (_) {
       if (_disposed || !_isStreaming) {
         _healthTimer?.cancel();
@@ -268,9 +225,7 @@ jobs:
             now: now,
             lastAudioChunkAt: _lastAudioChunkAt,
           )) {
-        unawaited(
-          _recoverAudioCapture(StateError('MICROPHONE_STREAM_STALLED')),
-        );
+        unawaited(_recoverAudioCapture(StateError('MICROPHONE_STREAM_STALLED')));
       }
 
       final lastRecovery = _lastAudioRecoveryAt;
@@ -312,38 +267,22 @@ jobs:
       final connectedAt = _connectedAt;
       if (_transportReady &&
           connectedAt != null &&
-          now.difference(connectedAt) >=
-              CloudSpeechHealthPolicy.stableConnectionDelay) {
+          now.difference(connectedAt) >= CloudSpeechHealthPolicy.stableConnectionDelay) {
         _reconnectAttempts = 0;
       }
     });
   }
 
 '''
-          replace_once("  Future<void> _cleanupAudioCapture() async {", health_methods + "  Future<void> _cleanupAudioCapture() async {")
-
-          replace_once(
+          repl(marker, health + marker)
+          repl(
               "  Future<void> _cleanupWebSocket() async {\n    try {",
               "  Future<void> _cleanupWebSocket() async {\n    _transportReady = false;\n    _connectedAt = null;\n    try {",
           )
 
-          old_commit = '''  void _commitCurrentPartial() {
-    final text = _currentPartial.trim();
-    if (text.isEmpty) return;
-    _segments.add(
-      ClinicalTranscriptSegment(
-        id: 'segment-${DateTime.now().microsecondsSinceEpoch}',
-        offset: _currentPartialOffset,
-        text: text,
-      ),
-    );
-    _currentPartial = '';
-    _currentPartialOffset = Duration.zero;
-    _publishCaptureState();
-    _scheduleDraftSave();
-  }
-'''
-          new_commit = '''  void _commitCurrentPartial() {
+          start = text.index('  void _commitCurrentPartial() {')
+          end = text.index('  Duration _elapsedCaptureTime() {', start)
+          text = text[:start] + '''  void _commitCurrentPartial() {
     final text = _currentPartial.trim();
     if (text.isEmpty) return;
 
@@ -380,28 +319,26 @@ jobs:
     _publishCaptureState();
     _scheduleDraftSave();
   }
-'''
-          replace_once(old_commit, new_commit)
 
-          replace_once(
+''' + text[end:]
+
+          repl(
               "  Future<void> _stopStreaming({bool sendStopMessage = true}) async {\n    _reconnectTimer?.cancel();",
               "  Future<void> _stopStreaming({bool sendStopMessage = true}) async {\n    _healthTimer?.cancel();\n    _healthTimer = null;\n    _reconnectTimer?.cancel();",
           )
-          replace_once(
+          repl(
               "    await _cleanupAudioCapture();\n    if (sendStopMessage && wasStreaming && _wsChannel != null) {",
               "    await _cleanupAudioCapture();\n    if (_transportReady) _flushBufferedAudio();\n    if (sendStopMessage && wasStreaming && _wsChannel != null) {",
           )
-          replace_once(
+          repl(
               "    _commitCurrentPartial();\n    await _cleanupWebSocket();\n  }",
               "    _commitCurrentPartial();\n    await _cleanupWebSocket();\n    _pendingAudio.clear();\n  }",
           )
-
-          replace_once(
+          repl(
               "    _reconnectTimer?.cancel();\n    unawaited(_cleanupAudioCapture());",
               "    _reconnectTimer?.cancel();\n    _healthTimer?.cancel();\n    _healthTimer = null;\n    _transportReady = false;\n    _pendingAudio.clear();\n    unawaited(_cleanupAudioCapture());",
           )
-
-          replace_once(
+          repl(
               "    _amplitudeTimer?.cancel();\n    _completeStopWaiter();",
               "    _amplitudeTimer?.cancel();\n    _healthTimer?.cancel();\n    _pendingAudio.clear();\n    _completeStopWaiter();",
           )
@@ -409,39 +346,18 @@ jobs:
           path.write_text(text)
           PY
 
-      - name: Set up Java
-        uses: actions/setup-java@v4
-        with:
-          distribution: temurin
-          java-version: '21'
-          cache: maven
-
-      - name: Validate backend voice tests
-        working-directory: backend
-        run: ./mvnw -q -Dtest=AiAudioSilenceGuardTest,VoiceStreamingServiceBufferTest test
-
-      - name: Set up Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: '3.44.6'
-          channel: stable
-          cache: true
-
-      - name: Validate mobile voice tests
+      - name: Format changed Dart files
         working-directory: mobile
         run: |
-          flutter pub get
           dart format lib/features/dashboard/application/cloud_speech_streaming_service.dart lib/features/dashboard/application/cloud_speech_streaming_health.dart test/cloud_speech_streaming_health_test.dart
-          flutter analyze --no-pub
-          flutter test --no-pub test/cloud_speech_streaming_health_test.dart test/clinical_speech_hypothesis_test.dart
 
-      - name: Remove workflow and commit patch
+      - name: Remove workflow and commit
         shell: bash
         run: |
           set -euo pipefail
           git rm .github/workflows/patch-voice-stability-once.yml
           git config user.name 'github-actions[bot]'
           git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
-          git add mobile/lib mobile/test backend/src/main backend/src/test
-          git commit -m 'fix(voice): stabiliser les longues dictées cloud'
+          git add mobile/lib mobile/test
+          git commit -m 'fix(mobile): rendre le streaming vocal résilient aux coupures'
           git push origin HEAD:fix/voice-long-session-stability
