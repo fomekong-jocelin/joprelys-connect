@@ -1,0 +1,85 @@
+name: Patch voice persistence once
+
+on:
+  push:
+    branches:
+      - fix/voice-persistence-reformulation
+    paths:
+      - '.github/workflows/patch-voice-persistence-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/voice-persistence-reformulation
+          fetch-depth: 0
+          persist-credentials: true
+
+      - name: Apply backend guards
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          service = Path('backend/src/main/java/com/joprelys/backend/prescription/application/PrescriptionService.java')
+          text = service.read_text()
+          old = '''\t\tif (!"DRAFT".equals(prescription.getStatus())) {
+\t\t\tthrow new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance au statut DRAFT peut être finalisée.");
+\t\t}
+
+\t\tprescription.setStatus("ACTIVE");'''
+          new = '''\t\tif (!"DRAFT".equals(prescription.getStatus())) {
+\t\t\tthrow new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance au statut DRAFT peut être finalisée.");
+\t\t}
+
+\t\tvalidateDraftCompleteness(prescription);
+\t\tprescription.setStatus("ACTIVE");'''
+          if old not in text:
+              raise SystemExit('finalize block not found')
+          text = text.replace(old, new, 1)
+
+          marker = '''\tprivate String generateRandomPin() {'''
+          helper = '''\tprivate void validateDraftCompleteness(PrescriptionEntity prescription) {
+\t\tif (prescription.getItems().isEmpty()) {
+\t\t\tthrow new ResponseStatusException(HttpStatus.BAD_REQUEST, "L’ordonnance doit contenir au moins un médicament avant finalisation.");
+\t\t}
+\t\tboolean missingDosage = prescription.getItems().stream()
+\t\t\t\t.anyMatch(item -> item.getDosage() == null || item.getDosage().isBlank());
+\t\tif (missingDosage) {
+\t\t\tthrow new ResponseStatusException(HttpStatus.BAD_REQUEST, "Complétez le dosage de chaque médicament avant de finaliser l’ordonnance.");
+\t\t}
+\t}
+
+'''
+          if marker not in text:
+              raise SystemExit('PrescriptionService marker not found')
+          text = text.replace(marker, helper + marker, 1)
+          service.write_text(text)
+
+          streaming = Path('backend/src/main/java/com/joprelys/backend/ai/application/VoiceStreamingService.java')
+          text = streaming.read_text()
+          old = '.retryWhen(Retry.backoff(1, TRANSCRIPTION_RETRY_DELAY)'
+          new = '.retryWhen(Retry.backoff(2, TRANSCRIPTION_RETRY_DELAY)'
+          if old not in text:
+              raise SystemExit('streaming retry block not found')
+          streaming.write_text(text.replace(old, new, 1))
+          PY
+
+      - name: Remove workflow and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/patch-voice-persistence-once.yml
+          git config user.name "Joprelys AI Engineering"
+          git config user.email "actions@users.noreply.github.com"
+          git add backend/src/main/java/com/joprelys/backend/prescription/application/PrescriptionService.java \
+                  backend/src/main/java/com/joprelys/backend/ai/application/VoiceStreamingService.java
+          git commit -m "fix(voice): sécuriser brouillons et retries de transcription"
+          git push origin HEAD:fix/voice-persistence-reformulation
