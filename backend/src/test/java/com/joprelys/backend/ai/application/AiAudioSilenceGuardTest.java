@@ -2,7 +2,9 @@ package com.joprelys.backend.ai.application;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
@@ -25,10 +27,20 @@ class AiAudioSilenceGuardTest {
                 AiAudioSilenceGuard.rejectSilentPcmWav(wav(true), "audio/wav"));
     }
 
+    @Test
+    void shouldDetectSilentRawPcmBeforeStreamingTranscription() {
+        assertTrue(AiAudioSilenceGuard.isLikelySilentPcm16(pcm(false)));
+    }
+
+    @Test
+    void shouldKeepAudibleRawPcmForStreamingTranscription() {
+        assertFalse(AiAudioSilenceGuard.isLikelySilentPcm16(pcm(true)));
+    }
+
     private byte[] wav(boolean audible) {
+        byte[] pcm = pcm(audible);
         int sampleRate = 16_000;
-        int samples = sampleRate;
-        int dataSize = samples * 2;
+        int dataSize = pcm.length;
         ByteBuffer buffer = ByteBuffer.allocate(44 + dataSize).order(ByteOrder.LITTLE_ENDIAN);
         buffer.put(new byte[] {'R', 'I', 'F', 'F'});
         buffer.putInt(36 + dataSize);
@@ -43,7 +55,14 @@ class AiAudioSilenceGuardTest {
         buffer.putShort((short) 16);
         buffer.put(new byte[] {'d', 'a', 't', 'a'});
         buffer.putInt(dataSize);
-        for (int index = 0; index < samples; index++) {
+        buffer.put(pcm);
+        return buffer.array();
+    }
+
+    private byte[] pcm(boolean audible) {
+        int sampleRate = 16_000;
+        ByteBuffer buffer = ByteBuffer.allocate(sampleRate * 2).order(ByteOrder.LITTLE_ENDIAN);
+        for (int index = 0; index < sampleRate; index++) {
             short sample = audible
                     ? (short) (Math.sin(index * 2.0d * Math.PI * 220.0d / sampleRate) * 4000)
                     : 0;

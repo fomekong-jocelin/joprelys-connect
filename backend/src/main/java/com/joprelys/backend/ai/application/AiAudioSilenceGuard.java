@@ -24,11 +24,34 @@ final class AiAudioSilenceGuard {
             return;
         }
 
-        int sampleCount = wav.dataSize / 2;
+        if (isLikelySilentPcm16(audio, wav.dataOffset, wav.dataSize)) {
+            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_AUDIO_SILENCE");
+        }
+    }
+
+    /**
+     * Returns {@code true} when raw little-endian PCM16 contains no credible
+     * speech energy. Streaming voice uses this before calling the remote
+     * transcription API so room silence cannot be turned into invented words.
+     */
+    static boolean isLikelySilentPcm16(byte[] pcm) {
+        if (pcm == null || pcm.length < 2) {
+            return true;
+        }
+        return isLikelySilentPcm16(pcm, 0, pcm.length - (pcm.length & 1));
+    }
+
+    private static boolean isLikelySilentPcm16(byte[] audio, int offset, int size) {
+        int safeSize = Math.min(size - (size & 1), audio.length - offset);
+        if (offset < 0 || safeSize < 2 || offset + safeSize > audio.length) {
+            return true;
+        }
+
+        int sampleCount = safeSize / 2;
         double sum = 0.0d;
         double sumSquares = 0.0d;
-        for (int index = wav.dataOffset; index + 1 < wav.dataOffset + wav.dataSize; index += 2) {
-            short sample = (short) ((audio[index] & 0xff) | (audio[index + 1] << 8));
+        for (int index = offset; index + 1 < offset + safeSize; index += 2) {
+            short sample = readSample(audio, index);
             sum += sample;
             sumSquares += (double) sample * sample;
         }
@@ -37,16 +60,18 @@ final class AiAudioSilenceGuard {
         double rms = Math.sqrt(variance);
 
         int active = 0;
-        for (int index = wav.dataOffset; index + 1 < wav.dataOffset + wav.dataSize; index += 2) {
-            short sample = (short) ((audio[index] & 0xff) | (audio[index + 1] << 8));
+        for (int index = offset; index + 1 < offset + safeSize; index += 2) {
+            short sample = readSample(audio, index);
             if (Math.abs(sample - mean) >= ACTIVE_SAMPLE_THRESHOLD) {
                 active++;
             }
         }
         double activeRatio = (double) active / sampleCount;
-        if (rms < MAX_SILENT_RMS && activeRatio < MIN_ACTIVE_SAMPLE_RATIO) {
-            throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "AI_AUDIO_SILENCE");
-        }
+        return rms < MAX_SILENT_RMS && activeRatio < MIN_ACTIVE_SAMPLE_RATIO;
+    }
+
+    private static short readSample(byte[] audio, int index) {
+        return (short) ((audio[index] & 0xff) | (audio[index + 1] << 8));
     }
 
     private static boolean isWav(String contentType) {
