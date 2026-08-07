@@ -1,0 +1,51 @@
+name: Format voice persistence once
+
+on:
+  push:
+    branches:
+      - fix/voice-persistence-reformulation
+    paths:
+      - '.github/workflows/format-voice-persistence-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/voice-persistence-reformulation
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+      - name: Apply official Dart formatting
+        shell: bash
+        run: |
+          set -euo pipefail
+          cd mobile
+          dart format \
+            lib/features/dashboard/application/clinical_voice_accepted_result_persistence.dart \
+            lib/features/dashboard/data/clinical_voice_structured_api.dart \
+            lib/features/dashboard/presentation/widgets/consultation_notes_sheet.dart \
+            test/clinical_voice_structured_persistence_test.dart \
+            test/consultation_api_voice_cleanup_test.dart
+          cd ..
+          git diff -- mobile
+      - name: Remove workflow and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/format-voice-persistence-once.yml
+          git config user.name "Joprelys AI Engineering"
+          git config user.email "actions@users.noreply.github.com"
+          git add mobile
+          git commit -m "style(mobile): appliquer dart format au correctif vocal"
+          git push origin HEAD:fix/voice-persistence-reformulation
