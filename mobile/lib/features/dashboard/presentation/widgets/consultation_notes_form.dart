@@ -57,8 +57,6 @@ class ConsultationNotesForm extends StatelessWidget {
               hint: l10n.consultationDiagnosisHint,
               controller: controllers.diagnosis,
               maxLength: 5000,
-              isRequired: true,
-              requiredMessage: l10n.consultationDiagnosisRequired,
             ),
           ),
           const _SectionDivider(),
