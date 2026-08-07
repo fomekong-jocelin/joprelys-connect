@@ -29,7 +29,9 @@ void main() {
       expect(request.path, '/api/consultations/consultation-1/prescription');
       final payload = Map<String, dynamic>.from(request.data as Map);
       final items = List<Map<String, dynamic>>.from(
-        (payload['items'] as List).map((item) => Map<String, dynamic>.from(item as Map)),
+        (payload['items'] as List).map(
+          (item) => Map<String, dynamic>.from(item as Map),
+        ),
       );
       expect(items, hasLength(1));
       expect(items.single['drugName'], 'inhalateur');
@@ -116,7 +118,7 @@ void main() {
   });
 
   group('ClinicalVoiceAcceptedResultPersistence', () {
-    test('saves SOAP then the two accepted structured resources', () async {
+    test('saves SOAP and extras before consuming the voice source', () async {
       final consultation = _FakeConsultationGateway();
       final structured = _FakeStructuredGateway();
       final persistence = ClinicalVoiceAcceptedResultPersistence(
@@ -132,6 +134,7 @@ void main() {
       );
 
       expect(consultation.saveCalls, 1);
+      expect(consultation.consumeCalls, 1);
       expect(structured.prescriptionCalls, 1);
       expect(structured.labOrderCalls, 1);
       expect(structured.lastConsultationId, 'consultation-1');
@@ -139,7 +142,7 @@ void main() {
       expect(structured.lastVisitId, 'visit-1');
     });
 
-    test('does not repeat a prescription already saved after a lab failure', () async {
+    test('keeps voice source and avoids duplicate prescription after lab failure', () async {
       final consultation = _FakeConsultationGateway();
       final structured = _FakeStructuredGateway(failFirstLabOrder: true);
       final persistence = ClinicalVoiceAcceptedResultPersistence(
@@ -159,14 +162,16 @@ void main() {
       await expectLater(save(), throwsStateError);
       expect(structured.prescriptionCalls, 1);
       expect(structured.labOrderCalls, 1);
+      expect(consultation.consumeCalls, 0);
 
       await save();
       expect(consultation.saveCalls, 2);
       expect(structured.prescriptionCalls, 1);
       expect(structured.labOrderCalls, 2);
+      expect(consultation.consumeCalls, 1);
     });
 
-    test('does not call structured APIs without accepted extras', () async {
+    test('consumes voice source after SOAP-only accepted result', () async {
       final consultation = _FakeConsultationGateway();
       final structured = _FakeStructuredGateway();
       final persistence = ClinicalVoiceAcceptedResultPersistence(
@@ -180,6 +185,7 @@ void main() {
       );
 
       expect(consultation.saveCalls, 1);
+      expect(consultation.consumeCalls, 1);
       expect(structured.prescriptionCalls, 0);
       expect(structured.labOrderCalls, 0);
     });
@@ -218,6 +224,7 @@ ResponseBody jsonResponse(int statusCode, Map<String, dynamic> payload) {
 
 final class _FakeConsultationGateway implements ConsultationGateway {
   int saveCalls = 0;
+  int consumeCalls = 0;
 
   @override
   Future<ConsultationNote?> getConsultationNote(String visitId) async => null;
@@ -229,6 +236,11 @@ final class _FakeConsultationGateway implements ConsultationGateway {
   ) async {
     saveCalls += 1;
     return SavedConsultationNote(consultationId: 'consultation-1', note: note);
+  }
+
+  @override
+  Future<void> consumeVoiceWorkingSet(String visitId) async {
+    consumeCalls += 1;
   }
 }
 
