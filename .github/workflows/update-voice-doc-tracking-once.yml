@@ -1,0 +1,79 @@
+name: Update voice documentation tracking once
+
+on:
+  push:
+    branches:
+      - fix/voice-persistence-reformulation
+    paths:
+      - '.github/workflows/update-voice-doc-tracking-once.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  update-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout feature branch
+        uses: actions/checkout@v4
+        with:
+          ref: fix/voice-persistence-reformulation
+          fetch-depth: 0
+          persist-credentials: true
+      - name: Update active changelog and project tracking
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+
+          changelog = Path('docs/ai/CHANGELOG.md')
+          text = changelog.read_text()
+          entry = '''- **BUG-20260807 / #278 / PR #279 — Persistance structurée et vraie reformulation de l’assistant vocal mobile** :
+            - **Persistance clinique** : les `prescription` et `labOrders` acceptés restent hors du contrat SOAP, sont conservés jusqu’au clic explicite `Enregistrer`, puis sont envoyés vers l’upsert ordonnance de la consultation et l’API des demandes d’examens. Le working set vocal n’est consommé qu’après réussite de toutes les ressources acceptées afin qu’une panne partielle reste récupérable.
+            - **Ordonnance sûre** : une prescription partielle telle que `inhalateur` peut être enregistrée en DRAFT avec dosage vide sans invention ; le backend interdit la finalisation ACTIVE tant qu’un dosage requis manque.
+            - **Reformulation clinique** : le rebuild batch doit désormais convertir le dialogue médecin/patient en phrases déclaratives concises, supprimer les questions purement conversationnelles et les répétitions, tout en conservant le garde de factualité et en interdisant toute conclusion à partir d’une question non répondue.
+            - **Résilience transcription** : une fenêtre distante bénéficie de deux retries bornés au lieu d’un, sans modifier le VAD anti-silence ni le recouvrement déjà stabilisés.
+            - **Validation** : run CI #2668 vert sur le HEAD fonctionnel `af62319f2d6af1bdda15c435f4e86d8c5639b8b7` (Flutter format/analyze/tests + Maven strict). Gate final exact-HEAD requis après clôture documentaire ; recette Android réelle encore obligatoire pour confirmer réouverture des ressources, qualité de reformulation et taux résiduel de mots perdus.
+            - **SemVer** : correctif rétrocompatible candidat PATCH.
+
+'''
+          anchor = '## [Unreleased]\n\n'
+          if 'BUG-20260807 / #278 / PR #279' not in text:
+              if anchor not in text:
+                  raise SystemExit('CHANGELOG Unreleased anchor missing')
+              text = text.replace(anchor, anchor + entry, 1)
+          changelog.write_text(text)
+
+          tracking = Path('docs/ai/PROJECT-TRACKING.md')
+          text = tracking.read_text()
+          replacements = {
+            '| Dernière mise à jour | 2026-08-02 — diagnostic P0 de l\'assistant vocal Flutter/Spring : courses de reprise, replays ASR, restauration de transcripts analysés et idempotence backend absente confirmés. |': '| Dernière mise à jour | 2026-08-07 — BUG-20260807 (#278 / PR #279) implémenté et gate fonctionnel #2668 vert : persistance ordonnance/examens, reformulation déclarative et sécurité des brouillons ; recette Android réelle encore requise. |',
+            '| État global | La livraison mobile est dans `main`, mais BUG-20260802 bloque la validation clinique de MOB-2816/MOB-2811 : répétitions, anciens transcripts et pertes de mots sont en correction cross-stack. |': '| État global | La stabilisation audio précédente est fusionnée dans `main`. BUG-20260807 est prêt à fusionner après gate documentaire final ; la validation clinique de MOB-2816 reste conditionnée à une recette Android longue confirmant reformulation, persistance structurée et taux résiduel de mots perdus. |',
+            '| Risques majeurs | P0 clinique : tant que les tests et la recette Android de BUG-20260802 ne sont pas verts, la dictée Consultation/Constantes ne doit pas être déclarée fiable. Restent aussi les gates Maven/PostgreSQL et Flutter exact-HEAD de TASK-20260801. |': '| Risques majeurs | P0 clinique résiduel : les gates automatisés sont verts, mais la qualité réelle de reformulation, la réouverture ordonnance/examens et le taux de mots manquants doivent encore être confirmés sur Android physique avant de déclarer la dictée fiable en production. |',
+            '| Prochaine priorité | Terminer BUG-20260802 (barrières Flutter, idempotence Spring, tests ciblés), puis exécuter une recette Android parole/silence/reprise avant de reprendre la clôture de TASK-20260801. |': '| Prochaine priorité | Obtenir le gate final exact-HEAD de la PR #279, fusionner le PATCH, puis exécuter la recette Android : dialogue long avec questions/réponses, prescription incomplète, examens, sauvegarde, réouverture du dossier et mesure du taux de mots perdus. |',
+          }
+          for old, new in replacements.items():
+              if old in text:
+                  text = text.replace(old, new, 1)
+              elif new not in text:
+                  raise SystemExit(f'PROJECT-TRACKING anchor missing: {old[:80]}')
+
+          row = '| BUG-20260807-MOBILE-VOICE-PERSISTENCE-REFORMULATION | EPIC-0028 / MOB-2816 / MOB-2821 | Correctif P0 cross-stack | Persister prescriptions/examens acceptés et reformuler le dialogue en note clinique déclarative | Flutter / Spring Boot / IA / Prescription / Lab | IMPLEMENTED — PR #279, gate fonctionnel #2668 vert ; gate documentaire final et recette Android pending | P0 | 3 | Senior Flutter + Senior Spring/IA + revue clinique | 1–1.5j | 2j encadré | Non recommandé seul | GPT-5.6 Sol | Tech Lead Flutter + Lead Backend + praticien | Hors sprint / hotfix PATCH | Implémentation + tests automatisés terminés | Gate exact-HEAD final, fusion, recette Android et mesure pertes | Moyen jusqu’à recette appareil | 2026-08-07 |\n'
+          if 'BUG-20260807-MOBILE-VOICE-PERSISTENCE-REFORMULATION' not in text:
+              table_header = '|---|---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|\n'
+              if table_header not in text:
+                  raise SystemExit('PROJECT-TRACKING table header missing')
+              text = text.replace(table_header, table_header + row, 1)
+          tracking.write_text(text)
+          PY
+      - name: Remove workflow and commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/update-voice-doc-tracking-once.yml
+          git config user.name "Joprelys AI Engineering"
+          git config user.email "actions@users.noreply.github.com"
+          git add docs/ai/CHANGELOG.md docs/ai/PROJECT-TRACKING.md
+          git commit -m "docs: clôturer le suivi du correctif vocal"
+          git push origin HEAD:fix/voice-persistence-reformulation
