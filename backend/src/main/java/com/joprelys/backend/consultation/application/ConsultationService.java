@@ -58,18 +58,20 @@ public class ConsultationService {
 		UserAccountEntity doctor = userAccountRepository.findByEmail(doctorEmail)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Médecin introuvable."));
 
+		String symptoms = textOrEmpty(request.symptoms());
+		String diagnosis = textOrEmpty(request.diagnosis());
 		ConsultationEntity consultation = consultationRepository.findByVisitId(visitId)
 				.orElseGet(() -> {
 					String docNumber = generateDocumentNumber();
 					return new ConsultationEntity(visit, doctor, docNumber,
-							request.symptoms(), request.clinicalExam(),
-							request.diagnosis(), request.conclusion(),
+							symptoms, request.clinicalExam(),
+							diagnosis, request.conclusion(),
 							request.advice(), request.followUp());
 				});
 
-		consultation.setSymptoms(request.symptoms());
+		consultation.setSymptoms(symptoms);
 		consultation.setClinicalExam(request.clinicalExam());
-		consultation.setDiagnosis(request.diagnosis());
+		consultation.setDiagnosis(diagnosis);
 		consultation.setConclusion(request.conclusion());
 		consultation.setAdvice(request.advice());
 		consultation.setFollowUp(request.followUp());
@@ -90,6 +92,10 @@ public class ConsultationService {
 		String date = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 		long count = consultationRepository.countGlobally() + 1;
 		return String.format("DOC-CONS-%s-%06d", date, count);
+	}
+
+	private String textOrEmpty(String value) {
+		return value == null ? "" : value;
 	}
 
 	@Transactional(readOnly = true)
