@@ -44,8 +44,8 @@ class ClinicalVoiceProgressiveAssistantSheet extends ConsumerStatefulWidget {
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      isDismissible: false,
-      enableDrag: false,
+      isDismissible: true,
+      enableDrag: true,
       backgroundColor: Colors.transparent,
       builder: (sheetContext) => Padding(
         padding: EdgeInsets.only(
@@ -171,10 +171,7 @@ class _ClinicalVoiceProgressiveAssistantSheetState
     }
   }
 
-  Future<void> _close() async {
-    final safeToClose = await _speechService.prepareForClose();
-    if (!safeToClose) return;
-    await _coordinator.synchronizeNow();
+  void _close() {
     if (mounted) Navigator.of(context).pop();
   }
 
@@ -274,7 +271,6 @@ class _ClinicalVoiceProgressiveAssistantSheetState
       valueListenable: _speechService,
       builder: (context, state, child) {
         final colors = Theme.of(context).colorScheme;
-        final processing = state.status == SpeechStatus.processing;
         return Container(
           decoration: BoxDecoration(
             color: colors.surface,
@@ -296,7 +292,6 @@ class _ClinicalVoiceProgressiveAssistantSheetState
               _Header(
                 patientName: widget.visit.patientName,
                 reference: _reference(),
-                processing: processing || state.isSynchronizingTranscript,
                 onClose: _close,
               ),
               const Divider(height: 1),
@@ -334,13 +329,11 @@ class _Header extends StatelessWidget {
   const _Header({
     required this.patientName,
     required this.reference,
-    required this.processing,
     required this.onClose,
   });
 
   final String patientName;
   final String reference;
-  final bool processing;
   final VoidCallback onClose;
 
   @override
@@ -374,10 +367,7 @@ class _Header extends StatelessWidget {
               ],
             ),
           ),
-          IconButton(
-            onPressed: processing ? null : onClose,
-            icon: const Icon(Icons.close_rounded),
-          ),
+          IconButton(onPressed: onClose, icon: const Icon(Icons.close_rounded)),
         ],
       ),
     );
