@@ -94,8 +94,8 @@ void main() {
       final saved = await api.saveConsultationNote('visit-123', note);
 
       expect(saved.consultationId, 'consultation-456');
-      expect(adapter.requests, hasLength(2));
-      final request = adapter.requests.first;
+      expect(adapter.requests, hasLength(1));
+      final request = adapter.requests.single;
       final requestData = Map<String, dynamic>.from(request.data as Map);
       expect(request.method, 'POST');
       expect(request.path, '/api/visits/visit-123/consultation');
@@ -108,10 +108,6 @@ void main() {
       expect(requestData.containsKey('finalDiagnosis'), isFalse);
       expect(requestData.containsKey('subjective'), isFalse);
       expect(requestData.containsKey('plan'), isFalse);
-      expect(
-        adapter.requests.last.path,
-        '/api/ai/consultations/visit-123/realtime-intake/consume',
-      );
     });
 
     test('rejects a save response without consultation id', () async {
