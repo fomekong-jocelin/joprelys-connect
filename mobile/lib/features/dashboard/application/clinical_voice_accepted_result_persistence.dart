@@ -47,6 +47,9 @@ final class ClinicalVoiceAcceptedResultPersistence {
       _savedLabOrdersFingerprint = labOrders;
     }
 
+    // Only consume the durable voice source after every accepted clinical
+    // resource has been persisted. A partial structured failure remains retryable.
+    await _consultationGateway.consumeVoiceWorkingSet(visit.id);
     return saved;
   }
 
