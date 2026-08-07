@@ -1,6 +1,8 @@
 package com.joprelys.backend.ai.application;
 
+import com.joprelys.backend.ai.domain.AiTranscription;
 import com.joprelys.backend.ai.infrastructure.openai.OpenAiStreamingTranscriptionService;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -10,14 +12,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
 import reactor.core.publisher.Flux;
+import reactor.core.publisher.Mono;
 import reactor.core.publisher.Sinks;
+import reactor.util.retry.Retry;
 
 /**
  * Service de streaming vocal temps réel pour la dictée clinique.
  *
- * <p>Le mobile transmet du PCM 16 bits, mono, 16 kHz. Le service regroupe
- * exactement trois secondes d'audio par appel de transcription, sans perdre
- * les octets excédentaires, et traite les fenêtres dans leur ordre d'arrivée.</p>
+ * <p>Le mobile transmet du PCM 16 bits, mono, 16 kHz. Les fenêtres se
+ * recouvrent afin qu'un mot situé à une frontière conserve du contexte. Les
+ * fenêtres silencieuses sont écartées avant tout appel distant et une erreur
+ * isolée de transcription ne détruit plus toute la session WebSocket.</p>
  */
 @Service
 @ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
@@ -25,11 +30,17 @@ public class VoiceStreamingService {
 
     private static final Logger log = LoggerFactory.getLogger(VoiceStreamingService.class);
 
-    private static final int BUFFER_SIZE_SECONDS = 3;
+    private static final int WINDOW_SIZE_SECONDS = 5;
+    private static final int WINDOW_OVERLAP_SECONDS = 1;
     private static final int SAMPLE_RATE = 16_000;
     private static final int BYTES_PER_SAMPLE = 2;
+    private static final int MAX_CONSECUTIVE_TRANSCRIPTION_FAILURES = 4;
+    private static final Duration TRANSCRIPTION_RETRY_DELAY = Duration.ofMillis(250);
+
     static final int TRANSCRIPTION_WINDOW_BYTES =
-            BUFFER_SIZE_SECONDS * SAMPLE_RATE * BYTES_PER_SAMPLE;
+            WINDOW_SIZE_SECONDS * SAMPLE_RATE * BYTES_PER_SAMPLE;
+    static final int TRANSCRIPTION_OVERLAP_BYTES =
+            WINDOW_OVERLAP_SECONDS * SAMPLE_RATE * BYTES_PER_SAMPLE;
 
     private final OpenAiStreamingTranscriptionService transcriptionService;
     private final ConcurrentHashMap<UUID, StreamingSession> activeSessions;
@@ -53,7 +64,7 @@ public class VoiceStreamingService {
                 visitId,
                 locale,
                 audioSink,
-                new AudioBuffer(TRANSCRIPTION_WINDOW_BYTES));
+                new AudioBuffer(TRANSCRIPTION_WINDOW_BYTES, TRANSCRIPTION_OVERLAP_BYTES));
 
         StreamingSession previous = activeSessions.put(visitId, session);
         if (previous != null) {
@@ -62,10 +73,7 @@ public class VoiceStreamingService {
         }
 
         return audioSink.asFlux()
-                .concatMap(audioChunk -> transcriptionService.transcribe(
-                        audioChunk,
-                        "audio/pcm",
-                        locale))
+                .concatMap(audioChunk -> transcribeWindow(session, audioChunk))
                 .filter(transcription -> transcription.text() != null
                         && !transcription.text().isBlank())
                 .map(transcription -> new TranscriptChunk(
@@ -75,6 +83,35 @@ public class VoiceStreamingService {
                 .doOnError(error -> log.error(
                         "Erreur streaming vocal visite={}", visitId, error))
                 .doFinally(signal -> activeSessions.remove(visitId, session));
+    }
+
+    private Mono<AiTranscription> transcribeWindow(StreamingSession session, byte[] audioChunk) {
+        if (AiAudioSilenceGuard.isLikelySilentPcm16(audioChunk)) {
+            log.debug(
+                    "Fenêtre silencieuse ignorée visite={} taille={}",
+                    session.visitId,
+                    audioChunk.length);
+            return Mono.empty();
+        }
+
+        return transcriptionService.transcribe(audioChunk, "audio/pcm", session.locale)
+                .retryWhen(Retry.backoff(1, TRANSCRIPTION_RETRY_DELAY)
+                        .maxBackoff(Duration.ofSeconds(1))
+                        .jitter(0.15d))
+                .doOnSuccess(ignored -> session.resetTranscriptionFailures())
+                .onErrorResume(error -> {
+                    int failures = session.incrementTranscriptionFailures();
+                    log.warn(
+                            "Fenêtre de transcription abandonnée visite={} échecsConsécutifs={}/{}",
+                            session.visitId,
+                            failures,
+                            MAX_CONSECUTIVE_TRANSCRIPTION_FAILURES,
+                            error);
+                    if (failures >= MAX_CONSECUTIVE_TRANSCRIPTION_FAILURES) {
+                        return Mono.error(error);
+                    }
+                    return Mono.empty();
+                });
     }
 
     /**
@@ -125,6 +162,7 @@ public class VoiceStreamingService {
         private final Sinks.Many<byte[]> audioSink;
         private final AudioBuffer audioBuffer;
         private boolean closed;
+        private int consecutiveTranscriptionFailures;
 
         private StreamingSession(
                 UUID visitId,
@@ -167,6 +205,15 @@ public class VoiceStreamingService {
             audioSink.tryEmitComplete();
         }
 
+        private synchronized int incrementTranscriptionFailures() {
+            consecutiveTranscriptionFailures += 1;
+            return consecutiveTranscriptionFailures;
+        }
+
+        private synchronized void resetTranscriptionFailures() {
+            consecutiveTranscriptionFailures = 0;
+        }
+
         private void emit(byte[] audio) {
             Sinks.EmitResult result = audioSink.tryEmitNext(audio);
             if (result.isFailure()) {
@@ -180,17 +227,25 @@ public class VoiceStreamingService {
     }
 
     /**
-     * Accumulateur borné conservant intégralement les paquets entrants.
+     * Accumulateur recouvrant : une seconde de contexte est conservée entre
+     * deux fenêtres de cinq secondes. Le flush final n'émet rien lorsqu'il ne
+     * contient que le recouvrement déjà traité.
      */
     static final class AudioBuffer {
         private final byte[] buffer;
+        private final int overlapBytes;
         private int position;
+        private int freshBytesSinceLastEmission;
 
-        AudioBuffer(int capacity) {
+        AudioBuffer(int capacity, int overlapBytes) {
             if (capacity <= 0) {
                 throw new IllegalArgumentException("capacity must be positive");
             }
+            if (overlapBytes < 0 || overlapBytes >= capacity) {
+                throw new IllegalArgumentException("overlap must be between 0 and capacity");
+            }
             this.buffer = new byte[capacity];
+            this.overlapBytes = overlapBytes;
         }
 
         synchronized List<byte[]> add(byte[] chunk) {
@@ -203,9 +258,13 @@ public class VoiceStreamingService {
                 System.arraycopy(chunk, sourceOffset, buffer, position, copied);
                 position += copied;
                 sourceOffset += copied;
+                freshBytesSinceLastEmission += copied;
 
                 if (position == buffer.length) {
-                    ready.add(flush());
+                    byte[] window = new byte[buffer.length];
+                    System.arraycopy(buffer, 0, window, 0, buffer.length);
+                    ready.add(window);
+                    retainOverlap();
                 }
             }
 
@@ -213,14 +272,34 @@ public class VoiceStreamingService {
         }
 
         synchronized byte[] flush() {
+            if (position == 0 || freshBytesSinceLastEmission == 0) {
+                position = 0;
+                freshBytesSinceLastEmission = 0;
+                return new byte[0];
+            }
             byte[] result = new byte[position];
             System.arraycopy(buffer, 0, result, 0, position);
             position = 0;
+            freshBytesSinceLastEmission = 0;
             return result;
         }
 
         synchronized void clear() {
             position = 0;
+            freshBytesSinceLastEmission = 0;
+        }
+
+        private void retainOverlap() {
+            if (overlapBytes > 0) {
+                System.arraycopy(
+                        buffer,
+                        buffer.length - overlapBytes,
+                        buffer,
+                        0,
+                        overlapBytes);
+            }
+            position = overlapBytes;
+            freshBytesSinceLastEmission = 0;
         }
     }
 
