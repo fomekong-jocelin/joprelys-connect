@@ -5,6 +5,7 @@ import '../../../../core/network/api_exception.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../../shared/widgets/app_button.dart';
+import '../../../auth/application/effective_access_controller.dart';
 import '../../application/clinical_voice_accepted_result_persistence.dart';
 import '../../data/clinical_voice_structured_api.dart';
 import '../../data/consultation_api.dart';
@@ -68,6 +69,10 @@ class _ConsultationNotesSheetState
           structuredGateway: ref.read(clinicalVoiceStructuredApiProvider),
         );
   }
+
+  bool get _canWritePrescription =>
+      ref.read(effectiveAccessProvider).value?.hasPermission('CLINICAL_WRITE') ==
+      true;
 
   @override
   void initState() {
@@ -145,6 +150,8 @@ class _ConsultationNotesSheetState
   }
 
   Future<void> _openPrescription() async {
+    if (!_canWritePrescription) return;
+
     var consultationId = _consultationId;
     if (consultationId == null || consultationId.trim().isEmpty) {
       final saved = await _saveCurrent(showNotice: false);
@@ -204,6 +211,11 @@ class _ConsultationNotesSheetState
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
+    final canWritePrescription = ref
+            .watch(effectiveAccessProvider)
+            .value
+            ?.hasPermission('CLINICAL_WRITE') ==
+        true;
 
     return Container(
       decoration: BoxDecoration(
@@ -217,7 +229,11 @@ class _ConsultationNotesSheetState
           ConsultationNotesHeader(
             visit: widget.visit,
             onLaunchAssistant: _launchAssistant,
-            onOpenPrescription: _isLoading || _didFailToLoad || _isSaving
+            onOpenPrescription:
+                !canWritePrescription ||
+                    _isLoading ||
+                    _didFailToLoad ||
+                    _isSaving
                 ? null
                 : _openPrescription,
             onClose: () => Navigator.of(context).pop(),
