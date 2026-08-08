@@ -89,6 +89,8 @@ void main() {
       ],
     });
 
+    expect(visit.id, 'visit-1');
+    expect(visit.consultationId, 'consultation-1');
     expect(visit.symptoms, 'Fatigue depuis trois semaines et toux sèche.');
     expect(visit.clinicalExam, 'Léger sifflement du côté droit.');
     expect(visit.diagnosis, isEmpty);
@@ -117,6 +119,7 @@ void main() {
 
     expect(visit.visitNumber, 'VIS-OLD');
     expect(visit.practitionerName, 'Dr Legacy');
+    expect(visit.consultationId, 'legacy-consultation');
     expect(visit.symptoms, 'Contrôle');
     expect(visit.diagnosis, isEmpty);
     expect(visit.prescriptionItems, isEmpty);
