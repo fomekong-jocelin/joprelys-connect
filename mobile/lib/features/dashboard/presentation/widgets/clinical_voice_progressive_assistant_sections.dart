@@ -7,7 +7,6 @@ import '../../application/clinical_voice_state.dart';
 import '../clinical_voice_localizations.dart';
 import '../dashboard_localizations.dart';
 import 'clinical_voice_listening_surface.dart';
-import 'clinical_voice_progressive_preview.dart';
 import 'clinical_voice_review_widgets.dart';
 import 'clinical_voice_segment_timeline.dart';
 
@@ -72,38 +71,25 @@ class ClinicalVoiceProgressiveCaptureBody extends StatelessWidget {
                       : l10n.assistantStartDictation,
                   onToggleListening: onToggleListening,
                 ),
-                const SizedBox(height: 18),
-                ClinicalTranscriptTimeline(
-                  segments: state.segments,
-                  partialTranscript: state.partialTranscript,
-                  partialOffset: state.partialOffset,
-                  editable: editable,
-                  onSegmentChanged: onSegmentChanged,
-                  onSegmentDeleted: onSegmentDeleted,
-                ),
-                if (state.hasApplicableResult) ...[
+                if (listening && state.transcript.trim().isNotEmpty) ...[
                   const SizedBox(height: 14),
-                  ClinicalVoiceProgressivePreview(state: state),
+                  _LiveTranscript(text: state.transcript),
                 ],
-                if (processing) ...[
-                  const SizedBox(height: 14),
-                  LinearProgressIndicator(
-                    borderRadius: BorderRadius.circular(
-                      AppDesignTokens.radiusXs,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    l10n.voiceAnalyzingBody,
-                    style: Theme.of(context).textTheme.bodySmall,
+                if (!listening && state.hasTranscript) ...[
+                  const SizedBox(height: 16),
+                  ClinicalTranscriptTimeline(
+                    segments: state.segments,
+                    partialTranscript: state.partialTranscript,
+                    partialOffset: state.partialOffset,
+                    editable: editable,
+                    onSegmentChanged: onSegmentChanged,
+                    onSegmentDeleted: onSegmentDeleted,
                   ),
                 ],
-                if (state.errorMessage != null) ...[
+                if (!listening && state.errorMessage != null) ...[
                   const SizedBox(height: 12),
                   _ErrorNotice(message: state.errorMessage!),
                 ],
-                const SizedBox(height: 12),
-                _SyncNotice(state: state),
               ],
             ),
           ),
@@ -147,6 +133,34 @@ class ClinicalVoiceProgressiveCaptureBody extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _LiveTranscript extends StatelessWidget {
+  const _LiveTranscript({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: BoxDecoration(
+        color: colors.surfaceContainerLow,
+        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
+        border: Border.all(color: colors.outlineVariant),
+      ),
+      child: Text(
+        text,
+        style: theme.textTheme.bodyLarge?.copyWith(
+          height: 1.45,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
@@ -248,55 +262,6 @@ class ClinicalVoiceProgressiveReviewBody extends StatelessWidget {
           ],
         ],
       ),
-    );
-  }
-}
-
-class _SyncNotice extends StatelessWidget {
-  const _SyncNotice({required this.state});
-
-  final RealtimeSpeechState state;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    final colors = Theme.of(context).colorScheme;
-    final (icon, text, color) = switch (state.transcriptSyncStatus) {
-      TranscriptSyncStatus.syncing => (
-        Icons.sync_rounded,
-        l10n.voiceTranscriptSaving,
-        colors.primary,
-      ),
-      TranscriptSyncStatus.failed => (
-        Icons.cloud_off_rounded,
-        l10n.voiceTranscriptSaveFailed,
-        colors.error,
-      ),
-      TranscriptSyncStatus.synced => (
-        Icons.cloud_done_outlined,
-        l10n.voiceTranscriptSaved,
-        colors.onSurfaceVariant,
-      ),
-      TranscriptSyncStatus.idle => (
-        Icons.verified_user_outlined,
-        l10n.voicePrivacyNotice,
-        colors.onSurfaceVariant,
-      ),
-    };
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Icon(icon, color: color, size: 17),
-        const SizedBox(width: 7),
-        Expanded(
-          child: Text(
-            text,
-            style: Theme.of(
-              context,
-            ).textTheme.bodySmall?.copyWith(color: color, height: 1.35),
-          ),
-        ),
-      ],
     );
   }
 }
