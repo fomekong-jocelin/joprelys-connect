@@ -7,6 +7,7 @@ import '../../application/clinical_voice_state.dart';
 import '../clinical_voice_localizations.dart';
 import '../dashboard_localizations.dart';
 import 'clinical_voice_listening_surface.dart';
+import 'clinical_voice_progressive_preview.dart';
 import 'clinical_voice_review_widgets.dart';
 import 'clinical_voice_segment_timeline.dart';
 
@@ -85,6 +86,10 @@ class ClinicalVoiceProgressiveCaptureBody extends StatelessWidget {
                     onSegmentChanged: onSegmentChanged,
                     onSegmentDeleted: onSegmentDeleted,
                   ),
+                ],
+                if (!listening && state.hasApplicableResult) ...[
+                  const SizedBox(height: 14),
+                  ClinicalVoiceProgressivePreview(state: state),
                 ],
                 if (!listening && state.errorMessage != null) ...[
                   const SizedBox(height: 12),
