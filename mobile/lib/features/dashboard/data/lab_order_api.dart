@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_providers.dart';
+import '../../../core/network/api_request_policy.dart';
 import '../domain/patient_record.dart';
 
 abstract interface class LabOrderGateway {
@@ -79,6 +80,7 @@ final class LabOrderApi implements LabOrderGateway {
     final response = await _client.request<List<int>>(
       '/api/lab-orders/results/$resultId/pdf',
       method: 'GET',
+      policy: const ApiRequestPolicy.protectedRead(),
       responseType: ResponseType.bytes,
     );
     final bytes = response.data;
