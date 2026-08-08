@@ -98,17 +98,15 @@ final class Prescription {
   final DateTime? updatedAt;
 
   factory Prescription.fromJson(Map<String, dynamic> json) {
+    final items = <PrescriptionItem>[];
     final rawItems = json['items'];
-    final items = rawItems is List
-        ? rawItems
-              .whereType<Map>()
-              .map(
-                (item) => PrescriptionItem.fromJson(
-                  Map<String, dynamic>.from(item),
-                ),
-              )
-              .toList(growable: false)
-        : const <PrescriptionItem>[];
+    if (rawItems is List) {
+      items.addAll(
+        rawItems.whereType<Map>().map(
+          (item) => PrescriptionItem.fromJson(Map<String, dynamic>.from(item)),
+        ),
+      );
+    }
     items.sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
 
     return Prescription(
@@ -118,7 +116,9 @@ final class Prescription {
       status: _text(json['status']).toUpperCase(),
       prescriptionNumber: _optionalText(json['prescriptionNumber']),
       expiresAt: _date(json['expiresAt']),
-      transmissionStatus: _optionalText(json['transmissionStatus'])?.toUpperCase(),
+      transmissionStatus: _optionalText(
+        json['transmissionStatus'],
+      )?.toUpperCase(),
       transmittedAt: _date(json['transmittedAt']),
       issuedAt: _date(json['issuedAt']),
       documentId: _optionalText(json['documentId']),
@@ -133,7 +133,9 @@ final class Prescription {
   bool get isExpired => status == 'EXPIRED';
   bool get isTransmitted => transmissionStatus == 'TRANSMITTED';
   bool get canFinalize =>
-      isDraft && items.isNotEmpty && items.every((item) => item.isCompleteForFinalization);
+      isDraft &&
+      items.isNotEmpty &&
+      items.every((item) => item.isCompleteForFinalization);
 }
 
 String _text(Object? value) => value?.toString().trim() ?? '';
