@@ -101,6 +101,9 @@ public class LabOrderItemEntity {
 			Instant producedAt,
 			Instant confirmedAt,
 			Instant now) {
+		if (status == LabOrderStatus.CANCELLED) {
+			throw new IllegalStateException("Impossible d'ajouter un résultat à un examen annulé");
+		}
 		this.status = nextStatus;
 		if (sampleCollectedAt == null) {
 			this.sampleCollectedAt = collectedAt != null ? collectedAt : now;
