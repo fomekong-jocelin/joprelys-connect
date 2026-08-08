@@ -94,4 +94,22 @@ public class LabOrderItemEntity {
 			this.validatedAt = now;
 		}
 	}
+
+	public void applyResultStatus(
+			LabOrderStatus nextStatus,
+			Instant collectedAt,
+			Instant producedAt,
+			Instant confirmedAt,
+			Instant now) {
+		this.status = nextStatus;
+		if (sampleCollectedAt == null) {
+			this.sampleCollectedAt = collectedAt != null ? collectedAt : now;
+		}
+		if (resultAt == null) {
+			this.resultAt = producedAt != null ? producedAt : now;
+		}
+		if (nextStatus == LabOrderStatus.VALIDATED && validatedAt == null) {
+			this.validatedAt = confirmedAt != null ? confirmedAt : now;
+		}
+	}
 }
