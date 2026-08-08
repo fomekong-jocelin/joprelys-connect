@@ -173,7 +173,9 @@ class _PrescriptionEditorSheetState
       _error = null;
     });
     try {
-      final saved = await ref.read(prescriptionApiProvider).saveDraft(
+      final saved = await ref
+          .read(prescriptionApiProvider)
+          .saveDraft(
             consultationId: widget.consultationId,
             items: _draftItems(),
           );
@@ -692,9 +694,9 @@ class _MetaText extends StatelessWidget {
         const SizedBox(width: 5),
         Text(
           text,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
+          style: Theme.of(
+            context,
+          ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
         ),
       ],
     );
@@ -715,10 +717,7 @@ class _InlineError extends StatelessWidget {
         color: colors.errorContainer,
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
       ),
-      child: Text(
-        message,
-        style: TextStyle(color: colors.onErrorContainer),
-      ),
+      child: Text(message, style: TextStyle(color: colors.onErrorContainer)),
     );
   }
 }
@@ -734,14 +733,18 @@ class _ReadOnlyNotice extends StatelessWidget {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(Icons.lock_outline_rounded, size: 17, color: colors.onSurfaceVariant),
+        Icon(
+          Icons.lock_outline_rounded,
+          size: 17,
+          color: colors.onSurfaceVariant,
+        ),
         const SizedBox(width: 7),
         Expanded(
           child: Text(
             text,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
           ),
         ),
       ],

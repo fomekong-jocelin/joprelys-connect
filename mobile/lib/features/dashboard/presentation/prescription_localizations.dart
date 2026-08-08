@@ -16,9 +16,8 @@ extension PrescriptionLocalizations on AppLocalizations {
       _prescriptionFrench ? 'Ajouter un médicament' : 'Add medication';
   String get prescriptionMedication =>
       _prescriptionFrench ? 'Médicament' : 'Medication';
-  String prescriptionMedicationIndex(int index) => _prescriptionFrench
-      ? 'Médicament $index'
-      : 'Medication $index';
+  String prescriptionMedicationIndex(int index) =>
+      _prescriptionFrench ? 'Médicament $index' : 'Medication $index';
   String get prescriptionDrugName =>
       _prescriptionFrench ? 'Nom du médicament' : 'Medication name';
   String get prescriptionDrugNameHint =>
@@ -42,9 +41,8 @@ extension PrescriptionLocalizations on AppLocalizations {
       _prescriptionFrench ? 'Fréquence' : 'Frequency';
   String get prescriptionInstructions =>
       _prescriptionFrench ? 'Instructions' : 'Instructions';
-  String get prescriptionSubstitutionAllowed => _prescriptionFrench
-      ? 'Substitution autorisée'
-      : 'Substitution allowed';
+  String get prescriptionSubstitutionAllowed =>
+      _prescriptionFrench ? 'Substitution autorisée' : 'Substitution allowed';
   String get prescriptionRemoveMedication =>
       _prescriptionFrench ? 'Retirer' : 'Remove';
   String get prescriptionSaveDraft =>
@@ -55,18 +53,14 @@ extension PrescriptionLocalizations on AppLocalizations {
       _prescriptionFrench ? 'Transmettre' : 'Transmit';
   String get prescriptionCancel => _prescriptionFrench ? 'Annuler' : 'Cancel';
   String get prescriptionClose => _prescriptionFrench ? 'Fermer' : 'Close';
-  String get prescriptionDraftSaved => _prescriptionFrench
-      ? 'Brouillon enregistré'
-      : 'Draft saved';
-  String get prescriptionFinalized => _prescriptionFrench
-      ? 'Ordonnance finalisée'
-      : 'Prescription finalized';
-  String get prescriptionCancelled => _prescriptionFrench
-      ? 'Ordonnance annulée'
-      : 'Prescription cancelled';
-  String get prescriptionTransmitted => _prescriptionFrench
-      ? 'Ordonnance transmise'
-      : 'Prescription transmitted';
+  String get prescriptionDraftSaved =>
+      _prescriptionFrench ? 'Brouillon enregistré' : 'Draft saved';
+  String get prescriptionFinalized =>
+      _prescriptionFrench ? 'Ordonnance finalisée' : 'Prescription finalized';
+  String get prescriptionCancelled =>
+      _prescriptionFrench ? 'Ordonnance annulée' : 'Prescription cancelled';
+  String get prescriptionTransmitted =>
+      _prescriptionFrench ? 'Ordonnance transmise' : 'Prescription transmitted';
   String get prescriptionDrugRequired => _prescriptionFrench
       ? 'Indiquez le nom du médicament.'
       : 'Enter the medication name.';

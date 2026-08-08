@@ -215,9 +215,7 @@ class _MiniActionButton extends StatelessWidget {
           borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
           child: SizedBox.square(
             dimension: 38,
-            child: Center(
-              child: Icon(icon, size: 20, color: foreground),
-            ),
+            child: Center(child: Icon(icon, size: 20, color: foreground)),
           ),
         ),
       ),

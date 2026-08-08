@@ -71,7 +71,10 @@ class _ConsultationNotesSheetState
   }
 
   bool get _canWritePrescription =>
-      ref.read(effectiveAccessProvider).value?.hasPermission('CLINICAL_WRITE') ==
+      ref
+          .read(effectiveAccessProvider)
+          .value
+          ?.hasPermission('CLINICAL_WRITE') ==
       true;
 
   @override
@@ -129,7 +132,9 @@ class _ConsultationNotesSheetState
       if (showNotice) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(AppLocalizations.of(context).consultationSavedSuccess),
+            content: Text(
+              AppLocalizations.of(context).consultationSavedSuccess,
+            ),
           ),
         );
       }
@@ -211,7 +216,8 @@ class _ConsultationNotesSheetState
   Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final l10n = AppLocalizations.of(context);
-    final canWritePrescription = ref
+    final canWritePrescription =
+        ref
             .watch(effectiveAccessProvider)
             .value
             ?.hasPermission('CLINICAL_WRITE') ==

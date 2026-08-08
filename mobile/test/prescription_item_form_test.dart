@@ -33,41 +33,42 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('finalization requires dosage and secondary fields stay progressive', (
-    tester,
-  ) async {
-    final formKey = GlobalKey<FormState>();
-    final controllers = PrescriptionItemControllers.fromItem(
-      const PrescriptionItem(drugName: 'Inhalateur'),
-    );
-    addTearDown(controllers.dispose);
+  testWidgets(
+    'finalization requires dosage and secondary fields stay progressive',
+    (tester) async {
+      final formKey = GlobalKey<FormState>();
+      final controllers = PrescriptionItemControllers.fromItem(
+        const PrescriptionItem(drugName: 'Inhalateur'),
+      );
+      addTearDown(controllers.dispose);
 
-    await tester.binding.setSurfaceSize(const Size(390, 800));
-    addTearDown(() => tester.binding.setSurfaceSize(null));
+      await tester.binding.setSurfaceSize(const Size(390, 800));
+      addTearDown(() => tester.binding.setSurfaceSize(null));
 
-    await tester.pumpWidget(
-      _Harness(
-        formKey: formKey,
-        controllers: controllers,
-        requireDosage: true,
-      ),
-    );
+      await tester.pumpWidget(
+        _Harness(
+          formKey: formKey,
+          controllers: controllers,
+          requireDosage: true,
+        ),
+      );
 
-    expect(formKey.currentState?.validate(), isFalse);
-    await tester.pump();
-    expect(
-      find.text('Complétez le dosage avant de finaliser.'),
-      findsOneWidget,
-    );
+      expect(formKey.currentState?.validate(), isFalse);
+      await tester.pump();
+      expect(
+        find.text('Complétez le dosage avant de finaliser.'),
+        findsOneWidget,
+      );
 
-    await tester.tap(find.text('Détails complémentaires'));
-    await tester.pumpAndSettle();
-    expect(find.text('Forme'), findsOneWidget);
-    expect(find.text('Voie'), findsOneWidget);
-    expect(find.text('Fréquence'), findsOneWidget);
-    expect(find.text('Instructions'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      await tester.tap(find.text('Détails complémentaires'));
+      await tester.pumpAndSettle();
+      expect(find.text('Forme'), findsOneWidget);
+      expect(find.text('Voie'), findsOneWidget);
+      expect(find.text('Fréquence'), findsOneWidget);
+      expect(find.text('Instructions'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 class _Harness extends StatelessWidget {

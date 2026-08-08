@@ -58,19 +58,22 @@ void main() {
       );
     });
 
-    test('loads and sorts a prescription from the canonical endpoint', () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(200, prescriptionJson()),
-      );
-      final api = buildApi(adapter);
+    test(
+      'loads and sorts a prescription from the canonical endpoint',
+      () async {
+        final adapter = QueueHttpClientAdapter(
+          (_, _) => jsonResponse(200, prescriptionJson()),
+        );
+        final api = buildApi(adapter);
 
-      final prescription = await api.getForConsultation('consultation-1');
+        final prescription = await api.getForConsultation('consultation-1');
 
-      expect(prescription?.status, 'DRAFT');
-      expect(prescription?.items, hasLength(2));
-      expect(prescription?.items.first.drugName, 'Inhalateur');
-      expect(prescription?.canFinalize, isFalse);
-    });
+        expect(prescription?.status, 'DRAFT');
+        expect(prescription?.items, hasLength(2));
+        expect(prescription?.items.first.drugName, 'Inhalateur');
+        expect(prescription?.canFinalize, isFalse);
+      },
+    );
 
     test('saves a draft without inventing a missing dosage', () async {
       final adapter = QueueHttpClientAdapter(
@@ -85,10 +88,7 @@ void main() {
 
       final request = adapter.requests.single;
       expect(request.method, 'POST');
-      expect(
-        request.path,
-        '/api/consultations/consultation-1/prescription',
-      );
+      expect(request.path, '/api/consultations/consultation-1/prescription');
       final data = Map<String, dynamic>.from(request.data as Map);
       final items = List<dynamic>.from(data['items'] as List);
       final item = Map<String, dynamic>.from(items.single as Map);

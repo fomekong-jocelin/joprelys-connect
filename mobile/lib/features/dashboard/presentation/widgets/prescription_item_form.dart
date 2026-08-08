@@ -125,7 +125,9 @@ class _PrescriptionItemFormState extends State<PrescriptionItemForm> {
                       children: [
                         Text(
                           drug.isEmpty
-                              ? l10n.prescriptionMedicationIndex(widget.index + 1)
+                              ? l10n.prescriptionMedicationIndex(
+                                  widget.index + 1,
+                                )
                               : drug,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
@@ -321,7 +323,8 @@ class _PrescriptionItemFormState extends State<PrescriptionItemForm> {
         setState(() {});
       },
       validator: (value) {
-        if (requiredMessage != null && (value == null || value.trim().isEmpty)) {
+        if (requiredMessage != null &&
+            (value == null || value.trim().isEmpty)) {
           return requiredMessage;
         }
         return null;
