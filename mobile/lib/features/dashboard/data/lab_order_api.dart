@@ -22,6 +22,12 @@ abstract interface class LabOrderGateway {
     required String status,
   });
 
+  Future<PatientLabOrderSummary> updateItemStatus({
+    required String orderId,
+    required String itemId,
+    required String status,
+  });
+
   Future<List<int>> downloadResultPdf(String resultId);
 }
 
@@ -70,6 +76,19 @@ final class LabOrderApi implements LabOrderGateway {
   }) async {
     final response = await _client.patch<dynamic>(
       '/api/lab-orders/$orderId/status',
+      data: <String, dynamic>{'status': status.trim().toUpperCase()},
+    );
+    return _orderFromResponse(response.data);
+  }
+
+  @override
+  Future<PatientLabOrderSummary> updateItemStatus({
+    required String orderId,
+    required String itemId,
+    required String status,
+  }) async {
+    final response = await _client.patch<dynamic>(
+      '/api/lab-orders/$orderId/items/$itemId/status',
       data: <String, dynamic>{'status': status.trim().toUpperCase()},
     );
     return _orderFromResponse(response.data);
