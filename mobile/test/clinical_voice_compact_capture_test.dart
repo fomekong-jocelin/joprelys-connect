@@ -8,30 +8,34 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/clinical
 import 'package:joprelys_mobile/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('listening capture hides empty transcript chrome and reconnect banner', (
-    tester,
-  ) async {
-    await tester.pumpWidget(
-      _Harness(
-        state: const RealtimeSpeechState(
-          status: SpeechStatus.listening,
-          stage: ClinicalVoiceStage.capture,
-          transcript: '',
-          segments: [],
-          partialTranscript: '',
-          partialOffset: Duration.zero,
-          vitals: PatientVitals(),
-          note: ConsultationNote(),
-          revisions: [],
-          errorMessage: 'Connexion vocale interrompue. Reconnexion (4/6)…',
+  testWidgets(
+    'listening capture hides empty transcript chrome and reconnect banner',
+    (tester) async {
+      await tester.pumpWidget(
+        _Harness(
+          state: const RealtimeSpeechState(
+            status: SpeechStatus.listening,
+            stage: ClinicalVoiceStage.capture,
+            transcript: '',
+            segments: [],
+            partialTranscript: '',
+            partialOffset: Duration.zero,
+            vitals: PatientVitals(),
+            note: ConsultationNote(),
+            revisions: [],
+            errorMessage: 'Connexion vocale interrompue. Reconnexion (4/6)…',
+          ),
         ),
-      ),
-    );
+      );
 
-    expect(find.text('La dictée apparaîtra ici'), findsNothing);
-    expect(find.textContaining('Chaque passage peut être relu'), findsNothing);
-    expect(find.textContaining('Reconnexion (4/6)'), findsNothing);
-  });
+      expect(find.text('La dictée apparaîtra ici'), findsNothing);
+      expect(
+        find.textContaining('Chaque passage peut être relu'),
+        findsNothing,
+      );
+      expect(find.textContaining('Reconnexion (4/6)'), findsNothing);
+    },
+  );
 
   testWidgets('listening capture shows transcript directly below microphone', (
     tester,
