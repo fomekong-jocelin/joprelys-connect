@@ -77,6 +77,8 @@ class PatientRecordContent extends StatelessWidget {
                 PatientRecordLaboratoryDetailSection(
                   key: const ValueKey(PatientRecordSection.laboratory),
                   record: record,
+                  access: access,
+                  onChanged: onRecordChanged,
                 ),
               _ => PatientRecordSectionView(
                 key: ValueKey(selected),
