@@ -17,17 +17,34 @@ void main() {
       expect(order.number, 'EXAM-REQ-20260808-000001');
       expect(order.examType, 'LABORATOIRE');
       expect(order.exams, ['NFS', 'CRP']);
+      expect(order.items, hasLength(2));
+      expect(order.items.first.id, 'item-nfs');
+      expect(order.items.first.examName, 'NFS');
+      expect(order.items.first.normalizedStatus, 'REQUESTED');
+      expect(order.hasStructuredItems, isTrue);
       expect(order.normalizedStatus, 'REQUESTED');
       expect(order.progressIndex, 0);
       expect(order.nextOperationalStatus, 'SAMPLE_COLLECTED');
       expect(order.targetOrganizationId, 'org-lab-1');
     });
 
-    test('maps result metadata and links it to its request', () {
+    test('keeps legacy exams readable when structured items are absent', () {
+      final payload = orderJson()..remove('items');
+      final order = PatientLabOrderSummary.fromJson(payload);
+
+      expect(order.exams, ['NFS', 'CRP']);
+      expect(order.items.map((item) => item.examName), ['NFS', 'CRP']);
+      expect(order.items.every((item) => item.id.isEmpty), isTrue);
+      expect(order.hasStructuredItems, isFalse);
+    });
+
+    test('maps result metadata and links it to one exam item', () {
       final result = PatientLabResultSummary.fromJson(resultJson());
 
       expect(result.resultNumber, 'EXAM-RES-20260808-000001');
       expect(result.examRequestNumber, 'EXAM-REQ-20260808-000001');
+      expect(result.labOrderItemId, 'item-crp');
+      expect(result.examName, 'CRP');
       expect(result.status, 'VALIDATED');
       expect(result.analyte, 'CRP');
       expect(result.value, '22');
@@ -81,7 +98,7 @@ void main() {
       expect(data.containsKey('visitId'), isFalse);
     });
 
-    test('updates status through the dedicated endpoint', () async {
+    test('updates legacy order status through its dedicated endpoint', () async {
       final adapter = QueueHttpClientAdapter(
         (_, _) => jsonResponse(200, orderJson(status: 'SAMPLE_COLLECTED')),
       );
@@ -100,6 +117,37 @@ void main() {
         containsPair('status', 'SAMPLE_COLLECTED'),
       );
       expect(order.normalizedStatus, 'SAMPLE_COLLECTED');
+    });
+
+    test('updates one exam without targeting the whole request', () async {
+      final payload = orderJson();
+      final items = List<Map<String, dynamic>>.from(payload['items'] as List);
+      items[1] = <String, dynamic>{
+        ...items[1],
+        'status': 'SAMPLE_COLLECTED',
+      };
+      payload['items'] = items;
+      final adapter = QueueHttpClientAdapter((_, _) => jsonResponse(200, payload));
+      final api = buildApi(adapter);
+
+      final order = await api.updateItemStatus(
+        orderId: 'order-1',
+        itemId: 'item-crp',
+        status: 'sample_collected',
+      );
+
+      final request = adapter.requests.single;
+      expect(request.method, 'PATCH');
+      expect(
+        request.path,
+        '/api/lab-orders/order-1/items/item-crp/status',
+      );
+      expect(
+        Map<String, dynamic>.from(request.data as Map),
+        containsPair('status', 'SAMPLE_COLLECTED'),
+      );
+      expect(order.items.first.normalizedStatus, 'REQUESTED');
+      expect(order.items.last.normalizedStatus, 'SAMPLE_COLLECTED');
     });
 
     test('downloads result PDF bytes from the canonical endpoint', () async {
@@ -145,6 +193,14 @@ ResponseBody jsonResponse(int statusCode, Map<String, dynamic> payload) {
 }
 
 Map<String, dynamic> orderJson({String status = 'REQUESTED'}) {
+  final itemStatus = switch (status) {
+    'SAMPLE_COLLECTED' ||
+    'IN_PROGRESS' ||
+    'RESULT_AVAILABLE' ||
+    'VALIDATED' ||
+    'CANCELLED' => status,
+    _ => 'REQUESTED',
+  };
   return <String, dynamic>{
     'id': 'order-1',
     'examRequestNumber': 'EXAM-REQ-20260808-000001',
@@ -157,6 +213,18 @@ Map<String, dynamic> orderJson({String status = 'REQUESTED'}) {
     'targetOrganizationId': 'org-lab-1',
     'examType': 'LABORATOIRE',
     'exams': ['NFS', 'CRP'],
+    'items': [
+      {
+        'id': 'item-nfs',
+        'examName': 'NFS',
+        'status': itemStatus,
+      },
+      {
+        'id': 'item-crp',
+        'examName': 'CRP',
+        'status': itemStatus,
+      },
+    ],
     'reason': 'Fatigue persistante',
     'priority': 'NORMALE',
     'status': status,
@@ -169,6 +237,8 @@ Map<String, dynamic> resultJson() {
     'id': 'result-1',
     'resultNumber': 'EXAM-RES-20260808-000001',
     'examRequestNumber': 'EXAM-REQ-20260808-000001',
+    'labOrderItemId': 'item-crp',
+    'examName': 'CRP',
     'patientId': 'patient-1',
     'validatorName': 'Dr Biologiste',
     'status': 'VALIDATED',
