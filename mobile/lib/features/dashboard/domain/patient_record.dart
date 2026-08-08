@@ -105,6 +105,11 @@ final class PatientLabOrderSummary {
     required this.number,
     required this.status,
     required this.exams,
+    this.patientId,
+    this.visitId,
+    this.requesterPractitionerId,
+    this.sourceOrganizationId,
+    this.targetOrganizationId,
     this.createdAt,
     this.priority,
     this.practitioner,
@@ -116,6 +121,11 @@ final class PatientLabOrderSummary {
   final String number;
   final String status;
   final List<String> exams;
+  final String? patientId;
+  final String? visitId;
+  final String? requesterPractitionerId;
+  final String? sourceOrganizationId;
+  final String? targetOrganizationId;
   final DateTime? createdAt;
   final String? priority;
   final String? practitioner;
@@ -128,6 +138,17 @@ final class PatientLabOrderSummary {
       id: _firstString(json, const ['id']) ?? '',
       number:
           _firstString(json, const ['examRequestNumber', 'orderNumber']) ?? '',
+      patientId: _firstString(json, const ['patientId']),
+      visitId: _firstString(json, const ['visitId']),
+      requesterPractitionerId: _firstString(json, const [
+        'requesterPractitionerId',
+      ]),
+      sourceOrganizationId: _firstString(json, const [
+        'sourceOrganizationId',
+      ]),
+      targetOrganizationId: _firstString(json, const [
+        'targetOrganizationId',
+      ]),
       status: _firstString(json, const ['status']) ?? '',
       exams: rawExams is List
           ? rawExams
@@ -145,6 +166,31 @@ final class PatientLabOrderSummary {
       reason: _firstString(json, const ['reason', 'clinicalReason']),
     );
   }
+
+  String get normalizedStatus => status.trim().toUpperCase();
+  bool get isCancelled => normalizedStatus == 'CANCELLED';
+  bool get isValidated => normalizedStatus == 'VALIDATED';
+  bool get isTerminal => isCancelled || isValidated;
+  bool get isActive => !isTerminal;
+
+  int get progressIndex {
+    return switch (normalizedStatus) {
+      'SAMPLE_COLLECTED' => 1,
+      'IN_PROGRESS' => 2,
+      'RESULT_AVAILABLE' => 3,
+      'VALIDATED' => 4,
+      'CANCELLED' => -1,
+      _ => 0,
+    };
+  }
+
+  String? get nextOperationalStatus {
+    return switch (normalizedStatus) {
+      'REQUESTED' || 'PAID' => 'SAMPLE_COLLECTED',
+      'SAMPLE_COLLECTED' => 'IN_PROGRESS',
+      _ => null,
+    };
+  }
 }
 
 @immutable
@@ -153,31 +199,82 @@ final class PatientLabResultSummary {
     required this.id,
     required this.analyte,
     required this.value,
+    this.resultNumber = '',
+    this.examRequestNumber = '',
+    this.status = '',
     this.unit,
     this.interpretation,
     this.referenceRange,
+    this.validatorName,
+    this.conclusion,
+    this.documentId,
+    this.version = 1,
+    this.parentResultId,
+    this.comment,
+    this.pdfFilePath,
+    this.sampleCollectedAt,
+    this.resultAt,
     this.validatedAt,
+    this.createdAt,
   });
 
   final String id;
+  final String resultNumber;
+  final String examRequestNumber;
+  final String status;
   final String analyte;
   final String value;
   final String? unit;
   final String? interpretation;
   final String? referenceRange;
+  final String? validatorName;
+  final String? conclusion;
+  final String? documentId;
+  final int version;
+  final String? parentResultId;
+  final String? comment;
+  final String? pdfFilePath;
+  final DateTime? sampleCollectedAt;
+  final DateTime? resultAt;
   final DateTime? validatedAt;
+  final DateTime? createdAt;
 
   factory PatientLabResultSummary.fromJson(Map<String, dynamic> json) {
     return PatientLabResultSummary(
       id: _firstString(json, const ['id']) ?? '',
+      resultNumber: _firstString(json, const ['resultNumber']) ?? '',
+      examRequestNumber:
+          _firstString(json, const ['examRequestNumber', 'orderNumber']) ?? '',
+      status: _firstString(json, const ['status']) ?? '',
       analyte: _firstString(json, const ['analyteName', 'name']) ?? '',
       value: (json['value'] ?? '').toString(),
       unit: _firstString(json, const ['unit']),
       interpretation: _firstString(json, const ['interpretation']),
       referenceRange: _firstString(json, const ['referenceRange']),
-      validatedAt: _date(json['validatedAt'] ?? json['createdAt']),
+      validatorName: _firstString(json, const ['validatorName']),
+      conclusion: _firstString(json, const ['conclusion']),
+      documentId: _firstString(json, const ['documentId']),
+      version: _int(json['version'], fallback: 1),
+      parentResultId: _firstString(json, const ['parentResultId']),
+      comment: _firstString(json, const ['comment']),
+      pdfFilePath: _firstString(json, const ['pdfFilePath']),
+      sampleCollectedAt: _date(json['sampleCollectedAt']),
+      resultAt: _date(json['resultAt']),
+      validatedAt: _date(json['validatedAt']),
+      createdAt: _date(json['createdAt']),
     );
   }
+
+  bool get hasPdf =>
+      pdfFilePath?.trim().isNotEmpty == true ||
+      documentId?.trim().isNotEmpty == true;
+
+  String get normalizedInterpretation =>
+      interpretation?.trim().toUpperCase() ?? '';
+
+  bool get isCritical =>
+      normalizedInterpretation == 'CRITICAL' ||
+      normalizedInterpretation == 'CRITIQUE';
 }
 
 @immutable
@@ -286,6 +383,11 @@ String? _firstString(Map<String, dynamic> json, List<String> keys) {
     }
   }
   return null;
+}
+
+int _int(Object? value, {int fallback = 0}) {
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? fallback;
 }
 
 DateTime? _date(Object? value) {
