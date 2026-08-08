@@ -11,7 +11,6 @@ import '../../data/clinical_voice_structured_api.dart';
 import '../../data/consultation_api.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
-import '../prescription_localizations.dart';
 import 'clinical_voice_progressive_assistant_sheet.dart';
 import 'consultation_note_form_controllers.dart';
 import 'consultation_notes_form.dart';
