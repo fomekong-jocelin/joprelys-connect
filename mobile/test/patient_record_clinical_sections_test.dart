@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:joprelys_mobile/features/auth/domain/effective_access.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/patient_history.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/patient_record.dart';
 import 'package:joprelys_mobile/features/dashboard/presentation/widgets/patient_record_consultations_section.dart';
@@ -70,7 +72,7 @@ void main() {
     },
   );
 
-  testWidgets('lab order renders exams separately with useful metadata', (
+  testWidgets('lab request links results in one compact tracking card', (
     tester,
   ) async {
     _usePhoneViewport(tester);
@@ -79,36 +81,106 @@ void main() {
         PatientLabOrderSummary(
           id: 'order-1',
           number: 'EXAM-REQ-20260808-000001',
-          status: 'PENDING',
+          status: 'RESULT_AVAILABLE',
           exams: const [
             'Numération complète',
             'Bilan inflammatoire',
             'Radiographie du thorax',
           ],
           createdAt: DateTime.utc(2026, 8, 8),
-          priority: 'ROUTINE',
+          priority: 'URGENTE',
           practitioner: 'Dr Test',
           examType: 'AUTRE',
           reason: 'Fatigue persistante',
         ),
       ],
+      labResults: [
+        PatientLabResultSummary(
+          id: 'result-1',
+          resultNumber: 'EXAM-RES-20260808-000001',
+          examRequestNumber: 'EXAM-REQ-20260808-000001',
+          status: 'DRAFT',
+          analyte: 'CRP',
+          value: '22',
+          unit: 'mg/L',
+          referenceRange: '< 5',
+          interpretation: 'ELEVE',
+          conclusion: 'Syndrome inflammatoire biologique',
+          validatorName: 'Dr Biologiste',
+          resultAt: DateTime.utc(2026, 8, 8, 10),
+        ),
+      ],
     );
 
     await tester.pumpWidget(
-      _TestApp(child: PatientRecordLaboratoryDetailSection(record: record)),
+      _TestApp(
+        child: PatientRecordLaboratoryDetailSection(
+          record: record,
+          access: _readOnlyAccess,
+          onChanged: () {},
+        ),
+      ),
     );
 
     expect(find.text('EXAM-REQ-20260808-000001'), findsOneWidget);
+    expect(find.text('Résultat disponible'), findsWidgets);
     expect(find.text('Numération complète'), findsOneWidget);
     expect(find.text('Bilan inflammatoire'), findsOneWidget);
-    expect(find.text('Radiographie du thorax'), findsOneWidget);
+    expect(find.text('Radiographie du thorax'), findsNothing);
+    expect(find.text('1 résultat'), findsWidgets);
+    expect(find.text('Prescrit'), findsOneWidget);
+    expect(find.text('Prélevé'), findsOneWidget);
+    expect(find.text('Analyse'), findsOneWidget);
+    expect(find.text('Résultat'), findsOneWidget);
+    expect(find.text('Validé'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+
+    await tester.tap(find.text('EXAM-REQ-20260808-000001'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('• Radiographie du thorax'), findsOneWidget);
     expect(find.text('Fatigue persistante'), findsOneWidget);
-    expect(find.text('Dr Test'), findsOneWidget);
-    expect(find.text('Priorité: ROUTINE'), findsOneWidget);
-    expect(find.text('Type: AUTRE'), findsOneWidget);
+    expect(find.text('EXAM-RES-20260808-000001'), findsOneWidget);
+    expect(find.text('CRP'), findsOneWidget);
+    expect(find.text('22 mg/L'), findsOneWidget);
+    expect(find.text('Valeurs de référence: < 5'), findsOneWidget);
+    expect(find.text('Syndrome inflammatoire biologique'), findsOneWidget);
+    expect(find.text('Dr Biologiste'), findsOneWidget);
+    expect(find.text('Prescrire un examen'), findsNothing);
+    expect(find.text('Annuler la demande'), findsNothing);
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('lab create action follows LAB_ORDER_CREATE permission', (
+    tester,
+  ) async {
+    _usePhoneViewport(tester);
+    await tester.pumpWidget(
+      _TestApp(
+        child: PatientRecordLaboratoryDetailSection(
+          record: _record(),
+          access: const EffectiveAccess(
+            userId: 'doctor-1',
+            permissions: {'LAB_ORDER_READ', 'LAB_ORDER_CREATE'},
+          ),
+          onChanged: () {},
+        ),
+      ),
+    );
+
+    expect(find.text('Prescrire un examen'), findsOneWidget);
+    expect(
+      find.text('Aucune demande d’examen n’est enregistrée pour ce patient.'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 }
+
+const _readOnlyAccess = EffectiveAccess(
+  userId: 'doctor-1',
+  permissions: {'LAB_ORDER_READ'},
+);
 
 void _usePhoneViewport(WidgetTester tester) {
   tester.view.devicePixelRatio = 1;
@@ -120,6 +192,7 @@ void _usePhoneViewport(WidgetTester tester) {
 PatientRecordBundle _record({
   List<PastVisitSummary> visits = const [],
   List<PatientLabOrderSummary> labOrders = const [],
+  List<PatientLabResultSummary> labResults = const [],
 }) {
   return PatientRecordBundle(
     identity: const PatientIdentity(
@@ -136,6 +209,7 @@ PatientRecordBundle _record({
       pastVisits: visits,
     ),
     labOrders: labOrders,
+    labResults: labResults,
   );
 }
 
@@ -146,16 +220,18 @@ class _TestApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      locale: const Locale('fr'),
-      supportedLocales: AppLocalizations.supportedLocales,
-      localizationsDelegates: const [
-        AppLocalizations.delegate,
-        GlobalMaterialLocalizations.delegate,
-        GlobalWidgetsLocalizations.delegate,
-        GlobalCupertinoLocalizations.delegate,
-      ],
-      home: Scaffold(body: SizedBox.expand(child: child)),
+    return ProviderScope(
+      child: MaterialApp(
+        locale: const Locale('fr'),
+        supportedLocales: AppLocalizations.supportedLocales,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        home: Scaffold(body: SizedBox.expand(child: child)),
+      ),
     );
   }
 }
