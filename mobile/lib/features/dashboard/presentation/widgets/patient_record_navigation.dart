@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
+import '../../../auth/domain/effective_access.dart';
 import '../../../foundation/presentation/mobile_workspace_localizations.dart';
 import '../../domain/patient_record.dart';
+import '../prescription_localizations.dart';
 import 'patient_record_consultations_section.dart';
 import 'patient_record_laboratory_section.dart';
+import 'patient_record_prescriptions_section.dart';
 import 'patient_record_section.dart';
 import 'patient_record_sections.dart';
 
@@ -14,14 +17,18 @@ class PatientRecordContent extends StatelessWidget {
     required this.record,
     required this.sections,
     required this.selected,
+    required this.access,
     required this.onSectionChanged,
+    required this.onRecordChanged,
     super.key,
   });
 
   final PatientRecordBundle record;
   final List<PatientRecordSection> sections;
   final PatientRecordSection selected;
+  final EffectiveAccess access;
   final ValueChanged<PatientRecordSection> onSectionChanged;
+  final VoidCallback onRecordChanged;
 
   @override
   Widget build(BuildContext context) {
@@ -58,6 +65,13 @@ class PatientRecordContent extends StatelessWidget {
                 PatientRecordConsultationsDetailSection(
                   key: const ValueKey(PatientRecordSection.consultations),
                   record: record,
+                ),
+              PatientRecordSection.prescriptions =>
+                PatientRecordPrescriptionsSection(
+                  key: const ValueKey(PatientRecordSection.prescriptions),
+                  record: record,
+                  access: access,
+                  onChanged: onRecordChanged,
                 ),
               PatientRecordSection.laboratory =>
                 PatientRecordLaboratoryDetailSection(
@@ -104,6 +118,10 @@ class _SectionChip extends StatelessWidget {
       PatientRecordSection.consultations => (
         l10n.recordConsultations,
         Icons.history_rounded,
+      ),
+      PatientRecordSection.prescriptions => (
+        l10n.prescriptionSectionTitle,
+        Icons.medication_outlined,
       ),
       PatientRecordSection.laboratory => (
         l10n.recordLaboratory,
