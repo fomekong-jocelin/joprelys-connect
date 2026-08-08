@@ -138,7 +138,7 @@ void main() {
     await tester.tap(find.text('EXAM-REQ-20260808-000001'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Radiographie du thorax'), findsOneWidget);
+    expect(find.text('• Radiographie du thorax'), findsOneWidget);
     expect(find.text('Fatigue persistante'), findsOneWidget);
     expect(find.text('EXAM-RES-20260808-000001'), findsOneWidget);
     expect(find.text('CRP'), findsOneWidget);
