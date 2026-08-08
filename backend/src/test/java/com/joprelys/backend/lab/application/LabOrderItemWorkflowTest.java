@@ -1,6 +1,7 @@
 package com.joprelys.backend.lab.application;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.joprelys.backend.lab.infrastructure.persistence.ExamType;
 import com.joprelys.backend.lab.infrastructure.persistence.LabOrderEntity;
@@ -81,6 +82,35 @@ class LabOrderItemWorkflowTest {
 
         assertThat(result.getLabOrderItem()).isSameAs(crp);
         assertThat(result.getLabOrderItem().getExamName()).isEqualTo("CRP");
+    }
+
+    @Test
+    void examCannotStartBeforePaymentIsConfirmed() {
+        assertThatThrownBy(() -> service.validatePaymentGate(
+                        LabOrderStatus.AWAITING_PAYMENT,
+                        LabOrderStatus.SAMPLE_COLLECTED))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("paiement");
+    }
+
+    @Test
+    void cancellationRemainsAllowedWhileAwaitingPayment() {
+        service.validatePaymentGate(LabOrderStatus.AWAITING_PAYMENT, LabOrderStatus.CANCELLED);
+    }
+
+    @Test
+    void cancelledExamRejectsLateResult() {
+        LabOrderEntity order = orderWith("CRP");
+        LabOrderItemEntity crp = order.getItems().get(0);
+        crp.applyStatus(LabOrderStatus.CANCELLED, Instant.parse("2026-08-08T10:00:00Z"));
+
+        assertThatThrownBy(() -> crp.applyResultStatus(
+                        LabOrderStatus.VALIDATED,
+                        null,
+                        Instant.parse("2026-08-08T11:00:00Z"),
+                        Instant.parse("2026-08-08T12:00:00Z"),
+                        Instant.parse("2026-08-08T12:00:00Z")))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     private LabOrderEntity orderWith(String... exams) {
