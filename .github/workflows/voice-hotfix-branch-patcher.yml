@@ -1,0 +1,101 @@
+name: Temporary voice hotfix branch patcher
+
+on:
+  push:
+    branches:
+      - fix/voice-start-and-compact-capture
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/voice-start-and-compact-capture
+          fetch-depth: 0
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.44.6'
+          channel: stable
+          cache: true
+
+      - name: Apply focused hotfix
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          service_path = Path('mobile/lib/features/dashboard/application/cloud_speech_streaming_service.dart')
+          text = service_path.read_text()
+          text = text.replace(
+              'static const int _maxPendingAudioBytes = 16_000 * 2 * 20;',
+              'static const int _maxPendingAudioBytes = 16_000 * 2 * 60;',
+          )
+          old_start = '''    value = value.copyWith(\n      status: SpeechStatus.processing,\n      stage: ClinicalVoiceStage.capture,\n      soundLevel: 0,\n      clearError: true,\n    );\n    await _connectWebSocket();\n'''
+          new_start = '''    value = value.copyWith(\n      status: SpeechStatus.processing,\n      stage: ClinicalVoiceStage.capture,\n      soundLevel: 0,\n      clearError: true,\n    );\n\n    try {\n      // La capture locale ne doit jamais dépendre de la disponibilité réseau.\n      // Le transport se connecte ensuite en arrière-plan et rejoue le buffer\n      // dès que le serveur confirme STREAMING_STARTED.\n      await _startAudioCapture();\n      if (_disposed || !_isStreaming || !_shouldReconnect) return;\n\n      value = value.copyWith(\n        status: SpeechStatus.listening,\n        stage: ClinicalVoiceStage.capture,\n        soundLevel: value.soundLevel <= 0 ? 12 : value.soundLevel,\n        clearError: true,\n      );\n      unawaited(_connectWebSocket());\n    } catch (error) {\n      _isStreaming = false;\n      _shouldReconnect = false;\n      _transportReady = false;\n      await _cleanupAudioCapture();\n      _setError(error);\n    }\n'''
+          if old_start not in text:
+              raise SystemExit('startRealtimeListening block not found')
+          service_path.write_text(text.replace(old_start, new_start))
+
+          ui_path = Path('mobile/lib/features/dashboard/presentation/widgets/clinical_voice_progressive_assistant_sections.dart')
+          ui = ui_path.read_text()
+          ui = ui.replace("import 'clinical_voice_progressive_preview.dart';\n", '')
+
+          old_timeline = '''                const SizedBox(height: 18),\n                ClinicalTranscriptTimeline(\n                  segments: state.segments,\n                  partialTranscript: state.partialTranscript,\n                  partialOffset: state.partialOffset,\n                  editable: editable,\n                  onSegmentChanged: onSegmentChanged,\n                  onSegmentDeleted: onSegmentDeleted,\n                ),\n'''
+          new_timeline = '''                if (listening && state.transcript.trim().isNotEmpty) ...[\n                  const SizedBox(height: 14),\n                  _LiveTranscript(text: state.transcript),\n                ],\n                if (!listening && state.hasTranscript) ...[\n                  const SizedBox(height: 16),\n                  ClinicalTranscriptTimeline(\n                    segments: state.segments,\n                    partialTranscript: state.partialTranscript,\n                    partialOffset: state.partialOffset,\n                    editable: editable,\n                    onSegmentChanged: onSegmentChanged,\n                    onSegmentDeleted: onSegmentDeleted,\n                  ),\n                ],\n'''
+          if old_timeline not in ui:
+              raise SystemExit('timeline block not found')
+          ui = ui.replace(old_timeline, new_timeline)
+
+          ui = ui.replace('''                if (state.hasApplicableResult) ...[\n                  const SizedBox(height: 14),\n                  ClinicalVoiceProgressivePreview(state: state),\n                ],\n''', '')
+          ui = ui.replace('''                if (processing) ...[\n                  const SizedBox(height: 14),\n                  LinearProgressIndicator(\n                    borderRadius: BorderRadius.circular(\n                      AppDesignTokens.radiusXs,\n                    ),\n                  ),\n                  const SizedBox(height: 8),\n                  Text(\n                    l10n.voiceAnalyzingBody,\n                    style: Theme.of(context).textTheme.bodySmall,\n                  ),\n                ],\n''', '')
+          ui = ui.replace(
+              '                if (state.errorMessage != null) ...[',
+              '                if (!listening && state.errorMessage != null) ...[',
+              1,
+          )
+          ui = ui.replace('                const SizedBox(height: 12),\n                _SyncNotice(state: state),\n', '')
+
+          marker = '\nclass ClinicalVoiceProgressiveReviewBody extends StatelessWidget {'
+          live = '''\nclass _LiveTranscript extends StatelessWidget {\n  const _LiveTranscript({required this.text});\n\n  final String text;\n\n  @override\n  Widget build(BuildContext context) {\n    final theme = Theme.of(context);\n    final colors = theme.colorScheme;\n    return Container(\n      width: double.infinity,\n      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),\n      decoration: BoxDecoration(\n        color: colors.surfaceContainerLow,\n        borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),\n        border: Border.all(color: colors.outlineVariant),\n      ),\n      child: Text(\n        text,\n        style: theme.textTheme.bodyLarge?.copyWith(\n          height: 1.45,\n          fontWeight: FontWeight.w600,\n        ),\n      ),\n    );\n  }\n}\n'''
+          if marker not in ui:
+              raise SystemExit('review marker not found')
+          ui = ui.replace(marker, live + marker, 1)
+
+          sync_start = ui.find('\nclass _SyncNotice extends StatelessWidget {')
+          error_start = ui.find('\nclass _ErrorNotice extends StatelessWidget {')
+          if sync_start != -1 and error_start != -1 and error_start > sync_start:
+              ui = ui[:sync_start] + ui[error_start:]
+          ui_path.write_text(ui)
+          PY
+
+      - name: Resolve dependencies
+        working-directory: mobile
+        run: flutter pub get
+
+      - name: Format
+        working-directory: mobile
+        run: dart format lib test
+
+      - name: Analyze
+        working-directory: mobile
+        run: flutter analyze
+
+      - name: Test
+        working-directory: mobile
+        run: flutter test
+
+      - name: Commit tested hotfix
+        shell: bash
+        run: |
+          rm -f .github/workflows/fix-voice-start-compact-once.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add mobile .github/workflows/fix-voice-start-compact-once.yml
+          git commit -m "fix(voice): démarrer localement et alléger la capture"
+          git push origin HEAD:fix/voice-start-and-compact-capture
