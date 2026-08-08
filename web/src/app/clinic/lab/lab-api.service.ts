@@ -29,6 +29,10 @@ export class LabOrderApiService {
     return this.http.patch<LabOrder>(`/api/lab-orders/${id}/status`, { status });
   }
 
+  updateItemStatus(orderId: string, itemId: string, status: string): Observable<LabOrder> {
+    return this.http.patch<LabOrder>(`/api/lab-orders/${orderId}/items/${itemId}/status`, { status });
+  }
+
   getPatientResults(patientId: string): Observable<LabResult[]> {
     return this.http.get<LabResult[]>(`/api/lab-orders/patient/${patientId}/results`);
   }
