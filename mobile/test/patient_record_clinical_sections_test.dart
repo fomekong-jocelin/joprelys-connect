@@ -169,7 +169,10 @@ void main() {
     );
 
     expect(find.text('Prescrire un examen'), findsOneWidget);
-    expect(find.text('Aucune demande d’examen n’est enregistrée pour ce patient.'), findsOneWidget);
+    expect(
+      find.text('Aucune demande d’examen n’est enregistrée pour ce patient.'),
+      findsOneWidget,
+    );
     expect(tester.takeException(), isNull);
   });
 }

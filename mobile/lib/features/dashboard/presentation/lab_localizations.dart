@@ -15,8 +15,7 @@ extension LabLocalizations on AppLocalizations {
   String get labCreateError => _labFrench
       ? 'La demande ne peut pas être enregistrée pour le moment.'
       : 'The request cannot be saved right now.';
-  String get labEmptyTitle =>
-      _labFrench ? 'Aucun examen' : 'No examinations';
+  String get labEmptyTitle => _labFrench ? 'Aucun examen' : 'No examinations';
   String get labEmptyBody => _labFrench
       ? 'Aucune demande d’examen n’est enregistrée pour ce patient.'
       : 'No examination request is recorded for this patient.';
@@ -74,7 +73,8 @@ extension LabLocalizations on AppLocalizations {
   String get labValidator => _labFrench ? 'Validé par' : 'Validated by';
   String get labSampleCollectedAt =>
       _labFrench ? 'Prélèvement' : 'Sample collected';
-  String get labResultAt => _labFrench ? 'Résultat disponible' : 'Result available';
+  String get labResultAt =>
+      _labFrench ? 'Résultat disponible' : 'Result available';
   String get labValidatedAt => _labFrench ? 'Validation' : 'Validation';
   String get labDownloadPdf =>
       _labFrench ? 'Télécharger le PDF' : 'Download PDF';
@@ -123,11 +123,13 @@ extension LabLocalizations on AppLocalizations {
   String labStatusLabel(String raw) {
     return switch (raw.trim().toUpperCase()) {
       'REQUESTED' => _labFrench ? 'Prescrit' : 'Requested',
-      'AWAITING_PAYMENT' => _labFrench ? 'Paiement en attente' : 'Awaiting payment',
+      'AWAITING_PAYMENT' =>
+        _labFrench ? 'Paiement en attente' : 'Awaiting payment',
       'PAID' => _labFrench ? 'Payé' : 'Paid',
       'SAMPLE_COLLECTED' => _labFrench ? 'Prélevé' : 'Sample collected',
       'IN_PROGRESS' => _labFrench ? 'En analyse' : 'In progress',
-      'RESULT_AVAILABLE' => _labFrench ? 'Résultat disponible' : 'Result available',
+      'RESULT_AVAILABLE' =>
+        _labFrench ? 'Résultat disponible' : 'Result available',
       'VALIDATED' => _labFrench ? 'Validé' : 'Validated',
       'CANCELLED' || 'CANCELED' => _labFrench ? 'Annulé' : 'Cancelled',
       'DRAFT' => _labFrench ? 'Brouillon' : 'Draft',

@@ -143,12 +143,8 @@ final class PatientLabOrderSummary {
       requesterPractitionerId: _firstString(json, const [
         'requesterPractitionerId',
       ]),
-      sourceOrganizationId: _firstString(json, const [
-        'sourceOrganizationId',
-      ]),
-      targetOrganizationId: _firstString(json, const [
-        'targetOrganizationId',
-      ]),
+      sourceOrganizationId: _firstString(json, const ['sourceOrganizationId']),
+      targetOrganizationId: _firstString(json, const ['targetOrganizationId']),
       status: _firstString(json, const ['status']) ?? '',
       exams: rawExams is List
           ? rawExams

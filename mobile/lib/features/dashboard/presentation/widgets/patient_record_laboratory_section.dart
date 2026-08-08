@@ -82,14 +82,16 @@ class _PatientRecordLaboratoryDetailSectionState
           .read(labOrderApiProvider)
           .updateStatus(orderId: order.id, status: status);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.labStatusUpdated)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.labStatusUpdated)));
       widget.onChanged();
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_errorMessage(error, l10n.labStatusUpdateError))),
+        SnackBar(
+          content: Text(_errorMessage(error, l10n.labStatusUpdateError)),
+        ),
       );
     } finally {
       if (mounted) setState(() => _busyOrderIds.remove(order.id));
@@ -125,7 +127,9 @@ class _PatientRecordLaboratoryDetailSectionState
     final l10n = AppLocalizations.of(context);
     setState(() => _busyResultIds.add(result.id));
     try {
-      final bytes = await ref.read(labOrderApiProvider).downloadResultPdf(result.id);
+      final bytes = await ref
+          .read(labOrderApiProvider)
+          .downloadResultPdf(result.id);
       final directory = await getApplicationDocumentsDirectory();
       final rawName = result.resultNumber.trim().isEmpty
           ? 'lab-result-${result.id}'
@@ -134,9 +138,9 @@ class _PatientRecordLaboratoryDetailSectionState
       final file = File('${directory.path}/$safeName.pdf');
       await file.writeAsBytes(bytes, flush: true);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.labPdfSaved)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.labPdfSaved)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -423,7 +427,10 @@ class _LabTrackingCard extends StatelessWidget {
                     Text(
                       [
                         if (order.createdAt != null)
-                          AppLocaleFormatters.formatDate(order.createdAt!, locale),
+                          AppLocaleFormatters.formatDate(
+                            order.createdAt!,
+                            locale,
+                          ),
                         if (order.practitioner?.trim().isNotEmpty == true)
                           order.practitioner!.trim(),
                       ].join(' · '),
@@ -521,7 +528,8 @@ class _LabTrackingCard extends StatelessWidget {
                         ),
                       ),
                     ],
-                    if (canWrite && (onAdvance != null || onCancel != null)) ...[
+                    if (canWrite &&
+                        (onAdvance != null || onCancel != null)) ...[
                       const SizedBox(height: 12),
                       Divider(height: 1, color: colors.outlineVariant),
                       const SizedBox(height: 8),
@@ -558,7 +566,8 @@ class _LabTrackingCard extends StatelessWidget {
                                       size: 17,
                                     ),
                               label: Text(
-                                order.nextOperationalStatus == 'SAMPLE_COLLECTED'
+                                order.nextOperationalStatus ==
+                                        'SAMPLE_COLLECTED'
                                     ? l10n.labMarkSampleCollected
                                     : l10n.labStartProcessing,
                               ),
@@ -682,9 +691,7 @@ class _ProgressTimeline extends StatelessWidget {
               child: Container(
                 width: 8,
                 height: 1,
-                color: index < current
-                    ? colors.primary
-                    : colors.outlineVariant,
+                color: index < current ? colors.primary : colors.outlineVariant,
               ),
             ),
         ],
@@ -755,9 +762,15 @@ class _ResultGroup extends StatelessWidget {
     final locale = Localizations.localeOf(context);
     final first = results.first;
     final pdfResult = results.where((result) => result.hasPdf).firstOrNull;
-    final conclusion = _firstNonEmpty(results.map((result) => result.conclusion));
-    final validator = _firstNonEmpty(results.map((result) => result.validatorName));
-    final sampleAt = _firstDate(results.map((result) => result.sampleCollectedAt));
+    final conclusion = _firstNonEmpty(
+      results.map((result) => result.conclusion),
+    );
+    final validator = _firstNonEmpty(
+      results.map((result) => result.validatorName),
+    );
+    final sampleAt = _firstDate(
+      results.map((result) => result.sampleCollectedAt),
+    );
     final resultAt = _firstDate(results.map((result) => result.resultAt));
     final validatedAt = _firstDate(results.map((result) => result.validatedAt));
 
@@ -1115,9 +1128,9 @@ class _DateMeta extends StatelessWidget {
     final colors = Theme.of(context).colorScheme;
     return Text(
       '$label · $value',
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: colors.onSurfaceVariant,
-      ),
+      style: Theme.of(
+        context,
+      ).textTheme.labelSmall?.copyWith(color: colors.onSurfaceVariant),
     );
   }
 }
@@ -1134,14 +1147,18 @@ class _EmptyState extends StatelessWidget {
       padding: const EdgeInsets.symmetric(vertical: 26, horizontal: 16),
       child: Column(
         children: [
-          Icon(Icons.science_outlined, color: colors.onSurfaceVariant, size: 28),
+          Icon(
+            Icons.science_outlined,
+            color: colors.onSurfaceVariant,
+            size: 28,
+          ),
           const SizedBox(height: 8),
           Text(
             message,
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: colors.onSurfaceVariant,
-            ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
           ),
         ],
       ),

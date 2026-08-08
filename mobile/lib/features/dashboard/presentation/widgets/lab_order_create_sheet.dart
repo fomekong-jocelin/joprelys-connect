@@ -101,7 +101,9 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
     });
 
     try {
-      await ref.read(labOrderApiProvider).createOrder(
+      await ref
+          .read(labOrderApiProvider)
+          .createOrder(
             patientId: widget.patientId,
             visitId: widget.visitId,
             examType: _examType,
@@ -112,9 +114,9 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
       if (!mounted) return;
       widget.onCreated?.call();
       Navigator.of(context).pop();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.labCreateSuccess)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.labCreateSuccess)));
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -201,7 +203,8 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                     onChanged: _saving
                         ? null
                         : (value) {
-                            if (value != null) setState(() => _examType = value);
+                            if (value != null)
+                              setState(() => _examType = value);
                           },
                     validator: (value) => value == null || value.isEmpty
                         ? l10n.labExamTypeRequired
@@ -219,9 +222,8 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                       hintText: l10n.labRequestedExamsHint,
                       alignLabelWithHint: true,
                     ),
-                    validator: (_) => _exams.isEmpty
-                        ? l10n.labRequestedExamsRequired
-                        : null,
+                    validator: (_) =>
+                        _exams.isEmpty ? l10n.labRequestedExamsRequired : null,
                   ),
                   const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
@@ -240,7 +242,8 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                     onChanged: _saving
                         ? null
                         : (value) {
-                            if (value != null) setState(() => _priority = value);
+                            if (value != null)
+                              setState(() => _priority = value);
                           },
                   ),
                   const SizedBox(height: 12),
