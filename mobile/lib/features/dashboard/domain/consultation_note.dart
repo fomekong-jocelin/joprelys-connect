@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 @immutable
 final class ConsultationNote {
   const ConsultationNote({
+    this.consultationId,
     this.symptoms,
     this.clinicalExam,
     this.diagnosis,
@@ -16,6 +17,7 @@ final class ConsultationNote {
 
   factory ConsultationNote.fromJson(Map<String, dynamic> json) {
     return ConsultationNote(
+      consultationId: _optionalText(json['id'] ?? json['consultationId']),
       symptoms: json['symptoms'] as String?,
       clinicalExam: json['clinicalExam'] as String?,
       diagnosis: json['diagnosis'] as String?,
@@ -30,6 +32,9 @@ final class ConsultationNote {
     );
   }
 
+  /// Identifiant technique de la consultation retourné par l'API. Il n'est
+  /// jamais renvoyé dans le payload SOAP de sauvegarde.
+  final String? consultationId;
   final String? symptoms;
   final String? clinicalExam;
   final String? diagnosis;
@@ -76,6 +81,7 @@ final class ConsultationNote {
   }
 
   ConsultationNote copyWith({
+    String? consultationId,
     String? symptoms,
     String? clinicalExam,
     String? diagnosis,
@@ -87,6 +93,7 @@ final class ConsultationNote {
     DateTime? updatedAt,
   }) {
     return ConsultationNote(
+      consultationId: consultationId ?? this.consultationId,
       symptoms: symptoms ?? this.symptoms,
       clinicalExam: clinicalExam ?? this.clinicalExam,
       diagnosis: diagnosis ?? this.diagnosis,
@@ -100,4 +107,10 @@ final class ConsultationNote {
   }
 
   static bool _isBlank(String? value) => value == null || value.trim().isEmpty;
+}
+
+String? _optionalText(Object? value) {
+  if (value == null) return null;
+  final text = value.toString().trim();
+  return text.isEmpty ? null : text;
 }

@@ -113,6 +113,7 @@ class PatientRecordSectionView extends StatelessWidget {
       PatientRecordSection.consultations => _ConsultationsSection(
         record: record,
       ),
+      PatientRecordSection.prescriptions => const SizedBox.shrink(),
       PatientRecordSection.laboratory => _LaboratorySection(record: record),
       PatientRecordSection.hospitalizations => _HospitalizationsSection(
         record: record,

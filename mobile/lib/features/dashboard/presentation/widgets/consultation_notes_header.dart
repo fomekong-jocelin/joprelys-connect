@@ -4,18 +4,21 @@ import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
+import '../prescription_localizations.dart';
 
 class ConsultationNotesHeader extends StatelessWidget {
   const ConsultationNotesHeader({
     required this.visit,
     required this.onLaunchAssistant,
     required this.onClose,
+    this.onOpenPrescription,
     super.key,
   });
 
   final ActiveVisit visit;
   final VoidCallback onLaunchAssistant;
   final VoidCallback onClose;
+  final VoidCallback? onOpenPrescription;
 
   @override
   Widget build(BuildContext context) {
@@ -28,6 +31,7 @@ class ConsultationNotesHeader extends StatelessWidget {
         _ConsultationHeaderBar(
           visit: visit,
           onLaunchAssistant: onLaunchAssistant,
+          onOpenPrescription: onOpenPrescription,
           onClose: onClose,
         ),
         Divider(height: 1, color: colors.outlineVariant.withValues(alpha: 0.3)),
@@ -100,11 +104,13 @@ class _ConsultationHeaderBar extends StatelessWidget {
     required this.visit,
     required this.onLaunchAssistant,
     required this.onClose,
+    this.onOpenPrescription,
   });
 
   final ActiveVisit visit;
   final VoidCallback onLaunchAssistant;
   final VoidCallback onClose;
+  final VoidCallback? onOpenPrescription;
 
   @override
   Widget build(BuildContext context) {
@@ -118,6 +124,15 @@ class _ConsultationHeaderBar extends StatelessWidget {
           Icon(Icons.edit_note_rounded, size: 22, color: colors.primary),
           const SizedBox(width: AppDesignTokens.spaceSm),
           Expanded(child: _ConsultationIdentity(visit: visit)),
+          _MiniActionButton(
+            icon: Icons.medication_outlined,
+            color: colors.primary,
+            tooltip: onOpenPrescription == null
+                ? l10n.prescriptionConsultationRequired
+                : l10n.prescriptionTitle,
+            onTap: onOpenPrescription,
+          ),
+          const SizedBox(width: AppDesignTokens.spaceXs),
           _MiniActionButton(
             icon: Icons.mic_rounded,
             color: colors.primary,
@@ -182,21 +197,25 @@ class _MiniActionButton extends StatelessWidget {
   final IconData icon;
   final Color color;
   final String tooltip;
-  final VoidCallback onTap;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
+    final enabled = onTap != null;
+    final foreground = enabled
+        ? color
+        : Theme.of(context).colorScheme.onSurfaceVariant;
     return Tooltip(
       message: tooltip,
       child: Material(
-        color: color.withValues(alpha: 0.12),
+        color: foreground.withValues(alpha: enabled ? 0.12 : 0.06),
         borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(AppDesignTokens.radiusSm),
           child: SizedBox.square(
             dimension: 38,
-            child: Center(child: Icon(icon, size: 20, color: color)),
+            child: Center(child: Icon(icon, size: 20, color: foreground)),
           ),
         ),
       ),

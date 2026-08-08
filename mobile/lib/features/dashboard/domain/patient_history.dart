@@ -128,6 +128,7 @@ final class PastVisitSummary {
     required this.date,
     required this.practitionerName,
     required this.chiefComplaint,
+    this.consultationId = '',
     this.symptoms = '',
     this.clinicalExam = '',
     this.diagnosis = '',
@@ -145,7 +146,9 @@ final class PastVisitSummary {
     this.pulse,
   });
 
+  /// Identifiant de visite, conservé pour les anciennes vues.
   final String id;
+  final String consultationId;
   final String visitNumber;
   final DateTime date;
   final String practitionerName;
@@ -177,6 +180,7 @@ final class PastVisitSummary {
     final diagnosis = _string(json['diagnosis']);
     return PastVisitSummary(
       id: _string(json['visitId'] ?? json['id']),
+      consultationId: _string(json['consultationId'] ?? json['id']),
       visitNumber: _string(json['visitNumber']),
       date:
           DateTime.tryParse(
@@ -216,6 +220,7 @@ final class PastVisitSummary {
 
   Map<String, dynamic> toJson() => {
     'id': id,
+    'consultationId': consultationId,
     'visitNumber': visitNumber,
     'date': date.toIso8601String(),
     'practitionerName': practitionerName,
