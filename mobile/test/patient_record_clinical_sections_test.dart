@@ -3,18 +3,20 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/patient_history.dart';
 import 'package:joprelys_mobile/features/dashboard/domain/patient_record.dart';
-import 'package:joprelys_mobile/features/dashboard/presentation/widgets/patient_record_clinical_sections.dart';
+import 'package:joprelys_mobile/features/dashboard/presentation/widgets/patient_record_consultations_section.dart';
+import 'package:joprelys_mobile/features/dashboard/presentation/widgets/patient_record_laboratory_section.dart';
 import 'package:joprelys_mobile/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('consultation card exposes full SOAP and prescription on expand', (
     tester,
   ) async {
+    _usePhoneViewport(tester);
     final record = _record(
       visits: [
         PastVisitSummary(
           id: 'consultation-1',
-          visitNumber: 'VIS-001',
+          visitNumber: 'VIS-20260808-000001',
           date: DateTime.utc(2026, 8, 8),
           practitionerName: 'Dr Test',
           chiefComplaint: 'Fatigue depuis trois semaines',
@@ -45,12 +47,13 @@ void main() {
       ),
     );
 
-    expect(find.text('VIS-001'), findsOneWidget);
+    expect(find.text('VIS-20260808-000001'), findsOneWidget);
     expect(find.text('Dr Test'), findsOneWidget);
     expect(
       find.text('Fatigue depuis trois semaines et toux sèche.'),
       findsOneWidget,
     );
+    expect(tester.takeException(), isNull);
 
     await tester.tap(
       find.text('Fatigue depuis trois semaines et toux sèche.'),
@@ -63,16 +66,18 @@ void main() {
     expect(find.text('Contrôle après les résultats.'), findsOneWidget);
     expect(find.text('Inhalateur'), findsOneWidget);
     expect(find.text('7 jours'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
 
   testWidgets('lab order renders exams separately with useful metadata', (
     tester,
   ) async {
+    _usePhoneViewport(tester);
     final record = _record(
       labOrders: [
         PatientLabOrderSummary(
           id: 'order-1',
-          number: 'EXAM-001',
+          number: 'EXAM-REQ-20260808-000001',
           status: 'PENDING',
           exams: const [
             'Numération complète',
@@ -92,7 +97,7 @@ void main() {
       _TestApp(child: PatientRecordLaboratoryDetailSection(record: record)),
     );
 
-    expect(find.text('EXAM-001'), findsOneWidget);
+    expect(find.text('EXAM-REQ-20260808-000001'), findsOneWidget);
     expect(find.text('Numération complète'), findsOneWidget);
     expect(find.text('Bilan inflammatoire'), findsOneWidget);
     expect(find.text('Radiographie du thorax'), findsOneWidget);
@@ -100,7 +105,15 @@ void main() {
     expect(find.text('Dr Test'), findsOneWidget);
     expect(find.text('Priorité: ROUTINE'), findsOneWidget);
     expect(find.text('Type: AUTRE'), findsOneWidget);
+    expect(tester.takeException(), isNull);
   });
+}
+
+void _usePhoneViewport(WidgetTester tester) {
+  tester.view.devicePixelRatio = 1;
+  tester.view.physicalSize = const Size(390, 844);
+  addTearDown(tester.view.resetDevicePixelRatio);
+  addTearDown(tester.view.resetPhysicalSize);
 }
 
 PatientRecordBundle _record({
