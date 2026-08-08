@@ -55,4 +55,100 @@ void main() {
 
     expect(withVisit.activeVisit?.visitNumber, 'VIS-001');
   });
+
+  test('keeps the complete SOAP consultation and prescription payload', () {
+    final visit = PastVisitSummary.fromJson({
+      'id': 'consultation-1',
+      'visitId': 'visit-1',
+      'visitNumber': 'VIS-001',
+      'createdAt': '2026-08-08T00:30:00Z',
+      'doctorName': 'Dr Test',
+      'symptoms': 'Fatigue depuis trois semaines et toux sèche.',
+      'clinicalExam': 'Léger sifflement du côté droit.',
+      'diagnosis': '',
+      'conclusion': 'Bilan complémentaire demandé.',
+      'advice': 'Hydratation.',
+      'followUp': 'Contrôle après les résultats.',
+      'status': 'BROUILLON',
+      'documentNumber': 'DOC-CONS-001',
+      'vitals': {
+        'temperature': 36.8,
+        'systolic': 120,
+        'diastolic': 80,
+        'pulse': 72,
+      },
+      'prescriptionNumber': 'ORD-001',
+      'prescriptionStatus': 'DRAFT',
+      'prescriptionItems': [
+        {
+          'drugName': 'Inhalateur',
+          'dosage': '',
+          'duration': '7 jours',
+          'instructions': 'Selon prescription',
+        },
+      ],
+    });
+
+    expect(visit.symptoms, 'Fatigue depuis trois semaines et toux sèche.');
+    expect(visit.clinicalExam, 'Léger sifflement du côté droit.');
+    expect(visit.diagnosis, isEmpty);
+    expect(visit.conclusion, 'Bilan complémentaire demandé.');
+    expect(visit.advice, 'Hydratation.');
+    expect(visit.followUp, 'Contrôle après les résultats.');
+    expect(visit.status, 'BROUILLON');
+    expect(visit.temperature, 36.8);
+    expect(visit.systolic, 120);
+    expect(visit.diastolic, 80);
+    expect(visit.pulse, 72);
+    expect(visit.prescriptionItems, hasLength(1));
+    expect(visit.prescriptionItems.single.drugName, 'Inhalateur');
+    expect(visit.prescriptionItems.single.dosage, isNull);
+    expect(visit.prescriptionItems.single.duration, '7 jours');
+  });
+
+  test('still accepts a legacy minimal consultation payload', () {
+    final visit = PastVisitSummary.fromJson({
+      'id': 'legacy-consultation',
+      'visitNumber': 'VIS-OLD',
+      'date': '2026-07-01T10:00:00Z',
+      'practitionerName': 'Dr Legacy',
+      'reason': 'Contrôle',
+    });
+
+    expect(visit.visitNumber, 'VIS-OLD');
+    expect(visit.practitionerName, 'Dr Legacy');
+    expect(visit.symptoms, 'Contrôle');
+    expect(visit.diagnosis, isEmpty);
+    expect(visit.prescriptionItems, isEmpty);
+  });
+
+  test('keeps structured lab order metadata and individual exams', () {
+    final order = PatientLabOrderSummary.fromJson({
+      'id': 'order-1',
+      'examRequestNumber': 'EXAM-001',
+      'status': 'PENDING',
+      'examType': 'AUTRE',
+      'priority': 'ROUTINE',
+      'reason': 'Fatigue persistante',
+      'requesterPractitionerName': 'Dr Test',
+      'createdAt': '2026-08-08T00:30:00Z',
+      'exams': [
+        'Numération complète',
+        'Bilan inflammatoire',
+        'Radiographie du thorax',
+      ],
+    });
+
+    expect(order.number, 'EXAM-001');
+    expect(order.status, 'PENDING');
+    expect(order.examType, 'AUTRE');
+    expect(order.priority, 'ROUTINE');
+    expect(order.reason, 'Fatigue persistante');
+    expect(order.practitioner, 'Dr Test');
+    expect(order.exams, [
+      'Numération complète',
+      'Bilan inflammatoire',
+      'Radiographie du thorax',
+    ]);
+  });
 }

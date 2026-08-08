@@ -4,6 +4,8 @@ import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../foundation/presentation/mobile_workspace_localizations.dart';
 import '../../domain/patient_record.dart';
+import 'patient_record_consultations_section.dart';
+import 'patient_record_laboratory_section.dart';
 import 'patient_record_section.dart';
 import 'patient_record_sections.dart';
 
@@ -51,11 +53,23 @@ class PatientRecordContent extends StatelessWidget {
         Expanded(
           child: AnimatedSwitcher(
             duration: const Duration(milliseconds: 220),
-            child: PatientRecordSectionView(
-              key: ValueKey(selected),
-              section: selected,
-              record: record,
-            ),
+            child: switch (selected) {
+              PatientRecordSection.consultations =>
+                PatientRecordConsultationsDetailSection(
+                  key: const ValueKey(PatientRecordSection.consultations),
+                  record: record,
+                ),
+              PatientRecordSection.laboratory =>
+                PatientRecordLaboratoryDetailSection(
+                  key: const ValueKey(PatientRecordSection.laboratory),
+                  record: record,
+                ),
+              _ => PatientRecordSectionView(
+                key: ValueKey(selected),
+                section: selected,
+                record: record,
+              ),
+            },
           ),
         ),
       ],

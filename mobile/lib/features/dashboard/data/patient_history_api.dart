@@ -51,26 +51,15 @@ final class PatientHistoryApi implements PatientHistoryGateway {
         .whereType<Map>()
         .map((e) => MedicalAntecedent.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    final pastVisits = consultationsData.whereType<Map>().map((m) {
-      final map = Map<String, dynamic>.from(m);
-      final vitalsMap = map['vitals'] is Map
-          ? Map<String, dynamic>.from(map['vitals'] as Map)
-          : null;
-      return PastVisitSummary(
-        id: (map['visitId'] ?? map['id'] ?? '') as String,
-        visitNumber: (map['visitNumber'] ?? '') as String,
-        date: map['createdAt'] != null
-            ? (DateTime.tryParse(map['createdAt'] as String) ?? DateTime.now())
-            : DateTime.now(),
-        practitionerName:
-            (map['doctorName'] ?? map['practitionerName'] ?? '') as String,
-        chiefComplaint: (map['symptoms'] ?? map['reason'] ?? '') as String,
-        temperature: (vitalsMap?['temperature'] as num?)?.toDouble(),
-        systolic: (vitalsMap?['systolic'] as num?)?.toInt(),
-        diastolic: (vitalsMap?['diastolic'] as num?)?.toInt(),
-        pulse: (vitalsMap?['pulse'] as num?)?.toInt(),
-      );
-    }).toList();
+    final pastVisits =
+        consultationsData
+            .whereType<Map>()
+            .map(
+              (item) =>
+                  PastVisitSummary.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList()
+          ..sort((left, right) => right.date.compareTo(left.date));
 
     return PatientMedicalHistory(
       patientId: patientId,

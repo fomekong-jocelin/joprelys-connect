@@ -86,8 +86,9 @@ final class PatientRecordApi implements PatientRecordGateway {
         .map(MedicalAntecedent.fromJson)
         .where((item) => item.description.isNotEmpty)
         .toList(growable: false);
-    final visits = _maps(results[2]).map(_pastVisit).toList(growable: false)
-      ..sort((left, right) => right.date.compareTo(left.date));
+    final visits =
+        _maps(results[2]).map(PastVisitSummary.fromJson).toList(growable: false)
+          ..sort((left, right) => right.date.compareTo(left.date));
 
     return PatientRecordBundle(
       identity: identity,
@@ -167,28 +168,5 @@ final class PatientRecordApi implements PatientRecordGateway {
         yield value.map((key, item) => MapEntry(key.toString(), item));
       }
     }
-  }
-
-  PastVisitSummary _pastVisit(Map<String, dynamic> map) {
-    final vitals = map['vitals'] is Map
-        ? Map<String, dynamic>.from(map['vitals'] as Map)
-        : const <String, dynamic>{};
-    final rawDate = map['createdAt'] ?? map['date'] ?? map['consultedAt'];
-    return PastVisitSummary(
-      id: (map['visitId'] ?? map['id'] ?? '').toString(),
-      visitNumber: (map['visitNumber'] ?? '').toString(),
-      date:
-          DateTime.tryParse(rawDate?.toString() ?? '')?.toLocal() ??
-          DateTime.fromMillisecondsSinceEpoch(0),
-      practitionerName: (map['doctorName'] ?? map['practitionerName'] ?? '')
-          .toString(),
-      chiefComplaint:
-          (map['diagnosis'] ?? map['symptoms'] ?? map['reason'] ?? '')
-              .toString(),
-      temperature: (vitals['temperature'] as num?)?.toDouble(),
-      systolic: (vitals['systolic'] as num?)?.toInt(),
-      diastolic: (vitals['diastolic'] as num?)?.toInt(),
-      pulse: (vitals['pulse'] as num?)?.toInt(),
-    );
   }
 }

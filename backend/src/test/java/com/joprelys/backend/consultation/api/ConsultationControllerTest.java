@@ -197,12 +197,21 @@ public class ConsultationControllerTest {
     }
 
     @Test
-    void givenMissingDiagnosis_whenSaveConsultation_thenBadRequest() throws Exception {
+    void givenMissingDiagnosis_whenSaveDraft_thenPersistsEmptyDiagnosis() throws Exception {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"symptoms\":\"Symptômes sans diagnostic\"}"))
-                .andExpect(status().isBadRequest());
+                        .content("{\"symptoms\":\"Fatigue depuis trois semaines et toux sèche\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.symptoms").value("Fatigue depuis trois semaines et toux sèche"))
+                .andExpect(jsonPath("$.diagnosis").value(""))
+                .andExpect(jsonPath("$.status").value("BROUILLON"));
+
+        mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.symptoms").value("Fatigue depuis trois semaines et toux sèche"))
+                .andExpect(jsonPath("$.diagnosis").value(""));
     }
 
     @Test

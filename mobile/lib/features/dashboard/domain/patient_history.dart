@@ -70,6 +70,57 @@ final class PatientAllergy {
 }
 
 @immutable
+final class PatientPrescriptionItemSummary {
+  const PatientPrescriptionItemSummary({
+    required this.drugName,
+    this.dosage,
+    this.posology,
+    this.duration,
+    this.quantity,
+    this.instructions,
+    this.form,
+    this.route,
+    this.frequency,
+  });
+
+  final String drugName;
+  final String? dosage;
+  final String? posology;
+  final String? duration;
+  final String? quantity;
+  final String? instructions;
+  final String? form;
+  final String? route;
+  final String? frequency;
+
+  factory PatientPrescriptionItemSummary.fromJson(Map<String, dynamic> json) {
+    return PatientPrescriptionItemSummary(
+      drugName: _string(json['drugName'] ?? json['name']),
+      dosage: _optionalString(json['dosage']),
+      posology: _optionalString(json['posology']),
+      duration: _optionalString(json['duration']),
+      quantity: _optionalString(json['quantity']),
+      instructions: _optionalString(json['instructions']),
+      form: _optionalString(json['form']),
+      route: _optionalString(json['route']),
+      frequency: _optionalString(json['frequency']),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'drugName': drugName,
+    if (dosage != null) 'dosage': dosage,
+    if (posology != null) 'posology': posology,
+    if (duration != null) 'duration': duration,
+    if (quantity != null) 'quantity': quantity,
+    if (instructions != null) 'instructions': instructions,
+    if (form != null) 'form': form,
+    if (route != null) 'route': route,
+    if (frequency != null) 'frequency': frequency,
+  };
+}
+
+@immutable
 final class PastVisitSummary {
   const PastVisitSummary({
     required this.id,
@@ -77,6 +128,17 @@ final class PastVisitSummary {
     required this.date,
     required this.practitionerName,
     required this.chiefComplaint,
+    this.symptoms = '',
+    this.clinicalExam = '',
+    this.diagnosis = '',
+    this.conclusion = '',
+    this.advice = '',
+    this.followUp = '',
+    this.status = '',
+    this.documentNumber = '',
+    this.prescriptionNumber,
+    this.prescriptionStatus,
+    this.prescriptionItems = const [],
     this.temperature,
     this.systolic,
     this.diastolic,
@@ -87,23 +149,68 @@ final class PastVisitSummary {
   final String visitNumber;
   final DateTime date;
   final String practitionerName;
+
+  /// Résumé court conservé pour les anciennes vues/cartes.
   final String chiefComplaint;
+
+  /// Champs SOAP détaillés retournés par l'historique consultation backend.
+  final String symptoms;
+  final String clinicalExam;
+  final String diagnosis;
+  final String conclusion;
+  final String advice;
+  final String followUp;
+  final String status;
+  final String documentNumber;
+  final String? prescriptionNumber;
+  final String? prescriptionStatus;
+  final List<PatientPrescriptionItemSummary> prescriptionItems;
+
   final double? temperature;
   final int? systolic;
   final int? diastolic;
   final int? pulse;
 
   factory PastVisitSummary.fromJson(Map<String, dynamic> json) {
+    final rawItems = json['prescriptionItems'];
+    final symptoms = _string(json['symptoms'] ?? json['reason']);
+    final diagnosis = _string(json['diagnosis']);
     return PastVisitSummary(
-      id: json['id'] as String? ?? '',
-      visitNumber: json['visitNumber'] as String? ?? '',
-      date: DateTime.tryParse(json['date'] as String? ?? '') ?? DateTime.now(),
-      practitionerName: json['practitionerName'] as String? ?? '',
-      chiefComplaint: json['chiefComplaint'] as String? ?? '',
-      temperature: (json['temperature'] as num?)?.toDouble(),
-      systolic: (json['systolic'] as num?)?.toInt(),
-      diastolic: (json['diastolic'] as num?)?.toInt(),
-      pulse: (json['pulse'] as num?)?.toInt(),
+      id: _string(json['visitId'] ?? json['id']),
+      visitNumber: _string(json['visitNumber']),
+      date:
+          DateTime.tryParse(
+            (json['createdAt'] ?? json['date'] ?? json['consultedAt'] ?? '')
+                .toString(),
+          )?.toLocal() ??
+          DateTime.fromMillisecondsSinceEpoch(0),
+      practitionerName: _string(json['doctorName'] ?? json['practitionerName']),
+      chiefComplaint: _firstNonBlank([diagnosis, symptoms]),
+      symptoms: symptoms,
+      clinicalExam: _string(json['clinicalExam']),
+      diagnosis: diagnosis,
+      conclusion: _string(json['conclusion']),
+      advice: _string(json['advice']),
+      followUp: _string(json['followUp']),
+      status: _string(json['status']),
+      documentNumber: _string(json['documentNumber']),
+      prescriptionNumber: _optionalString(json['prescriptionNumber']),
+      prescriptionStatus: _optionalString(json['prescriptionStatus']),
+      prescriptionItems: rawItems is List
+          ? rawItems
+                .whereType<Map>()
+                .map(
+                  (item) => PatientPrescriptionItemSummary.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ),
+                )
+                .where((item) => item.drugName.isNotEmpty)
+                .toList(growable: false)
+          : const <PatientPrescriptionItemSummary>[],
+      temperature: _number(json, 'temperature')?.toDouble(),
+      systolic: _number(json, 'systolic')?.toInt(),
+      diastolic: _number(json, 'diastolic')?.toInt(),
+      pulse: _number(json, 'pulse')?.toInt(),
     );
   }
 
@@ -113,6 +220,19 @@ final class PastVisitSummary {
     'date': date.toIso8601String(),
     'practitionerName': practitionerName,
     'chiefComplaint': chiefComplaint,
+    'symptoms': symptoms,
+    'clinicalExam': clinicalExam,
+    'diagnosis': diagnosis,
+    'conclusion': conclusion,
+    'advice': advice,
+    'followUp': followUp,
+    'status': status,
+    'documentNumber': documentNumber,
+    if (prescriptionNumber != null) 'prescriptionNumber': prescriptionNumber,
+    if (prescriptionStatus != null) 'prescriptionStatus': prescriptionStatus,
+    'prescriptionItems': prescriptionItems
+        .map((item) => item.toJson())
+        .toList(),
     if (temperature != null) 'temperature': temperature,
     if (systolic != null) 'systolic': systolic,
     if (diastolic != null) 'diastolic': diastolic,
@@ -188,6 +308,28 @@ final class PatientMedicalHistory {
     'pastVisits': pastVisits.map((item) => item.toJson()).toList(),
   };
 }
+
+num? _number(Map<String, dynamic> json, String key) {
+  final direct = json[key];
+  if (direct is num) return direct;
+  final vitals = json['vitals'];
+  if (vitals is Map) {
+    final value = vitals[key];
+    if (value is num) return value;
+    return num.tryParse(value?.toString() ?? '');
+  }
+  return num.tryParse(direct?.toString() ?? '');
+}
+
+String _firstNonBlank(Iterable<String> values) {
+  for (final value in values) {
+    final trimmed = value.trim();
+    if (trimmed.isNotEmpty) return trimmed;
+  }
+  return '';
+}
+
+String _string(Object? value) => value?.toString().trim() ?? '';
 
 String? _optionalString(Object? value) {
   if (value == null) return null;
