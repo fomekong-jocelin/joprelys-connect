@@ -90,7 +90,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
        );
 
   static const int _maxReconnectAttempts = 6;
-  static const int _maxPendingAudioBytes = 16_000 * 2 * 20;
+  static const int _maxPendingAudioBytes = 16_000 * 2 * 60;
   static const int _recentReplayAudioBytes = 16_000 * 2 * 3;
   static const Duration _connectTimeout = Duration(seconds: 12);
   static const Duration _startAckTimeout = Duration(seconds: 10);
@@ -206,7 +206,28 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
       soundLevel: 0,
       clearError: true,
     );
-    await _connectWebSocket();
+
+    try {
+      // La capture locale ne doit pas dépendre de la disponibilité réseau.
+      // Le transport se connecte ensuite en arrière-plan et rejoue le buffer
+      // dès que le serveur confirme STREAMING_STARTED.
+      await _startAudioCapture();
+      if (_disposed || !_isStreaming || !_shouldReconnect) return;
+
+      value = value.copyWith(
+        status: SpeechStatus.listening,
+        stage: ClinicalVoiceStage.capture,
+        soundLevel: value.soundLevel <= 0 ? 12 : value.soundLevel,
+        clearError: true,
+      );
+      unawaited(_connectWebSocket());
+    } catch (error) {
+      _isStreaming = false;
+      _shouldReconnect = false;
+      _transportReady = false;
+      await _cleanupAudioCapture();
+      _setError(error);
+    }
   }
 
   Future<void> _connectWebSocket() async {
