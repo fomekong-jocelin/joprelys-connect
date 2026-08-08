@@ -77,8 +77,7 @@ public class LabOrderService {
 				request.exams(),
 				request.reason(),
 				request.priority(),
-				organizationId
-		);
+				organizationId);
 		entity.setOrganizationId(organizationId);
 
 		return mapToResponse(labOrderRepository.save(entity));
@@ -141,6 +140,7 @@ public class LabOrderService {
 					.findFirst()
 					.orElseThrow(() -> new IllegalArgumentException("Examen introuvable dans cette demande"));
 
+			validatePaymentGate(entity.getStatus(), status);
 			validateItemTransition(item.getStatus(), status);
 			item.applyStatus(status, Instant.now());
 			recalculateOrderStatus(entity);
@@ -190,6 +190,12 @@ public class LabOrderService {
 
 		if (entity.getStatus() != LabOrderStatus.AWAITING_PAYMENT && entity.getStatus() != LabOrderStatus.PAID) {
 			entity.setStatus(LabOrderStatus.REQUESTED);
+		}
+	}
+
+	void validatePaymentGate(LabOrderStatus orderStatus, LabOrderStatus next) {
+		if (orderStatus == LabOrderStatus.AWAITING_PAYMENT && next != LabOrderStatus.CANCELLED) {
+			throw new IllegalArgumentException("Le paiement doit être confirmé avant de traiter les examens");
 		}
 	}
 
