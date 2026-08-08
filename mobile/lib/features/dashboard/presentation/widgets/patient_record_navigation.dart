@@ -4,7 +4,8 @@ import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../foundation/presentation/mobile_workspace_localizations.dart';
 import '../../domain/patient_record.dart';
-import 'patient_record_clinical_sections.dart';
+import 'patient_record_consultations_section.dart';
+import 'patient_record_laboratory_section.dart';
 import 'patient_record_section.dart';
 import 'patient_record_sections.dart';
 
