@@ -7,7 +7,7 @@ import '../../../foundation/presentation/mobile_workspace_localizations.dart';
 import '../../domain/patient_record.dart';
 import '../prescription_localizations.dart';
 import 'patient_record_consultations_section.dart';
-import 'patient_record_laboratory_section.dart';
+import 'patient_record_laboratory_item_section.dart';
 import 'patient_record_prescriptions_section.dart';
 import 'patient_record_section.dart';
 import 'patient_record_sections.dart';
@@ -74,7 +74,7 @@ class PatientRecordContent extends StatelessWidget {
                   onChanged: onRecordChanged,
                 ),
               PatientRecordSection.laboratory =>
-                PatientRecordLaboratoryDetailSection(
+                PatientRecordLaboratoryItemSection(
                   key: const ValueKey(PatientRecordSection.laboratory),
                   record: record,
                   access: access,
