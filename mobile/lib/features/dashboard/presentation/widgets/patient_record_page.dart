@@ -68,6 +68,7 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
       sections.addAll(const [
         PatientRecordSection.medical,
         PatientRecordSection.consultations,
+        PatientRecordSection.prescriptions,
       ]);
     }
     if (widget.access.hasPermission('LAB_ORDER_READ')) {
@@ -203,6 +204,8 @@ class _PatientRecordPageState extends ConsumerState<PatientRecordPage> {
       record: record,
       sections: _availableSections,
       selected: _section,
+      access: widget.access,
+      onRecordChanged: _load,
       onSectionChanged: (section) {
         setState(() => _section = section);
       },
