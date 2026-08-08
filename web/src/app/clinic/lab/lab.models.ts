@@ -18,6 +18,15 @@ export enum LabOrderStatus {
   CANCELLED = 'CANCELLED'
 }
 
+export interface LabOrderItem {
+  id: string;
+  examName: string;
+  status: LabOrderStatus;
+  sampleCollectedAt?: string;
+  resultAt?: string;
+  validatedAt?: string;
+}
+
 export interface LabOrder {
   id: string;
   examRequestNumber: string;
@@ -30,6 +39,7 @@ export interface LabOrder {
   targetOrganizationId?: string;
   examType: ExamType;
   exams: string[];
+  items?: LabOrderItem[];
   reason?: string;
   priority: string;
   status: LabOrderStatus;
@@ -57,6 +67,7 @@ export interface LabResultItemRequest {
 
 export interface LabResultUploadRequest {
   examRequestNumber: string;
+  labOrderItemId?: string;
   validatorName: string;
   validatorUserId?: string;
   status?: string;
@@ -72,6 +83,8 @@ export interface LabResult {
   id: string;
   resultNumber: string;
   examRequestNumber: string;
+  labOrderItemId?: string;
+  examName?: string;
   patientId: string;
   validatorName: string;
   status?: string;
