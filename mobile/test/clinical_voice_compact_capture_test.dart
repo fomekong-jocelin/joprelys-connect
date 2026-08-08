@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,6 +10,21 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/clinical
 import 'package:joprelys_mobile/l10n/app_localizations.dart';
 
 void main() {
+  test('cloud capture starts microphone before websocket handshake', () {
+    final source = File(
+      'lib/features/dashboard/application/cloud_speech_streaming_service.dart',
+    ).readAsStringSync();
+    final start = source.indexOf('Future<void> startRealtimeListening()');
+    final end = source.indexOf('Future<void> _connectWebSocket()', start);
+    final startup = source.substring(start, end);
+    final microphone = startup.indexOf('await _startAudioCapture()');
+    final transport = startup.indexOf('unawaited(_connectWebSocket())');
+
+    expect(microphone, greaterThanOrEqualTo(0));
+    expect(transport, greaterThan(microphone));
+    expect(startup, isNot(contains('await _connectWebSocket()')));
+  });
+
   testWidgets(
     'listening capture hides empty transcript chrome and reconnect banner',
     (tester) async {
