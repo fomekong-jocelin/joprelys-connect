@@ -99,12 +99,67 @@ final class PatientVaccinationSummary {
 }
 
 @immutable
+final class PatientLabOrderItemSummary {
+  const PatientLabOrderItemSummary({
+    required this.id,
+    required this.examName,
+    required this.status,
+    this.sampleCollectedAt,
+    this.resultAt,
+    this.validatedAt,
+  });
+
+  final String id;
+  final String examName;
+  final String status;
+  final DateTime? sampleCollectedAt;
+  final DateTime? resultAt;
+  final DateTime? validatedAt;
+
+  factory PatientLabOrderItemSummary.fromJson(Map<String, dynamic> json) {
+    return PatientLabOrderItemSummary(
+      id: _firstString(json, const ['id']) ?? '',
+      examName: _firstString(json, const ['examName', 'name']) ?? '',
+      status: _firstString(json, const ['status']) ?? 'REQUESTED',
+      sampleCollectedAt: _date(json['sampleCollectedAt']),
+      resultAt: _date(json['resultAt']),
+      validatedAt: _date(json['validatedAt']),
+    );
+  }
+
+  String get normalizedStatus => status.trim().toUpperCase();
+  bool get isCancelled => normalizedStatus == 'CANCELLED';
+  bool get isValidated => normalizedStatus == 'VALIDATED';
+  bool get isTerminal => isCancelled || isValidated;
+
+  int get progressIndex {
+    return switch (normalizedStatus) {
+      'SAMPLE_COLLECTED' => 1,
+      'IN_PROGRESS' => 2,
+      'RESULT_AVAILABLE' => 3,
+      'VALIDATED' => 4,
+      'CANCELLED' => -1,
+      _ => 0,
+    };
+  }
+
+  String? get nextOperationalStatus {
+    return switch (normalizedStatus) {
+      'REQUESTED' || 'PAID' => 'SAMPLE_COLLECTED',
+      'SAMPLE_COLLECTED' => 'IN_PROGRESS',
+      _ => null,
+    };
+  }
+}
+
+@immutable
 final class PatientLabOrderSummary {
   const PatientLabOrderSummary({
     required this.id,
     required this.number,
     required this.status,
     required this.exams,
+    this.items = const [],
     this.patientId,
     this.visitId,
     this.requesterPractitionerId,
@@ -121,6 +176,7 @@ final class PatientLabOrderSummary {
   final String number;
   final String status;
   final List<String> exams;
+  final List<PatientLabOrderItemSummary> items;
   final String? patientId;
   final String? visitId;
   final String? requesterPractitionerId;
@@ -134,6 +190,37 @@ final class PatientLabOrderSummary {
 
   factory PatientLabOrderSummary.fromJson(Map<String, dynamic> json) {
     final rawExams = json['exams'];
+    final exams = rawExams is List
+        ? rawExams
+              .map((item) => item.toString().trim())
+              .where((item) => item.isNotEmpty)
+              .toList(growable: false)
+        : const <String>[];
+    final status = _firstString(json, const ['status']) ?? '';
+    final rawItems = json['items'];
+    final structuredItems = rawItems is List
+        ? rawItems
+              .whereType<Map>()
+              .map(
+                (item) => PatientLabOrderItemSummary.fromJson(
+                  Map<String, dynamic>.from(item),
+                ),
+              )
+              .where((item) => item.examName.isNotEmpty)
+              .toList(growable: false)
+        : const <PatientLabOrderItemSummary>[];
+    final items = structuredItems.isNotEmpty
+        ? structuredItems
+        : exams
+              .map(
+                (exam) => PatientLabOrderItemSummary(
+                  id: '',
+                  examName: exam,
+                  status: status,
+                ),
+              )
+              .toList(growable: false);
+
     return PatientLabOrderSummary(
       id: _firstString(json, const ['id']) ?? '',
       number:
@@ -145,13 +232,11 @@ final class PatientLabOrderSummary {
       ]),
       sourceOrganizationId: _firstString(json, const ['sourceOrganizationId']),
       targetOrganizationId: _firstString(json, const ['targetOrganizationId']),
-      status: _firstString(json, const ['status']) ?? '',
-      exams: rawExams is List
-          ? rawExams
-                .map((item) => item.toString().trim())
-                .where((item) => item.isNotEmpty)
-                .toList(growable: false)
-          : const <String>[],
+      status: status,
+      exams: exams.isNotEmpty
+          ? exams
+          : items.map((item) => item.examName).toList(growable: false),
+      items: items,
       createdAt: _date(json['createdAt']),
       priority: _firstString(json, const ['priority']),
       practitioner: _firstString(json, const [
@@ -168,6 +253,7 @@ final class PatientLabOrderSummary {
   bool get isValidated => normalizedStatus == 'VALIDATED';
   bool get isTerminal => isCancelled || isValidated;
   bool get isActive => !isTerminal;
+  bool get hasStructuredItems => items.any((item) => item.id.isNotEmpty);
 
   int get progressIndex {
     return switch (normalizedStatus) {
@@ -197,6 +283,8 @@ final class PatientLabResultSummary {
     required this.value,
     this.resultNumber = '',
     this.examRequestNumber = '',
+    this.labOrderItemId,
+    this.examName,
     this.status = '',
     this.unit,
     this.interpretation,
@@ -217,6 +305,8 @@ final class PatientLabResultSummary {
   final String id;
   final String resultNumber;
   final String examRequestNumber;
+  final String? labOrderItemId;
+  final String? examName;
   final String status;
   final String analyte;
   final String value;
@@ -241,6 +331,8 @@ final class PatientLabResultSummary {
       resultNumber: _firstString(json, const ['resultNumber']) ?? '',
       examRequestNumber:
           _firstString(json, const ['examRequestNumber', 'orderNumber']) ?? '',
+      labOrderItemId: _firstString(json, const ['labOrderItemId']),
+      examName: _firstString(json, const ['examName']),
       status: _firstString(json, const ['status']) ?? '',
       analyte: _firstString(json, const ['analyteName', 'name']) ?? '',
       value: (json['value'] ?? '').toString(),
