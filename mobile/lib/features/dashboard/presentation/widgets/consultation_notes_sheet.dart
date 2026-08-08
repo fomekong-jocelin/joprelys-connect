@@ -10,10 +10,12 @@ import '../../data/clinical_voice_structured_api.dart';
 import '../../data/consultation_api.dart';
 import '../../domain/active_visit.dart';
 import '../dashboard_localizations.dart';
+import '../prescription_localizations.dart';
 import 'clinical_voice_progressive_assistant_sheet.dart';
 import 'consultation_note_form_controllers.dart';
 import 'consultation_notes_form.dart';
 import 'consultation_notes_header.dart';
+import 'prescription_editor_sheet.dart';
 
 class ConsultationNotesSheet extends ConsumerStatefulWidget {
   const ConsultationNotesSheet({required this.visit, this.onSaved, super.key});
@@ -56,6 +58,7 @@ class _ConsultationNotesSheetState
   bool _isSaving = false;
   bool _isLoading = true;
   bool _didFailToLoad = false;
+  String? _consultationId;
   String? _error;
 
   ClinicalVoiceAcceptedResultPersistence get _persistence {
@@ -82,7 +85,10 @@ class _ConsultationNotesSheetState
     try {
       final gateway = ref.read(consultationApiProvider);
       final note = await gateway.getConsultationNote(widget.visit.id);
-      if (mounted && note != null) _controllers.populate(note);
+      if (mounted && note != null) {
+        _controllers.populate(note);
+        _consultationId = note.consultationId;
+      }
     } catch (error) {
       if (mounted) {
         setState(() {
@@ -95,9 +101,11 @@ class _ConsultationNotesSheetState
     }
   }
 
-  Future<void> _submit() async {
-    if (_didFailToLoad) return;
-    if (_formKey.currentState?.validate() != true) return;
+  Future<SavedConsultationNote?> _saveCurrent({
+    required bool showNotice,
+  }) async {
+    if (_didFailToLoad) return null;
+    if (_formKey.currentState?.validate() != true) return null;
 
     setState(() {
       _isSaving = true;
@@ -105,24 +113,52 @@ class _ConsultationNotesSheetState
     });
 
     try {
-      await _persistence.save(
+      final saved = await _persistence.save(
         visit: widget.visit,
         note: _controllers.toConsultationNote(),
         prescriptionJson: _controllers.acceptedPrescriptions,
         labOrdersJson: _controllers.acceptedLabOrders,
       );
-      if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.consultationSavedSuccess)));
+      if (!mounted) return null;
+      setState(() => _consultationId = saved.consultationId);
+      if (showNotice) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context).consultationSavedSuccess),
+          ),
+        );
+      }
       widget.onSaved?.call();
-      Navigator.of(context).pop();
+      return saved;
     } catch (error) {
       if (mounted) setState(() => _error = _errorMessage(error));
+      return null;
     } finally {
       if (mounted) setState(() => _isSaving = false);
     }
+  }
+
+  Future<void> _submit() async {
+    final saved = await _saveCurrent(showNotice: true);
+    if (saved == null || !mounted) return;
+    Navigator.of(context).pop();
+  }
+
+  Future<void> _openPrescription() async {
+    var consultationId = _consultationId;
+    if (consultationId == null || consultationId.trim().isEmpty) {
+      final saved = await _saveCurrent(showNotice: false);
+      if (saved == null || !mounted) return;
+      consultationId = saved.consultationId;
+    }
+
+    await PrescriptionEditorSheet.show(
+      context,
+      consultationId: consultationId,
+      reference: '${widget.visit.patientName} · ${widget.visit.visitNumber}',
+      canWrite: true,
+      onChanged: widget.onSaved,
+    );
   }
 
   void _launchAssistant() {
@@ -181,6 +217,9 @@ class _ConsultationNotesSheetState
           ConsultationNotesHeader(
             visit: widget.visit,
             onLaunchAssistant: _launchAssistant,
+            onOpenPrescription: _isLoading || _didFailToLoad || _isSaving
+                ? null
+                : _openPrescription,
             onClose: () => Navigator.of(context).pop(),
           ),
           Expanded(
