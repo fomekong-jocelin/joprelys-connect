@@ -23,6 +23,10 @@ extension LabLocalizations on AppLocalizations {
   String get labHistory => _labFrench ? 'Historique' : 'History';
   String get labResults => _labFrench ? 'Résultats' : 'Results';
   String get labResult => _labFrench ? 'Résultat' : 'Result';
+  String get labRequestLevelResults => _labFrench
+      ? 'Résultats non rattachés à un examen précis'
+      : 'Results not linked to a specific examination';
+
   String labResultsCount(int count) {
     if (_labFrench) {
       return count <= 1 ? '$count résultat' : '$count résultats';
@@ -35,6 +39,13 @@ extension LabLocalizations on AppLocalizations {
       return count <= 1 ? '$count examen' : '$count examens';
     }
     return count == 1 ? '1 examination' : '$count examinations';
+  }
+
+  String labItemProgress(int completed, int total) {
+    if (_labFrench) {
+      return '$completed/$total finalisés';
+    }
+    return '$completed/$total completed';
   }
 
   String get labOrderNumber => _labFrench ? 'Demande' : 'Request';
@@ -92,6 +103,13 @@ extension LabLocalizations on AppLocalizations {
       _labFrench ? 'Démarrer l’analyse' : 'Start processing';
   String get labCancelOrder =>
       _labFrench ? 'Annuler la demande' : 'Cancel request';
+  String get labCancelExam => _labFrench ? 'Annuler' : 'Cancel';
+  String labCancelExamTitle(String examName) => _labFrench
+      ? 'Annuler « $examName » ?'
+      : 'Cancel “$examName”?';
+  String get labCancelExamBody => _labFrench
+      ? 'Seul cet examen sera annulé. Les autres examens de la demande continueront leur parcours.'
+      : 'Only this examination will be cancelled. The other examinations in the request will continue.';
   String get labCancelTitle => _labFrench
       ? 'Annuler cette demande d’examens ?'
       : 'Cancel this examination request?';
