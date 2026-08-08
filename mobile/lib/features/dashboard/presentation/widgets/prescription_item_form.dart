@@ -280,18 +280,28 @@ class _PrescriptionItemFormState extends State<PrescriptionItemForm> {
                       maxLines: 3,
                     ),
                     if (widget.editable) ...[
-                      const SizedBox(height: 4),
-                      SwitchListTile.adaptive(
-                        contentPadding: EdgeInsets.zero,
-                        dense: true,
-                        value: widget.controllers.substitutionAllowed,
-                        title: Text(l10n.prescriptionSubstitutionAllowed),
-                        onChanged: (value) {
-                          setState(() {
-                            widget.controllers.substitutionAllowed = value;
-                          });
-                          widget.onChanged();
-                        },
+                      const SizedBox(height: 8),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.prescriptionSubstitutionAllowed,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Switch.adaptive(
+                            value: widget.controllers.substitutionAllowed,
+                            onChanged: (value) {
+                              setState(() {
+                                widget.controllers.substitutionAllowed = value;
+                              });
+                              widget.onChanged();
+                            },
+                          ),
+                        ],
                       ),
                     ],
                   ],
