@@ -203,8 +203,9 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                     onChanged: _saving
                         ? null
                         : (value) {
-                            if (value != null)
+                            if (value != null) {
                               setState(() => _examType = value);
+                            }
                           },
                     validator: (value) => value == null || value.isEmpty
                         ? l10n.labExamTypeRequired
@@ -242,8 +243,9 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                     onChanged: _saving
                         ? null
                         : (value) {
-                            if (value != null)
+                            if (value != null) {
                               setState(() => _priority = value);
+                            }
                           },
                   ),
                   const SizedBox(height: 12),
