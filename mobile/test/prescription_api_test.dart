@@ -98,19 +98,19 @@ void main() {
     });
 
     test('uses dedicated lifecycle endpoints', () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(200, prescriptionJson(status: 'ACTIVE')),
-      );
+      final adapter = QueueHttpClientAdapter((_, callIndex) {
+        final status = callIndex == 1 ? 'CANCELLED' : 'ACTIVE';
+        return jsonResponse(200, prescriptionJson(status: status));
+      });
       final api = buildApi(adapter);
 
       await api.finalize('prescription-1');
-      expect(adapter.requests.single.method, 'POST');
+      expect(adapter.requests.first.method, 'POST');
       expect(
-        adapter.requests.single.path,
+        adapter.requests.first.path,
         '/api/prescriptions/prescription-1/finalize',
       );
 
-      adapter.enqueue((_, _) => jsonResponse(200, prescriptionJson(status: 'CANCELLED')));
       await api.cancel('prescription-1');
       expect(adapter.requests[1].method, 'PATCH');
       expect(
@@ -118,7 +118,6 @@ void main() {
         '/api/prescriptions/prescription-1/cancel',
       );
 
-      adapter.enqueue((_, _) => jsonResponse(200, prescriptionJson(status: 'ACTIVE')));
       await api.transmit('prescription-1');
       expect(adapter.requests[2].method, 'POST');
       expect(
