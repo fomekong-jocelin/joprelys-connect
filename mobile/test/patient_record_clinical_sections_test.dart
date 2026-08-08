@@ -8,66 +8,67 @@ import 'package:joprelys_mobile/features/dashboard/presentation/widgets/patient_
 import 'package:joprelys_mobile/l10n/app_localizations.dart';
 
 void main() {
-  testWidgets('consultation card exposes full SOAP and prescription on expand', (
-    tester,
-  ) async {
-    _usePhoneViewport(tester);
-    final record = _record(
-      visits: [
-        PastVisitSummary(
-          id: 'consultation-1',
-          visitNumber: 'VIS-20260808-000001',
-          date: DateTime.utc(2026, 8, 8),
-          practitionerName: 'Dr Test',
-          chiefComplaint: 'Fatigue depuis trois semaines',
-          symptoms: 'Fatigue depuis trois semaines et toux sèche.',
-          clinicalExam: 'Léger sifflement du côté droit.',
-          diagnosis: '',
-          conclusion: 'Bilan complémentaire demandé.',
-          advice: 'Hydratation et repos.',
-          followUp: 'Contrôle après les résultats.',
-          status: 'BROUILLON',
-          prescriptionItems: const [
-            PatientPrescriptionItemSummary(
-              drugName: 'Inhalateur',
-              duration: '7 jours',
-            ),
-          ],
-          temperature: 36.8,
-          systolic: 120,
-          diastolic: 80,
-          pulse: 72,
+  testWidgets(
+    'consultation card exposes full SOAP and prescription on expand',
+    (tester) async {
+      _usePhoneViewport(tester);
+      final record = _record(
+        visits: [
+          PastVisitSummary(
+            id: 'consultation-1',
+            visitNumber: 'VIS-20260808-000001',
+            date: DateTime.utc(2026, 8, 8),
+            practitionerName: 'Dr Test',
+            chiefComplaint: 'Fatigue depuis trois semaines',
+            symptoms: 'Fatigue depuis trois semaines et toux sèche.',
+            clinicalExam: 'Léger sifflement du côté droit.',
+            diagnosis: '',
+            conclusion: 'Bilan complémentaire demandé.',
+            advice: 'Hydratation et repos.',
+            followUp: 'Contrôle après les résultats.',
+            status: 'BROUILLON',
+            prescriptionItems: const [
+              PatientPrescriptionItemSummary(
+                drugName: 'Inhalateur',
+                duration: '7 jours',
+              ),
+            ],
+            temperature: 36.8,
+            systolic: 120,
+            diastolic: 80,
+            pulse: 72,
+          ),
+        ],
+      );
+
+      await tester.pumpWidget(
+        _TestApp(
+          child: PatientRecordConsultationsDetailSection(record: record),
         ),
-      ],
-    );
+      );
 
-    await tester.pumpWidget(
-      _TestApp(
-        child: PatientRecordConsultationsDetailSection(record: record),
-      ),
-    );
+      expect(find.text('VIS-20260808-000001'), findsOneWidget);
+      expect(find.text('Dr Test'), findsOneWidget);
+      expect(
+        find.text('Fatigue depuis trois semaines et toux sèche.'),
+        findsOneWidget,
+      );
+      expect(tester.takeException(), isNull);
 
-    expect(find.text('VIS-20260808-000001'), findsOneWidget);
-    expect(find.text('Dr Test'), findsOneWidget);
-    expect(
-      find.text('Fatigue depuis trois semaines et toux sèche.'),
-      findsOneWidget,
-    );
-    expect(tester.takeException(), isNull);
+      await tester.tap(
+        find.text('Fatigue depuis trois semaines et toux sèche.'),
+      );
+      await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.text('Fatigue depuis trois semaines et toux sèche.'),
-    );
-    await tester.pumpAndSettle();
-
-    expect(find.text('Léger sifflement du côté droit.'), findsOneWidget);
-    expect(find.text('Bilan complémentaire demandé.'), findsOneWidget);
-    expect(find.text('Hydratation et repos.'), findsOneWidget);
-    expect(find.text('Contrôle après les résultats.'), findsOneWidget);
-    expect(find.text('Inhalateur'), findsOneWidget);
-    expect(find.text('7 jours'), findsOneWidget);
-    expect(tester.takeException(), isNull);
-  });
+      expect(find.text('Léger sifflement du côté droit.'), findsOneWidget);
+      expect(find.text('Bilan complémentaire demandé.'), findsOneWidget);
+      expect(find.text('Hydratation et repos.'), findsOneWidget);
+      expect(find.text('Contrôle après les résultats.'), findsOneWidget);
+      expect(find.text('Inhalateur'), findsOneWidget);
+      expect(find.text('7 jours'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 
   testWidgets('lab order renders exams separately with useful metadata', (
     tester,

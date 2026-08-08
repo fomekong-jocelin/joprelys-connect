@@ -86,10 +86,9 @@ final class PatientRecordApi implements PatientRecordGateway {
         .map(MedicalAntecedent.fromJson)
         .where((item) => item.description.isNotEmpty)
         .toList(growable: false);
-    final visits = _maps(results[2])
-        .map(PastVisitSummary.fromJson)
-        .toList(growable: false)
-      ..sort((left, right) => right.date.compareTo(left.date));
+    final visits =
+        _maps(results[2]).map(PastVisitSummary.fromJson).toList(growable: false)
+          ..sort((left, right) => right.date.compareTo(left.date));
 
     return PatientRecordBundle(
       identity: identity,

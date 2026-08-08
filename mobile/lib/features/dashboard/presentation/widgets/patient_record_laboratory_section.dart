@@ -7,10 +7,7 @@ import '../../../foundation/presentation/mobile_workspace_localizations.dart';
 import '../../domain/patient_record.dart';
 
 class PatientRecordLaboratoryDetailSection extends StatelessWidget {
-  const PatientRecordLaboratoryDetailSection({
-    required this.record,
-    super.key,
-  });
+  const PatientRecordLaboratoryDetailSection({required this.record, super.key});
 
   final PatientRecordBundle record;
 
@@ -20,7 +17,10 @@ class PatientRecordLaboratoryDetailSection extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _SectionTitle(icon: Icons.biotech_rounded, title: l10n.recordLabResults),
+        _SectionTitle(
+          icon: Icons.biotech_rounded,
+          title: l10n.recordLabResults,
+        ),
         const SizedBox(height: 10),
         if (record.labResults.isEmpty)
           _EmptyCard(message: l10n.recordNoLabOrders)
@@ -110,10 +110,7 @@ class _LabOrderCard extends StatelessWidget {
                   neutral: true,
                 ),
               if (order.examType?.trim().isNotEmpty == true)
-                _Badge(
-                  label: 'Type: ${order.examType}',
-                  neutral: true,
-                ),
+                _Badge(label: 'Type: ${order.examType}', neutral: true),
             ],
           ),
           const SizedBox(height: 12),
@@ -242,7 +239,9 @@ class _Metadata extends StatelessWidget {
       children: [
         Text(
           '$label : ',
-          style: theme.textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w900),
+          style: theme.textTheme.bodySmall?.copyWith(
+            fontWeight: FontWeight.w900,
+          ),
         ),
         Expanded(child: Text(value, style: theme.textTheme.bodySmall)),
       ],

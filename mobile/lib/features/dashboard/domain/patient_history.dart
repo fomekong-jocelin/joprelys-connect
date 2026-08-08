@@ -178,14 +178,13 @@ final class PastVisitSummary {
     return PastVisitSummary(
       id: _string(json['visitId'] ?? json['id']),
       visitNumber: _string(json['visitNumber']),
-      date: DateTime.tryParse(
+      date:
+          DateTime.tryParse(
             (json['createdAt'] ?? json['date'] ?? json['consultedAt'] ?? '')
                 .toString(),
           )?.toLocal() ??
           DateTime.fromMillisecondsSinceEpoch(0),
-      practitionerName: _string(
-        json['doctorName'] ?? json['practitionerName'],
-      ),
+      practitionerName: _string(json['doctorName'] ?? json['practitionerName']),
       chiefComplaint: _firstNonBlank([diagnosis, symptoms]),
       symptoms: symptoms,
       clinicalExam: _string(json['clinicalExam']),
@@ -231,7 +230,9 @@ final class PastVisitSummary {
     'documentNumber': documentNumber,
     if (prescriptionNumber != null) 'prescriptionNumber': prescriptionNumber,
     if (prescriptionStatus != null) 'prescriptionStatus': prescriptionStatus,
-    'prescriptionItems': prescriptionItems.map((item) => item.toJson()).toList(),
+    'prescriptionItems': prescriptionItems
+        .map((item) => item.toJson())
+        .toList(),
     if (temperature != null) 'temperature': temperature,
     if (systolic != null) 'systolic': systolic,
     if (diastolic != null) 'diastolic': diastolic,

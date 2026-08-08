@@ -51,15 +51,15 @@ final class PatientHistoryApi implements PatientHistoryGateway {
         .whereType<Map>()
         .map((e) => MedicalAntecedent.fromJson(Map<String, dynamic>.from(e)))
         .toList();
-    final pastVisits = consultationsData
-        .whereType<Map>()
-        .map(
-          (item) => PastVisitSummary.fromJson(
-            Map<String, dynamic>.from(item),
-          ),
-        )
-        .toList()
-      ..sort((left, right) => right.date.compareTo(left.date));
+    final pastVisits =
+        consultationsData
+            .whereType<Map>()
+            .map(
+              (item) =>
+                  PastVisitSummary.fromJson(Map<String, dynamic>.from(item)),
+            )
+            .toList()
+          ..sort((left, right) => right.date.compareTo(left.date));
 
     return PatientMedicalHistory(
       patientId: patientId,

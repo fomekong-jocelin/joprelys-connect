@@ -30,9 +30,8 @@ class PatientRecordConsultationsDetailSection extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       itemCount: record.history.pastVisits.length,
       separatorBuilder: (_, _) => const SizedBox(height: 12),
-      itemBuilder: (context, index) => _ConsultationCard(
-        visit: record.history.pastVisits[index],
-      ),
+      itemBuilder: (context, index) =>
+          _ConsultationCard(visit: record.history.pastVisits[index]),
     );
   }
 }
@@ -290,7 +289,10 @@ class _ClinicalField extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 3),
-          Text(content, style: theme.textTheme.bodyMedium?.copyWith(height: 1.4)),
+          Text(
+            content,
+            style: theme.textTheme.bodyMedium?.copyWith(height: 1.4),
+          ),
         ],
       ),
     );
