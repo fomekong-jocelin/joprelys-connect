@@ -104,9 +104,8 @@ extension LabLocalizations on AppLocalizations {
   String get labCancelOrder =>
       _labFrench ? 'Annuler la demande' : 'Cancel request';
   String get labCancelExam => _labFrench ? 'Annuler' : 'Cancel';
-  String labCancelExamTitle(String examName) => _labFrench
-      ? 'Annuler « $examName » ?'
-      : 'Cancel “$examName”?';
+  String labCancelExamTitle(String examName) =>
+      _labFrench ? 'Annuler « $examName » ?' : 'Cancel “$examName”?';
   String get labCancelExamBody => _labFrench
       ? 'Seul cet examen sera annulé. Les autres examens de la demande continueront leur parcours.'
       : 'Only this examination will be cancelled. The other examinations in the request will continue.';

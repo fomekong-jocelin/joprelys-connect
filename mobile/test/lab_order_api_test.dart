@@ -98,36 +98,38 @@ void main() {
       expect(data.containsKey('visitId'), isFalse);
     });
 
-    test('updates legacy order status through its dedicated endpoint', () async {
-      final adapter = QueueHttpClientAdapter(
-        (_, _) => jsonResponse(200, orderJson(status: 'SAMPLE_COLLECTED')),
-      );
-      final api = buildApi(adapter);
+    test(
+      'updates legacy order status through its dedicated endpoint',
+      () async {
+        final adapter = QueueHttpClientAdapter(
+          (_, _) => jsonResponse(200, orderJson(status: 'SAMPLE_COLLECTED')),
+        );
+        final api = buildApi(adapter);
 
-      final order = await api.updateStatus(
-        orderId: 'order-1',
-        status: 'sample_collected',
-      );
+        final order = await api.updateStatus(
+          orderId: 'order-1',
+          status: 'sample_collected',
+        );
 
-      final request = adapter.requests.single;
-      expect(request.method, 'PATCH');
-      expect(request.path, '/api/lab-orders/order-1/status');
-      expect(
-        Map<String, dynamic>.from(request.data as Map),
-        containsPair('status', 'SAMPLE_COLLECTED'),
-      );
-      expect(order.normalizedStatus, 'SAMPLE_COLLECTED');
-    });
+        final request = adapter.requests.single;
+        expect(request.method, 'PATCH');
+        expect(request.path, '/api/lab-orders/order-1/status');
+        expect(
+          Map<String, dynamic>.from(request.data as Map),
+          containsPair('status', 'SAMPLE_COLLECTED'),
+        );
+        expect(order.normalizedStatus, 'SAMPLE_COLLECTED');
+      },
+    );
 
     test('updates one exam without targeting the whole request', () async {
       final payload = orderJson();
       final items = List<Map<String, dynamic>>.from(payload['items'] as List);
-      items[1] = <String, dynamic>{
-        ...items[1],
-        'status': 'SAMPLE_COLLECTED',
-      };
+      items[1] = <String, dynamic>{...items[1], 'status': 'SAMPLE_COLLECTED'};
       payload['items'] = items;
-      final adapter = QueueHttpClientAdapter((_, _) => jsonResponse(200, payload));
+      final adapter = QueueHttpClientAdapter(
+        (_, _) => jsonResponse(200, payload),
+      );
       final api = buildApi(adapter);
 
       final order = await api.updateItemStatus(
@@ -138,10 +140,7 @@ void main() {
 
       final request = adapter.requests.single;
       expect(request.method, 'PATCH');
-      expect(
-        request.path,
-        '/api/lab-orders/order-1/items/item-crp/status',
-      );
+      expect(request.path, '/api/lab-orders/order-1/items/item-crp/status');
       expect(
         Map<String, dynamic>.from(request.data as Map),
         containsPair('status', 'SAMPLE_COLLECTED'),
@@ -214,16 +213,8 @@ Map<String, dynamic> orderJson({String status = 'REQUESTED'}) {
     'examType': 'LABORATOIRE',
     'exams': ['NFS', 'CRP'],
     'items': [
-      {
-        'id': 'item-nfs',
-        'examName': 'NFS',
-        'status': itemStatus,
-      },
-      {
-        'id': 'item-crp',
-        'examName': 'CRP',
-        'status': itemStatus,
-      },
+      {'id': 'item-nfs', 'examName': 'NFS', 'status': itemStatus},
+      {'id': 'item-crp', 'examName': 'CRP', 'status': itemStatus},
     ],
     'reason': 'Fatigue persistante',
     'priority': 'NORMALE',

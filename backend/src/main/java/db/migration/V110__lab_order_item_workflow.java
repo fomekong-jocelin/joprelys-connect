@@ -10,7 +10,7 @@ import org.flywaydb.core.api.migration.BaseJavaMigration;
 import org.flywaydb.core.api.migration.Context;
 
 /** Adds per-exam lifecycle tracking while preserving legacy order-level data. */
-public class V95__lab_order_item_workflow extends BaseJavaMigration {
+public class V110__lab_order_item_workflow extends BaseJavaMigration {
 
     @Override
     public void migrate(Context context) throws Exception {

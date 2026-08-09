@@ -60,15 +60,13 @@ class _PatientRecordLaboratoryItemSectionState
     final l10n = AppLocalizations.of(context);
     setState(() => _busyItems.add(key));
     try {
-      await ref.read(labOrderApiProvider).updateItemStatus(
-            orderId: order.id,
-            itemId: item.id,
-            status: status,
-          );
+      await ref
+          .read(labOrderApiProvider)
+          .updateItemStatus(orderId: order.id, itemId: item.id, status: status);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.labStatusUpdated)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.labStatusUpdated)));
       widget.onChanged();
     } catch (error) {
       if (!mounted) return;
@@ -122,14 +120,13 @@ class _PatientRecordLaboratoryItemSectionState
           ? 'lab-result-${result.id}'
           : result.resultNumber.trim();
       final safeName = rawName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-');
-      await File('${directory.path}/$safeName.pdf').writeAsBytes(
-        bytes,
-        flush: true,
-      );
+      await File(
+        '${directory.path}/$safeName.pdf',
+      ).writeAsBytes(bytes, flush: true);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.labPdfSaved)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.labPdfSaved)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
@@ -226,9 +223,7 @@ class _PatientRecordLaboratoryItemSectionState
     });
   }
 
-  List<PatientLabResultSummary> _resultsForOrder(
-    PatientLabOrderSummary order,
-  ) {
+  List<PatientLabResultSummary> _resultsForOrder(PatientLabOrderSummary order) {
     return widget.record.labResults
         .where(
           (result) =>
@@ -264,16 +259,16 @@ class _Header extends StatelessWidget {
             children: [
               Text(
                 l10n.labSectionTitle,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      fontWeight: FontWeight.w900,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
               ),
               const SizedBox(height: 2),
               Text(
                 '${l10n.labExamsCount(activeOrders)} · ${l10n.labResultsCount(resultCount)}',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
               ),
             ],
           ),
@@ -303,9 +298,9 @@ class _Heading extends StatelessWidget {
         Text(
           label,
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                color: colors.onSurfaceVariant,
-                fontWeight: FontWeight.w900,
-              ),
+            color: colors.onSurfaceVariant,
+            fontWeight: FontWeight.w900,
+          ),
         ),
         const SizedBox(width: 7),
         Text('$count', style: Theme.of(context).textTheme.labelMedium),
@@ -336,7 +331,7 @@ class _OrderCard extends StatelessWidget {
   final Set<String> busyResults;
   final VoidCallback onToggle;
   final void Function(PatientLabOrderItemSummary item, String status)
-      onAdvanceItem;
+  onAdvanceItem;
   final ValueChanged<PatientLabOrderItemSummary> onCancelItem;
   final ValueChanged<PatientLabResultSummary> onDownloadPdf;
 
@@ -376,9 +371,7 @@ class _OrderCard extends StatelessWidget {
                                 : order.number,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: Theme.of(context)
-                                .textTheme
-                                .titleSmall
+                            style: Theme.of(context).textTheme.titleSmall
                                 ?.copyWith(fontWeight: FontWeight.w900),
                           ),
                         ),
@@ -396,7 +389,10 @@ class _OrderCard extends StatelessWidget {
                     Text(
                       [
                         if (order.createdAt != null)
-                          AppLocaleFormatters.formatDate(order.createdAt!, locale),
+                          AppLocaleFormatters.formatDate(
+                            order.createdAt!,
+                            locale,
+                          ),
                         if (order.practitioner?.trim().isNotEmpty == true)
                           order.practitioner!.trim(),
                         if (order.items.isNotEmpty)
@@ -405,8 +401,8 @@ class _OrderCard extends StatelessWidget {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: colors.onSurfaceVariant,
-                          ),
+                        color: colors.onSurfaceVariant,
+                      ),
                     ),
                     const SizedBox(height: 9),
                     for (final item in preview)
@@ -418,9 +414,9 @@ class _OrderCard extends StatelessWidget {
                       Text(
                         '+${order.items.length - 2}',
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                   ],
                 ),
@@ -438,12 +434,15 @@ class _OrderCard extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: 9),
                         child: Text(
                           order.reason!.trim(),
-                          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                color: colors.onSurfaceVariant,
-                              ),
+                          style: Theme.of(context).textTheme.bodySmall
+                              ?.copyWith(color: colors.onSurfaceVariant),
                         ),
                       ),
-                    for (var index = 0; index < order.items.length; index++) ...[
+                    for (
+                      var index = 0;
+                      index < order.items.length;
+                      index++
+                    ) ...[
                       _ExamUnitRow(
                         order: order,
                         item: order.items[index],
@@ -465,9 +464,9 @@ class _OrderCard extends StatelessWidget {
                       Text(
                         l10n.labRequestLevelResults,
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                              color: colors.onSurfaceVariant,
-                              fontWeight: FontWeight.w800,
-                            ),
+                          color: colors.onSurfaceVariant,
+                          fontWeight: FontWeight.w800,
+                        ),
                       ),
                       const SizedBox(height: 6),
                       _ResultGroups(
@@ -489,14 +488,17 @@ class _OrderCard extends StatelessWidget {
   List<PatientLabResultSummary> _resultsForItem(
     PatientLabOrderItemSummary item,
   ) {
-    return results.where((result) {
-      if (item.id.isNotEmpty && result.labOrderItemId?.trim() == item.id) {
-        return true;
-      }
-      return result.labOrderItemId?.trim().isNotEmpty != true &&
-          result.examName?.trim().isNotEmpty == true &&
-          result.examName!.trim().toLowerCase() == item.examName.toLowerCase();
-    }).toList(growable: false);
+    return results
+        .where((result) {
+          if (item.id.isNotEmpty && result.labOrderItemId?.trim() == item.id) {
+            return true;
+          }
+          return result.labOrderItemId?.trim().isNotEmpty != true &&
+              result.examName?.trim().isNotEmpty == true &&
+              result.examName!.trim().toLowerCase() ==
+                  item.examName.toLowerCase();
+        })
+        .toList(growable: false);
   }
 
   List<PatientLabResultSummary> get _requestLevelResults {
@@ -527,9 +529,9 @@ class _ExamPreview extends StatelessWidget {
             item.examName,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
           ),
         ),
         const SizedBox(width: 8),
@@ -567,7 +569,8 @@ class _ExamUnitRow extends StatelessWidget {
     final l10n = AppLocalizations.of(context);
     final colors = Theme.of(context).colorScheme;
     final next = item.nextOperationalStatus;
-    final canCancel = canWrite &&
+    final canCancel =
+        canWrite &&
         !item.isTerminal &&
         item.normalizedStatus != 'RESULT_AVAILABLE';
 
@@ -582,9 +585,9 @@ class _ExamUnitRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   item.examName,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w900),
                 ),
               ),
               const SizedBox(width: 8),
@@ -602,9 +605,9 @@ class _ExamUnitRow extends StatelessWidget {
             const SizedBox(height: 7),
             Text(
               l10n.labNoStructuredResults,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
             ),
           ],
           if (canWrite && (next != null || canCancel)) ...[
@@ -713,8 +716,8 @@ class _ResultGroup extends StatelessWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
-                        fontWeight: FontWeight.w900,
-                      ),
+                    fontWeight: FontWeight.w900,
+                  ),
                 ),
               ),
               _StatusPill(status: first.status, compact: true),
@@ -731,16 +734,20 @@ class _ResultGroup extends StatelessWidget {
                     child: Text(
                       result.analyte,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                   const SizedBox(width: 10),
                   Text(
-                    [result.value, if (result.unit?.trim().isNotEmpty == true) result.unit!.trim()].join(' '),
+                    [
+                      result.value,
+                      if (result.unit?.trim().isNotEmpty == true)
+                        result.unit!.trim(),
+                    ].join(' '),
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          fontWeight: FontWeight.w900,
-                        ),
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ],
               ),
@@ -749,9 +756,9 @@ class _ResultGroup extends StatelessWidget {
             const SizedBox(height: 3),
             Text(
               first.conclusion!.trim(),
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: colors.onSurfaceVariant,
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(color: colors.onSurfaceVariant),
             ),
           ],
           if (downloadable != null) ...[
@@ -803,9 +810,9 @@ class _StatusPill extends StatelessWidget {
         l10n.labStatusLabel(status),
         maxLines: 1,
         style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: foreground,
-              fontWeight: FontWeight.w900,
-            ),
+          color: foreground,
+          fontWeight: FontWeight.w900,
+        ),
       ),
     );
   }
@@ -822,9 +829,9 @@ class _EmptyState extends StatelessWidget {
     return Text(
       message,
       textAlign: TextAlign.center,
-      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-            color: colors.onSurfaceVariant,
-          ),
+      style: Theme.of(
+        context,
+      ).textTheme.bodyMedium?.copyWith(color: colors.onSurfaceVariant),
     );
   }
 }
