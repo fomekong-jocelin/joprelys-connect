@@ -107,14 +107,18 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     };
 
     addUniqueItem(this.item('/dashboard', 'menu.dashboard', 'chart-bar'));
+    const canManageFacility = hasPermission('ORGANIZATION_MANAGE', 'USER_MANAGE', 'ORGANIZATION_STRUCTURE_MANAGE');
+    if (canManageFacility) {
+      addUniqueItem(this.section('menu.section.facility'));
+    }
     if (hasPermission('ORGANIZATION_MANAGE')) {
       addUniqueItem(this.item('/organizations', 'menu.clinics', 'building'));
     }
-    if (hasPermission('USER_MANAGE')) {
-      addUniqueItem(this.item('/clinic/staff', 'menu.staff', 'users'));
-    }
     if (hasPermission('ORGANIZATION_STRUCTURE_MANAGE')) {
       addUniqueItem(this.item('/clinic/hospital-organization', 'menu.hospitalOrganization', 'building'));
+    }
+    if (hasPermission('USER_MANAGE')) {
+      addUniqueItem(this.item('/clinic/staff', 'menu.staff', 'users'));
     }
     if (hasPermission('RBAC_MANAGE')) {
       addUniqueItem(this.item('/clinic/rbac', 'menu.rbac', 'shield-check'));
@@ -127,6 +131,11 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
     }
     if (hasPermission('APPOINTMENT_READ_OWN')) {
       addUniqueItem(this.item('/clinic/appointments', 'menu.doctorAppointments', 'calendar'));
+    }
+    const canViewCapacity = hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.spatial)
+      || hasPermission('SPATIAL_CONFIGURATION_MANAGE');
+    if (canViewCapacity) {
+      addUniqueItem(this.section('menu.section.capacity'));
     }
     if (hasAnyPermission(permissions, PROFESSIONAL_ACCESS_POLICIES.spatial)) {
       addUniqueItem(this.item('/clinic/spatial', 'menu.spatial', 'bed'));
@@ -204,6 +213,15 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       label: this.i18n.t(translationKey),
       iconName,
       indent,
+    };
+  }
+
+  private section(translationKey: string): NavItem {
+    return {
+      path: `section:${translationKey}`,
+      label: this.i18n.t(translationKey),
+      iconName: 'building',
+      isHeader: true,
     };
   }
 

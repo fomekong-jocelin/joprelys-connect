@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260809 — Clarification de la navigation clinique** :
+  - remplacement des libellés ambigus par `Services & unités de soins`, `Suivi des lits` et `Configurer chambres & lits` ;
+  - regroupement sous `Établissement` et `Capacité d’accueil` ;
+  - **SemVer** : correctif rétrocompatible candidat `PATCH`.
+
 - **BUG-20260809 — Filtrage du médecin responsable par service** :
   - les modales d’admission normale et de continuité urgence proposent uniquement les médecins actifs affectés à l’unité sélectionnée ;
   - l’admission normale impose maintenant l’ordre service → médecin et désactive le médecin avant la sélection du service ;

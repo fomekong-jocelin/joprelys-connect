@@ -114,7 +114,38 @@ describe('AppShellNavComponent patient isolation', () => {
 
     expect(paths.filter((path) => path === '/patients')).toHaveLength(1);
     expect(paths.some((path) => /^\/patients\/[^/]+\/(profile|consultations|lab-orders|hospitalizations|audit-trail)$/.test(path))).toBe(false);
-    expect(items.some((item) => item.isHeader || item.indent)).toBe(false);
+    expect(items.some((item) => item.indent)).toBe(false);
+  });
+
+  it('should group facility and bed-capacity links with task-oriented labels', () => {
+    effectiveAccess.set({
+      userId: 'admin-1',
+      roles: ['ADMIN_CLINIQUE'],
+      permissions: ['ORGANIZATION_STRUCTURE_MANAGE', 'HOSPITALIZATION_READ', 'SPATIAL_CONFIGURATION_MANAGE'],
+    });
+    fixture.componentRef.setInput('session', {
+      role: 'ADMIN_CLINIQUE',
+      name: 'Administrateur clinique',
+    });
+    fixture.detectChanges();
+
+    const items = fixture.componentInstance.menuItems();
+    const visibleItems = items.filter((item) => !item.isHeader);
+
+    expect(items.map((item) => item.label)).toEqual([
+      'menu.dashboard',
+      'menu.section.facility',
+      'menu.hospitalOrganization',
+      'menu.section.capacity',
+      'menu.spatial',
+      'menu.spatialConfig',
+    ]);
+    expect(visibleItems.map((item) => item.path)).toEqual([
+      '/dashboard',
+      '/clinic/hospital-organization',
+      '/clinic/spatial',
+      '/clinic/spatial/configuration',
+    ]);
   });
 
   it('should not expose billing or the global lab queue to a doctor without their exact permissions', () => {
