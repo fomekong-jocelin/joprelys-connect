@@ -12,6 +12,8 @@ public interface LabResultRepository extends JpaRepository<LabResultEntity, UUID
 
 	List<LabResultEntity> findByLabOrderId(UUID labOrderId);
 
+	List<LabResultEntity> findByLabOrderItemId(UUID labOrderItemId);
+
 	List<LabResultEntity> findByResultNumber(String resultNumber);
 
 	long countByResultNumberStartingWith(String prefix);

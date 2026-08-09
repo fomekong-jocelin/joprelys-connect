@@ -18,6 +18,7 @@ public record LabOrderResponse(
 		UUID targetOrganizationId,
 		ExamType examType,
 		List<String> exams,
+		List<LabOrderItemResponse> items,
 		String reason,
 		String priority,
 		LabOrderStatus status,

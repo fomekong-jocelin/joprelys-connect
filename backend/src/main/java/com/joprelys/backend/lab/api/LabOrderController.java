@@ -101,12 +101,23 @@ public class LabOrderController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('LAB_ORDER_WRITE')")
-    @Operation(summary = "Mettre à jour le statut d'un examen", description = "Modifie le statut d'une demande d'examen médical.")
+    @Operation(summary = "Mettre à jour le statut d'une demande", description = "Modifie le statut global d'une demande d'examen médical. Conservé pour compatibilité avec les intégrations existantes.")
     public LabOrderResponse updateStatus(
             @Parameter(description = "Identifiant de la demande d'examen") @PathVariable UUID id,
             @Valid @RequestBody UpdateLabOrderStatusRequest request,
             Authentication authentication) {
         return labOrderService.updateStatus(id, request.status(), authentication.getName());
+    }
+
+    @PatchMapping("/{orderId}/items/{itemId}/status")
+    @PreAuthorize("hasAuthority('LAB_ORDER_WRITE')")
+    @Operation(summary = "Mettre à jour le statut d'un examen", description = "Fait avancer un examen précis sans modifier directement les autres examens de la demande.")
+    public LabOrderResponse updateItemStatus(
+            @PathVariable UUID orderId,
+            @PathVariable UUID itemId,
+            @Valid @RequestBody UpdateLabOrderStatusRequest request,
+            Authentication authentication) {
+        return labOrderService.updateItemStatus(orderId, itemId, request.status(), authentication.getName());
     }
 
     @GetMapping("/patient/{patientId}/results")

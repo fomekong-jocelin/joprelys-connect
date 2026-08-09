@@ -27,6 +27,10 @@ public class LabResultEntity {
 	@JoinColumn(name = "lab_order_id", nullable = false)
 	private LabOrderEntity labOrder;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "lab_order_item_id")
+	private LabOrderItemEntity labOrderItem;
+
 	@ManyToOne(fetch = FetchType.LAZY, optional = false)
 	@JoinColumn(name = "patient_id", nullable = false)
 	private PatientEntity patient;
@@ -109,23 +113,28 @@ public class LabResultEntity {
 			Instant sampleCollectedAt,
 			Instant resultAt,
 			Instant validatedAt) {
-		this.id = UUID.randomUUID();
-		this.resultNumber = resultNumber;
-		this.labOrder = labOrder;
-		this.patient = patient;
-		this.organizationId = labOrder.getOrganizationId();
-		this.validatorName = validatorName;
-		this.analyteName = analyteName;
-		this.value = value;
-		this.unit = unit;
-		this.referenceRange = referenceRange;
-		this.interpretation = interpretation != null ? interpretation : "NORMAL";
-		this.comment = comment;
-		this.pdfFilePath = pdfFilePath;
-		this.sampleCollectedAt = sampleCollectedAt;
-		this.resultAt = resultAt;
-		this.validatedAt = validatedAt;
-		this.status = LabResultStatus.VALIDATED;
+		this(
+				resultNumber,
+				labOrder,
+				null,
+				patient,
+				validatorName,
+				LabResultStatus.VALIDATED,
+				null,
+				null,
+				null,
+				1,
+				null,
+				analyteName,
+				value,
+				unit,
+				referenceRange,
+				interpretation,
+				comment,
+				pdfFilePath,
+				sampleCollectedAt,
+				resultAt,
+				validatedAt);
 	}
 
 	public LabResultEntity(
@@ -149,9 +158,56 @@ public class LabResultEntity {
 			Instant sampleCollectedAt,
 			Instant resultAt,
 			Instant validatedAt) {
+		this(
+				resultNumber,
+				labOrder,
+				null,
+				patient,
+				validatorName,
+				status,
+				validatorUserId,
+				conclusion,
+				documentId,
+				version,
+				parentResult,
+				analyteName,
+				value,
+				unit,
+				referenceRange,
+				interpretation,
+				comment,
+				pdfFilePath,
+				sampleCollectedAt,
+				resultAt,
+				validatedAt);
+	}
+
+	public LabResultEntity(
+			String resultNumber,
+			LabOrderEntity labOrder,
+			LabOrderItemEntity labOrderItem,
+			PatientEntity patient,
+			String validatorName,
+			LabResultStatus status,
+			UUID validatorUserId,
+			String conclusion,
+			UUID documentId,
+			int version,
+			LabResultEntity parentResult,
+			String analyteName,
+			String value,
+			String unit,
+			String referenceRange,
+			String interpretation,
+			String comment,
+			String pdfFilePath,
+			Instant sampleCollectedAt,
+			Instant resultAt,
+			Instant validatedAt) {
 		this.id = UUID.randomUUID();
 		this.resultNumber = resultNumber;
 		this.labOrder = labOrder;
+		this.labOrderItem = labOrderItem;
 		this.patient = patient;
 		this.organizationId = labOrder.getOrganizationId();
 		this.validatorName = validatorName;
@@ -188,6 +244,10 @@ public class LabResultEntity {
 
 	public LabOrderEntity getLabOrder() {
 		return labOrder;
+	}
+
+	public LabOrderItemEntity getLabOrderItem() {
+		return labOrderItem;
 	}
 
 	public PatientEntity getPatient() {

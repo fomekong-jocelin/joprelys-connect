@@ -1,14 +1,13 @@
 import { DatePipe } from '@angular/common';
-import { Component, inject, signal, computed } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
-import { RouterLink } from '@angular/router';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { LabOrderApiService } from './lab-api.service';
-import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
+import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models';
 
 @Component({
   selector: 'app-lab-orders-page',
@@ -24,127 +23,130 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
       />
 
       <div class="app-container-wide pb-10">
-
-          <div class="grid gap-5 xl:grid-cols-[420px_1fr]">
-            <section class="ui-card-subtle p-5 md:p-6">
-              <div class="mb-4 flex items-center justify-between gap-3">
-                <div>
-                  <p class="ui-label">{{ t('lab.requests') }}</p>
-                  <h2 class="font-display text-lg font-extrabold" style="color: var(--text-primary)">
-                    {{ filteredOrders().length }} {{ t('lab.requestsCount') }}
-                  </h2>
-                </div>
-                <app-ui-button variant="secondary" (pressed)="loadOrders()">{{ t('lab.refresh') }}</app-ui-button>
+        <div class="grid gap-5 xl:grid-cols-[420px_1fr]">
+          <section class="ui-card-subtle p-5 md:p-6">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p class="ui-label">{{ t('lab.requests') }}</p>
+                <h2 class="font-display text-lg font-extrabold" style="color: var(--text-primary)">
+                  {{ filteredOrders().length }} {{ t('lab.requestsCount') }}
+                </h2>
               </div>
+              <app-ui-button variant="secondary" (pressed)="loadOrders()">{{ t('lab.refresh') }}</app-ui-button>
+            </div>
 
-              <!-- Filtres de recherche -->
-              <div class="mb-5 space-y-3 border-b pb-4" style="border-color: var(--app-border);">
-                <!-- Recherche texte -->
-                <div>
-                  <input
-                    type="text"
-                    [placeholder]="t('lab.searchPlaceholder')"
-                    class="w-full border px-3 py-2 text-sm bg-transparent"
-                    style="border-radius: var(--radius-brand-sm); border-color: var(--app-border); color: var(--text-primary);"
-                    [value]="searchQuery()"
-                    (input)="updateSearchQuery($event)"
-                  />
-                </div>
-                <!-- Sélecteurs Priorité & Statut -->
-                <div class="grid grid-cols-2 gap-2">
-                  <select
-                    class="border px-2 py-1.5 text-xs bg-transparent"
-                    style="border-radius: var(--radius-brand-sm); border-color: var(--app-border); color: var(--text-primary);"
-                    [value]="filterPriority()"
-                    (change)="updateFilterPriority($event)"
-                  >
-                    <option value="" style="background: var(--app-surface);">{{ t('lab.filterPriorityAll') }}</option>
-                    <option value="NORMALE" style="background: var(--app-surface);">NORMALE</option>
-                    <option value="URGENTE" style="background: var(--app-surface);">URGENTE</option>
-                  </select>
-
-                  <select
-                    class="border px-2 py-1.5 text-xs bg-transparent"
-                    style="border-radius: var(--radius-brand-sm); border-color: var(--app-border); color: var(--text-primary);"
-                    [value]="filterStatus()"
-                    (change)="updateFilterStatus($event)"
-                  >
-                    <option value="" style="background: var(--app-surface);">{{ t('lab.filterStatusAll') }}</option>
-                    @for (st of allowedStatuses; track st) {
-                      <option [value]="st" style="background: var(--app-surface);">{{ statusLabel(st) }}</option>
-                    }
-                  </select>
-                </div>
+            <div class="mb-5 space-y-3 border-b pb-4" style="border-color: var(--app-border);">
+              <div>
+                <input
+                  type="text"
+                  [placeholder]="t('lab.searchPlaceholder')"
+                  class="w-full border px-3 py-2 text-sm bg-transparent"
+                  style="border-radius: var(--radius-brand-sm); border-color: var(--app-border); color: var(--text-primary);"
+                  [value]="searchQuery()"
+                  (input)="updateSearchQuery($event)"
+                />
               </div>
+              <div class="grid grid-cols-2 gap-2">
+                <select
+                  class="border px-2 py-1.5 text-xs bg-transparent"
+                  style="border-radius: var(--radius-brand-sm); border-color: var(--app-border); color: var(--text-primary);"
+                  [value]="filterPriority()"
+                  (change)="updateFilterPriority($event)"
+                >
+                  <option value="" style="background: var(--app-surface);">{{ t('lab.filterPriorityAll') }}</option>
+                  <option value="NORMALE" style="background: var(--app-surface);">NORMALE</option>
+                  <option value="URGENTE" style="background: var(--app-surface);">URGENTE</option>
+                </select>
 
-              @if (isLoading()) {
-                <p class="py-8 text-center text-sm font-bold" style="color: var(--text-muted)">{{ t('common.loading') }}</p>
-              } @else if (loadError()) {
-                <p class="border p-3 text-sm font-semibold"
-                   style="border-radius: var(--radius-brand-md); border-color: color-mix(in srgb, var(--brand-danger) 34%, transparent); color: var(--brand-danger);">
-                  {{ loadError() }}
-                </p>
-              } @else if (filteredOrders().length === 0) {
-                <p class="py-8 text-center text-sm" style="color: var(--text-secondary)">{{ t('lab.empty') }}</p>
-              } @else {
-                <div class="space-y-3">
-                  @for (order of filteredOrders(); track order.id) {
-                    <button
-                      type="button"
-                      class="w-full border p-4 text-left transition"
-                      [style.border-color]="selectedOrder()?.id === order.id ? 'var(--brand-primary)' : 'var(--app-border)'"
-                      [style.background]="selectedOrder()?.id === order.id ? 'color-mix(in srgb, var(--brand-primary) 7%, var(--app-surface))' : 'var(--app-surface)'"
-                      style="border-radius: var(--radius-brand-md);"
-                      (click)="selectOrder(order)"
-                    >
-                      <div class="flex items-start justify-between gap-3">
-                        <div>
-                          <p class="font-mono text-sm font-black" style="color: var(--text-primary)">{{ order.examRequestNumber }}</p>
-                          <p class="mt-1 text-xs font-bold" style="color: var(--text-secondary)">{{ order.patientName }}</p>
-                        </div>
-                        <span class="border px-2 py-1 text-[11px] font-black uppercase"
-                              [style.color]="statusColor(order.status)"
-                              style="border-radius: var(--radius-brand-sm); border-color: var(--app-border);">
-                          {{ statusLabel(order.status) }}
-                        </span>
-                      </div>
-                      <p class="mt-2 text-xs" style="color: var(--text-muted)">
-                        {{ order.examType }} · {{ order.priority }} · {{ order.createdAt | date:'short' }}
-                      </p>
-                    </button>
+                <select
+                  class="border px-2 py-1.5 text-xs bg-transparent"
+                  style="border-radius: var(--radius-brand-sm); border-color: var(--app-border); color: var(--text-primary);"
+                  [value]="filterStatus()"
+                  (change)="updateFilterStatus($event)"
+                >
+                  <option value="" style="background: var(--app-surface);">{{ t('lab.filterStatusAll') }}</option>
+                  @for (st of allowedStatuses; track st) {
+                    <option [value]="st" style="background: var(--app-surface);">{{ statusLabel(st) }}</option>
                   }
-                </div>
-              }
-            </section>
+                </select>
+              </div>
+            </div>
 
-            <section class="ui-card-subtle min-h-[520px] p-5 md:p-6">
-              @if (selectedOrder(); as order) {
-                <div class="space-y-5">
-                  <div class="border-b pb-5" style="border-color: var(--app-border)">
-                    <p class="ui-label">{{ t('lab.detail') }}</p>
-                    <h2 class="mt-1 font-mono text-xl font-black" style="color: var(--text-primary)">{{ order.examRequestNumber }}</h2>
-                    <p class="mt-2 text-sm" style="color: var(--text-secondary)">
-                      {{ order.patientName }} · {{ t('lab.requestedBy') }} {{ order.requesterPractitionerName }}
+            @if (isLoading()) {
+              <p class="py-8 text-center text-sm font-bold" style="color: var(--text-muted)">{{ t('common.loading') }}</p>
+            } @else if (loadError()) {
+              <p class="border p-3 text-sm font-semibold"
+                 style="border-radius: var(--radius-brand-md); border-color: color-mix(in srgb, var(--brand-danger) 34%, transparent); color: var(--brand-danger);">
+                {{ loadError() }}
+              </p>
+            } @else if (filteredOrders().length === 0) {
+              <p class="py-8 text-center text-sm" style="color: var(--text-secondary)">{{ t('lab.empty') }}</p>
+            } @else {
+              <div class="space-y-3">
+                @for (order of filteredOrders(); track order.id) {
+                  <button
+                    type="button"
+                    class="w-full border p-4 text-left transition"
+                    [style.border-color]="selectedOrder()?.id === order.id ? 'var(--brand-primary)' : 'var(--app-border)'"
+                    [style.background]="selectedOrder()?.id === order.id ? 'color-mix(in srgb, var(--brand-primary) 7%, var(--app-surface))' : 'var(--app-surface)'"
+                    style="border-radius: var(--radius-brand-md);"
+                    (click)="selectOrder(order)"
+                  >
+                    <div class="flex items-start justify-between gap-3">
+                      <div>
+                        <p class="font-mono text-sm font-black" style="color: var(--text-primary)">{{ order.examRequestNumber }}</p>
+                        <p class="mt-1 text-xs font-bold" style="color: var(--text-secondary)">{{ order.patientName }}</p>
+                      </div>
+                      <span class="border px-2 py-1 text-[11px] font-black uppercase"
+                            [style.color]="statusColor(order.status)"
+                            style="border-radius: var(--radius-brand-sm); border-color: var(--app-border);">
+                        {{ statusLabel(order.status) }}
+                      </span>
+                    </div>
+                    <p class="mt-2 text-xs" style="color: var(--text-muted)">
+                      {{ order.examType }} · {{ order.priority }} · {{ order.createdAt | date:'short' }}
                     </p>
-                  </div>
+                  </button>
+                }
+              </div>
+            }
+          </section>
 
-                  <div class="grid gap-3 md:grid-cols-3">
-                    <div class="ui-card-muted p-4">
-                      <span class="ui-label">{{ t('lab.examType') }}</span>
-                      <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.examType }}</p>
-                    </div>
-                    <div class="ui-card-muted p-4">
-                      <span class="ui-label">{{ t('lab.priority') }}</span>
-                      <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.priority }}</p>
-                    </div>
-                    <div class="ui-card-muted p-4">
-                      <span class="ui-label">{{ t('lab.createdAt') }}</span>
-                      <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.createdAt | date:'mediumDate' }}</p>
-                    </div>
+          <section class="ui-card-subtle min-h-[520px] p-5 md:p-6">
+            @if (selectedOrder(); as order) {
+              <div class="space-y-5">
+                <div class="border-b pb-5" style="border-color: var(--app-border)">
+                  <p class="ui-label">{{ t('lab.detail') }}</p>
+                  <div class="mt-1 flex flex-wrap items-center justify-between gap-3">
+                    <h2 class="font-mono text-xl font-black" style="color: var(--text-primary)">{{ order.examRequestNumber }}</h2>
+                    <span class="border px-2.5 py-1 text-xs font-black uppercase"
+                          [style.color]="statusColor(order.status)"
+                          style="border-radius: var(--radius-brand-sm); border-color: var(--app-border);">
+                      {{ statusLabel(order.status) }}
+                    </span>
                   </div>
+                  <p class="mt-2 text-sm" style="color: var(--text-secondary)">
+                    {{ order.patientName }} · {{ t('lab.requestedBy') }} {{ order.requesterPractitionerName }}
+                  </p>
+                </div>
 
-                  @if (canWriteLab()) {
-                    <div class="ui-card-muted p-4">
+                <div class="grid gap-3 md:grid-cols-3">
+                  <div class="ui-card-muted p-4">
+                    <span class="ui-label">{{ t('lab.examType') }}</span>
+                    <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.examType }}</p>
+                  </div>
+                  <div class="ui-card-muted p-4">
+                    <span class="ui-label">{{ t('lab.priority') }}</span>
+                    <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.priority }}</p>
+                  </div>
+                  <div class="ui-card-muted p-4">
+                    <span class="ui-label">{{ t('lab.createdAt') }}</span>
+                    <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.createdAt | date:'mediumDate' }}</p>
+                  </div>
+                </div>
+
+                @if (canWriteLab() && !hasStructuredItems(order)) {
+                  <div class="ui-card-muted p-4">
                     <p class="ui-label">{{ t('lab.statusChange') }}</p>
                     <div class="mt-3 flex flex-col gap-3 md:flex-row md:items-end">
                       <label class="block md:w-72">
@@ -159,17 +161,78 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                         {{ isUpdatingStatus() ? t('common.saving') : t('lab.updateStatus') }}
                       </app-ui-button>
                     </div>
-                    @if (statusError()) {
-                      <p class="mt-3 text-sm font-semibold" style="color: var(--brand-danger)">{{ statusError() }}</p>
-                    }
-                    @if (statusSuccess()) {
-                      <p class="mt-3 text-sm font-semibold" style="color: var(--brand-success)">{{ statusSuccess() }}</p>
-                    }
-                    </div>
-                  }
+                  </div>
+                }
 
-                  <div class="ui-card-muted p-4">
-                    <p class="ui-label">{{ t('lab.exams') }}</p>
+                <div class="ui-card-muted p-4">
+                  <p class="ui-label">{{ t('lab.exams') }}</p>
+
+                  @if (hasStructuredItems(order)) {
+                    <div class="mt-3 grid gap-2 md:grid-cols-2">
+                      @for (item of structuredItems(order); track item.id) {
+                        <button
+                          type="button"
+                          class="border p-3 text-left transition"
+                          [style.border-color]="selectedItemId() === item.id ? 'var(--brand-primary)' : 'var(--app-border)'"
+                          [style.background]="selectedItemId() === item.id ? 'color-mix(in srgb, var(--brand-primary) 7%, var(--app-surface))' : 'var(--app-surface)'"
+                          style="border-radius: var(--radius-brand-sm);"
+                          (click)="selectItem(item)"
+                        >
+                          <div class="flex items-center justify-between gap-3">
+                            <span class="text-sm font-extrabold" style="color: var(--text-primary)">{{ item.examName }}</span>
+                            <span class="text-[11px] font-black uppercase" [style.color]="statusColor(item.status)">
+                              {{ statusLabel(item.status) }}
+                            </span>
+                          </div>
+                          @if (item.sampleCollectedAt) {
+                            <p class="mt-1 text-[11px]" style="color: var(--text-muted)">
+                              {{ t('lab.sampleCollectedAt') }}: {{ item.sampleCollectedAt | date:'short' }}
+                            </p>
+                          }
+                        </button>
+                      }
+                    </div>
+
+                    @if (selectedItem(order); as item) {
+                      <div class="mt-4 border-t pt-4" style="border-color: var(--app-border);">
+                        <div class="flex flex-wrap items-center justify-between gap-3">
+                          <div>
+                            <p class="text-sm font-extrabold" style="color: var(--text-primary)">{{ item.examName }}</p>
+                            <p class="text-xs" style="color: var(--text-secondary)">{{ statusLabel(item.status) }}</p>
+                          </div>
+                          @if (canWriteLab()) {
+                            <div class="flex flex-wrap gap-2">
+                              @if (nextItemStatus(order, item); as nextStatus) {
+                                <button
+                                  type="button"
+                                  class="ui-button ui-button-secondary"
+                                  [disabled]="updatingItemId() === item.id"
+                                  (click)="updateItemStatus(order, item, nextStatus)"
+                                >
+                                  {{ statusLabel(nextStatus) }}
+                                </button>
+                              }
+                              @if (canCancelItem(item)) {
+                                <button
+                                  type="button"
+                                  class="ui-button ui-button-secondary"
+                                  [disabled]="updatingItemId() === item.id"
+                                  (click)="updateItemStatus(order, item, LabOrderStatus.CANCELLED)"
+                                >
+                                  {{ statusLabel(LabOrderStatus.CANCELLED) }}
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+                        @if (order.status === LabOrderStatus.AWAITING_PAYMENT) {
+                          <p class="mt-3 text-sm font-semibold" style="color: var(--brand-danger)">
+                            {{ statusLabel(LabOrderStatus.AWAITING_PAYMENT) }}
+                          </p>
+                        }
+                      </div>
+                    }
+                  } @else {
                     <div class="mt-3 flex flex-wrap gap-2">
                       @for (exam of order.exams; track exam) {
                         <span class="border px-2.5 py-1 text-xs font-bold"
@@ -178,17 +241,29 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                         </span>
                       }
                     </div>
-                    @if (order.reason) {
-                      <p class="mt-3 text-sm" style="color: var(--text-secondary)">{{ order.reason }}</p>
-                    }
-                  </div>
+                  }
 
-                  @if (canWriteLab()) {
-                    <form class="ui-card-muted space-y-4 p-4" [formGroup]="resultForm" (ngSubmit)="submitResults(order)">
+                  @if (order.reason) {
+                    <p class="mt-3 text-sm" style="color: var(--text-secondary)">{{ order.reason }}</p>
+                  }
+
+                  @if (statusError()) {
+                    <p class="mt-3 text-sm font-semibold" style="color: var(--brand-danger)">{{ statusError() }}</p>
+                  }
+                  @if (statusSuccess()) {
+                    <p class="mt-3 text-sm font-semibold" style="color: var(--brand-success)">{{ statusSuccess() }}</p>
+                  }
+                </div>
+
+                @if (canWriteLab() && canEnterResults(order)) {
+                  <form class="ui-card-muted space-y-4 p-4" [formGroup]="resultForm" (ngSubmit)="submitResults(order)">
                     <div>
                       <p class="ui-label">{{ t('lab.resultEntry') }}</p>
                       <h3 class="font-display text-base font-extrabold" style="color: var(--text-primary)">
                         {{ t('lab.resultEntryTitle') }}
+                        @if (selectedItem(order); as item) {
+                          · {{ item.examName }}
+                        }
                       </h3>
                     </div>
 
@@ -263,13 +338,16 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                         {{ isSubmitting() ? t('common.saving') : t('lab.validateButton') }}
                       </app-ui-button>
                     </div>
-                    </form>
-                  }
+                  </form>
+                }
 
-                  @if (canReadLabResults()) {
-                    <div class="ui-card-muted p-4">
+                @if (canReadLabResults()) {
+                  <div class="ui-card-muted p-4">
                     <div class="mb-3">
                       <p class="ui-label">{{ t('lab.history') }}</p>
+                      @if (selectedItem(order); as item) {
+                        <p class="mt-1 text-sm font-extrabold" style="color: var(--text-primary)">{{ item.examName }}</p>
+                      }
                       <h3 class="font-display text-base font-extrabold" style="color: var(--text-primary)">
                         {{ filteredResults(order).length }} {{ t('lab.historyCount') }}
                       </h3>
@@ -306,19 +384,19 @@ import { LabOrder, LabResult, LabOrderStatus } from './lab.models';
                         </table>
                       </div>
                     }
-                    </div>
-                  }
-                </div>
-              } @else {
-                <div class="flex min-h-[440px] items-center justify-center text-center">
-                  <div>
-                    <h2 class="ui-title text-xl">{{ t('lab.noSelectionTitle') }}</h2>
-                    <p class="mt-2 max-w-md text-sm" style="color: var(--text-secondary)">{{ t('lab.noSelectionText') }}</p>
                   </div>
+                }
+              </div>
+            } @else {
+              <div class="flex min-h-[440px] items-center justify-center text-center">
+                <div>
+                  <h2 class="ui-title text-xl">{{ t('lab.noSelectionTitle') }}</h2>
+                  <p class="mt-2 max-w-md text-sm" style="color: var(--text-secondary)">{{ t('lab.noSelectionText') }}</p>
                 </div>
-              }
-            </section>
-          </div>
+              </div>
+            }
+          </section>
+        </div>
       </div>
     </app-shell>
   `,
@@ -329,12 +407,14 @@ export class LabOrdersPageComponent {
   private readonly labApi = inject(LabOrderApiService);
   private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
+  readonly LabOrderStatus = LabOrderStatus;
   readonly canReadLabResults = computed(() => this.rbacApi.hasPermission('LAB_ORDER_READ'));
   readonly canWriteLab = computed(() => this.rbacApi.hasPermission('LAB_ORDER_WRITE'));
 
   readonly searchQuery = signal('');
   readonly filterPriority = signal('');
   readonly filterStatus = signal('');
+  readonly selectedItemId = signal('');
 
   readonly filteredOrders = computed(() => {
     const query = this.searchQuery().toLowerCase().trim();
@@ -346,28 +426,11 @@ export class LabOrdersPageComponent {
         order.examRequestNumber.toLowerCase().includes(query) ||
         order.patientName.toLowerCase().includes(query) ||
         (order.patientId && order.patientId.toLowerCase().includes(query));
-
       const matchesPriority = !priority || order.priority === priority;
       const matchesStatus = !status || order.status === status;
-
       return matchesQuery && matchesPriority && matchesStatus;
     });
   });
-
-  updateSearchQuery(event: Event): void {
-    const value = event.target instanceof HTMLInputElement ? event.target.value : '';
-    this.searchQuery.set(value);
-  }
-
-  updateFilterPriority(event: Event): void {
-    const value = event.target instanceof HTMLSelectElement ? event.target.value : '';
-    this.filterPriority.set(value);
-  }
-
-  updateFilterStatus(event: Event): void {
-    const value = event.target instanceof HTMLSelectElement ? event.target.value : '';
-    this.filterStatus.set(value);
-  }
 
   readonly orders = signal<LabOrder[]>([]);
   readonly selectedOrder = signal<LabOrder | null>(null);
@@ -375,6 +438,7 @@ export class LabOrdersPageComponent {
   readonly isLoadingResults = signal(false);
   readonly isSubmitting = signal(false);
   readonly isUpdatingStatus = signal(false);
+  readonly updatingItemId = signal('');
   readonly loadError = signal('');
   readonly resultsError = signal('');
   readonly submitError = signal('');
@@ -413,16 +477,33 @@ export class LabOrdersPageComponent {
     return this.resultForm.controls.results;
   }
 
+  updateSearchQuery(event: Event): void {
+    const value = event.target instanceof HTMLInputElement ? event.target.value : '';
+    this.searchQuery.set(value);
+  }
+
+  updateFilterPriority(event: Event): void {
+    const value = event.target instanceof HTMLSelectElement ? event.target.value : '';
+    this.filterPriority.set(value);
+  }
+
+  updateFilterStatus(event: Event): void {
+    const value = event.target instanceof HTMLSelectElement ? event.target.value : '';
+    this.filterStatus.set(value);
+  }
+
   loadOrders(): void {
     this.isLoading.set(true);
     this.loadError.set('');
     this.labApi.getLabOrders().subscribe({
       next: (orders) => {
         this.orders.set(orders);
-        const selected = this.selectedOrder() ?? orders[0] ?? null;
+        const previousId = this.selectedOrder()?.id;
+        const selected = orders.find((order) => order.id === previousId) ?? orders[0] ?? null;
         this.selectedOrder.set(selected);
         if (selected) {
           this.statusDraft.set(selected.status);
+          this.selectInitialItem(selected);
           if (this.canReadLabResults()) this.loadResults(selected.patientId);
         }
         this.isLoading.set(false);
@@ -436,16 +517,76 @@ export class LabOrdersPageComponent {
 
   selectOrder(order: LabOrder): void {
     this.selectedOrder.set(order);
-    this.statusDraft.set(order.status as LabOrderStatus);
-    this.submitError.set('');
-    this.submitSuccess.set('');
-    this.statusError.set('');
-    this.statusSuccess.set('');
+    this.statusDraft.set(order.status);
+    this.selectedItemId.set('');
+    this.selectInitialItem(order);
+    this.clearMessages();
     if (this.canReadLabResults()) {
       this.loadResults(order.patientId);
     } else {
       this.patientResults.set([]);
     }
+  }
+
+  selectItem(item: LabOrderItem): void {
+    this.selectedItemId.set(item.id);
+    this.clearMessages();
+  }
+
+  structuredItems(order: LabOrder): LabOrderItem[] {
+    return order.items ?? [];
+  }
+
+  hasStructuredItems(order: LabOrder): boolean {
+    return this.structuredItems(order).some((item) => item.id?.trim().length > 0);
+  }
+
+  selectedItem(order: LabOrder): LabOrderItem | null {
+    const items = this.structuredItems(order);
+    return items.find((item) => item.id === this.selectedItemId()) ?? items[0] ?? null;
+  }
+
+  nextItemStatus(order: LabOrder, item: LabOrderItem): LabOrderStatus | null {
+    if (order.status === LabOrderStatus.AWAITING_PAYMENT) return null;
+    if (item.status === LabOrderStatus.REQUESTED || item.status === LabOrderStatus.PAID) {
+      return LabOrderStatus.SAMPLE_COLLECTED;
+    }
+    if (item.status === LabOrderStatus.SAMPLE_COLLECTED) {
+      return LabOrderStatus.IN_PROGRESS;
+    }
+    return null;
+  }
+
+  canCancelItem(item: LabOrderItem): boolean {
+    return item.status !== LabOrderStatus.CANCELLED &&
+      item.status !== LabOrderStatus.VALIDATED &&
+      item.status !== LabOrderStatus.RESULT_AVAILABLE;
+  }
+
+  canEnterResults(order: LabOrder): boolean {
+    if (!this.hasStructuredItems(order)) return true;
+    const item = this.selectedItem(order);
+    return item?.status === LabOrderStatus.IN_PROGRESS || item?.status === LabOrderStatus.RESULT_AVAILABLE;
+  }
+
+  updateItemStatus(order: LabOrder, item: LabOrderItem, status: LabOrderStatus): void {
+    if (!this.canWriteLab() || this.updatingItemId()) return;
+    this.updatingItemId.set(item.id);
+    this.statusError.set('');
+    this.statusSuccess.set('');
+    this.labApi.updateItemStatus(order.id, item.id, status).subscribe({
+      next: (updated) => {
+        this.replaceOrder(updated);
+        this.selectedOrder.set(updated);
+        this.selectedItemId.set(item.id);
+        this.statusSuccess.set(this.t('lab.statusSuccess'));
+        this.updatingItemId.set('');
+      },
+      error: (error) => {
+        this.statusError.set(error.error?.detail || error.error?.title || this.t('lab.statusError'));
+        this.updatingItemId.set('');
+      },
+    });
   }
 
   addResultLine(): void {
@@ -458,6 +599,11 @@ export class LabOrdersPageComponent {
 
   submitResults(order: LabOrder): void {
     if (!this.canWriteLab()) return;
+    const item = this.hasStructuredItems(order) ? this.selectedItem(order) : null;
+    if (item && !this.canEnterResults(order)) {
+      this.submitError.set(this.t('lab.statusError'));
+      return;
+    }
     if (this.resultForm.invalid || this.isSubmitting()) {
       this.resultForm.markAllAsTouched();
       return;
@@ -470,19 +616,20 @@ export class LabOrdersPageComponent {
 
     this.labApi.uploadResults({
       examRequestNumber: order.examRequestNumber,
+      labOrderItemId: item?.id,
       validatorName: raw.validatorName.trim(),
       status: raw.status,
       sampleCollectedAt: this.toIso(raw.sampleCollectedAt),
       resultAt: this.toIso(raw.validatedAt),
       validatedAt: this.toIso(raw.validatedAt),
       conclusion: raw.conclusion.trim() || undefined,
-      results: raw.results.map((item) => ({
-        analyteName: item.analyteName.trim(),
-        value: item.value.trim(),
-        unit: item.unit.trim() || undefined,
-        referenceRange: item.referenceRange.trim() || undefined,
-        interpretation: item.interpretation,
-        comment: item.comment?.trim() || undefined,
+      results: raw.results.map((result) => ({
+        analyteName: result.analyteName.trim(),
+        value: result.value.trim(),
+        unit: result.unit.trim() || undefined,
+        referenceRange: result.referenceRange.trim() || undefined,
+        interpretation: result.interpretation,
+        comment: result.comment?.trim() || undefined,
       })),
       pdfBase64: this.pdfBase64() || undefined,
     }, raw.apiKey.trim()).subscribe({
@@ -500,7 +647,7 @@ export class LabOrdersPageComponent {
   }
 
   updateStatus(order: LabOrder): void {
-    if (!this.canWriteLab()) return;
+    if (!this.canWriteLab() || this.hasStructuredItems(order)) return;
     this.isUpdatingStatus.set(true);
     this.statusError.set('');
     this.statusSuccess.set('');
@@ -519,7 +666,21 @@ export class LabOrdersPageComponent {
   }
 
   filteredResults(order: LabOrder): LabResult[] {
-    return this.patientResults().filter((result) => result.examRequestNumber === order.examRequestNumber);
+    const requestResults = this.patientResults().filter(
+      (result) => result.examRequestNumber === order.examRequestNumber,
+    );
+    if (!this.hasStructuredItems(order)) return requestResults;
+
+    const item = this.selectedItem(order);
+    if (!item) {
+      return requestResults.filter((result) => !result.labOrderItemId && !result.examName);
+    }
+
+    const examName = item.examName.trim().toLowerCase();
+    return requestResults.filter((result) => {
+      if (result.labOrderItemId === item.id) return true;
+      return !result.labOrderItemId && result.examName?.trim().toLowerCase() === examName;
+    });
   }
 
   onPdfSelected(event: Event): void {
@@ -558,6 +719,20 @@ export class LabOrdersPageComponent {
       interpretation: ['NORMAL'],
       comment: [''],
     });
+  }
+
+  private selectInitialItem(order: LabOrder): void {
+    const items = this.structuredItems(order);
+    if (!items.some((item) => item.id === this.selectedItemId())) {
+      this.selectedItemId.set(items[0]?.id ?? '');
+    }
+  }
+
+  private clearMessages(): void {
+    this.submitError.set('');
+    this.submitSuccess.set('');
+    this.statusError.set('');
+    this.statusSuccess.set('');
   }
 
   private loadResults(patientId: string): void {
