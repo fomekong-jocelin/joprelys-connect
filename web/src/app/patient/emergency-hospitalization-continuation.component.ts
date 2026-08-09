@@ -16,6 +16,7 @@ import { HospitalizationLocationApiService } from './hospitalization-location-ap
 import { PatientIdentityStatus } from './patient.models';
 import { SpatialApiService } from './spatial-api.service';
 import { isAdmissibleBed } from './bed-placement-policies';
+import { isEligibleHospitalizationPractitioner } from './staff-placement-policies';
 
 @Component({
   selector: 'app-emergency-hospitalization-continuation',
@@ -104,6 +105,9 @@ import { isAdmissibleBed } from './bed-placement-policies';
               <option value="">{{ t('patients.hospitalization.selectPractitioner', 'Sélectionner un praticien') }}</option>
               @for (member of eligiblePractitioners(); track member.id) { <option [value]="member.id">{{ member.displayName }}</option> }
             </select>
+            @if (selectedUnitId() && eligiblePractitioners().length === 0) {
+              <p class="mt-1 text-xs font-semibold text-amber-700 dark:text-amber-300">{{ t('patients.hospitalization.noPractitionerForService', 'Aucun médecin n’est affecté à ce service.') }}</p>
+            }
           </label>
 
           <label class="block min-w-0 lg:col-span-2">
@@ -173,10 +177,8 @@ export class EmergencyHospitalizationContinuationComponent {
   readonly freeBeds = computed(() => (this.bedsBySpace()[this.selectedSpaceId()] ?? [])
     .filter(isAdmissibleBed));
 
-  readonly eligiblePractitioners = computed(() => this.staff().filter((member) => {
-    const roles = member.role.split(',').map((role) => role.trim());
-    return roles.includes('MEDECIN');
-  }));
+  readonly eligiblePractitioners = computed(() => this.staff().filter((member) =>
+    isEligibleHospitalizationPractitioner(member, this.selectedUnitId())));
 
   constructor() {
     if (!this.canAdmit()) {
@@ -228,6 +230,9 @@ export class EmergencyHospitalizationContinuationComponent {
     this.selectedUnitId.set(unitId);
     this.selectedSpaceId.set('');
     this.selectedBedId.set('');
+    if (!this.eligiblePractitioners().some((practitioner) => practitioner.id === this.responsiblePractitionerId)) {
+      this.responsiblePractitionerId = '';
+    }
   }
 
   selectSpace(spaceId: string): void {

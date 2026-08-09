@@ -132,6 +132,59 @@ describe('PatientHospitalizationComponent permissions', () => {
     expect(hasPermission).toHaveBeenCalledWith('HOSPITALIZATION_MEDICATION_ADMINISTER');
   });
 
+  it('only exposes active physicians assigned to the selected hospitalization service', () => {
+    component.staffList.set([
+      {
+        id: 'doctor-med',
+        email: 'med@example.com',
+        displayName: 'Dr Médecine',
+        role: 'MEDECIN',
+        enabled: true,
+        createdAt: '2026-08-09T00:00:00Z',
+        activeOrganizationalUnits: [{
+          id: 'unit-med',
+          code: 'MED',
+          nameFr: 'Médecine',
+          nameEn: 'Medicine',
+          primary: true,
+        }],
+      },
+      {
+        id: 'doctor-surgery',
+        email: 'surgery@example.com',
+        displayName: 'Dr Chirurgie',
+        role: 'MEDECIN',
+        enabled: true,
+        createdAt: '2026-08-09T00:00:00Z',
+        activeOrganizationalUnits: [{
+          id: 'unit-surgery',
+          code: 'SURG',
+          nameFr: 'Chirurgie',
+          nameEn: 'Surgery',
+          primary: true,
+        }],
+      },
+      {
+        id: 'admin-med',
+        email: 'admin@example.com',
+        displayName: 'Administration',
+        role: 'ADMIN_CLINIQUE',
+        enabled: true,
+        createdAt: '2026-08-09T00:00:00Z',
+        activeOrganizationalUnits: [{
+          id: 'unit-med',
+          code: 'MED',
+          nameFr: 'Médecine',
+          nameEn: 'Medicine',
+          primary: true,
+        }],
+      },
+    ]);
+    component.selectedUnitId.set('unit-med');
+
+    expect(component.eligiblePractitioners().map((practitioner) => practitioner.id)).toEqual(['doctor-med']);
+  });
+
   it('does not expose admission to a nurse-style profile without HOSPITALIZATION_ADMIT', () => {
     grantedPermissions.add('HOSPITALIZATION_NOTE_WRITE');
     grantedPermissions.add('HOSPITALIZATION_CARE_WRITE');

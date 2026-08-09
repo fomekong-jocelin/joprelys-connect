@@ -397,6 +397,7 @@
   "patients.hospitalization.responsiblePractitioner": "Médecin responsable",
   "patients.hospitalization.selectVisit": "Sélectionner la visite",
   "patients.hospitalization.selectPractitioner": "Sélectionner le médecin",
+  "patients.hospitalization.noPractitionerForService": "Aucun médecin n’est affecté à ce service.",
   "patients.hospitalization.number": "Numéro de séjour",
   "patients.status": "Statut",
   "staff.copyPassword": "Copier le mot de passe",

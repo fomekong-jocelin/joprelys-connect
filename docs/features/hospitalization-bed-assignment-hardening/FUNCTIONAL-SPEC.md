@@ -7,6 +7,7 @@ Garantir que les deux parcours d’admission proposés au praticien utilisent la
 ## Périmètre livré dans cette tâche
 
 - admission normale : proposer uniquement un lit disponible, ouvert et prêt ;
+- admission normale et continuité urgence : proposer uniquement les médecins actifs affectés au service sélectionné ;
 - continuité urgence : conserver l’écran après un échec documentaire ;
 - permettre une régénération documentaire sans rejouer l’admission ;
 - backend : refuser un praticien responsable inactif, hors établissement ou non affecté à l’unité au moment de l’admission.

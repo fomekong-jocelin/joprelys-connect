@@ -422,12 +422,13 @@
                 <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
                 <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select">
                   <option value="">-- {{ t('patients.hospitalization.selectPractitioner') }} --</option>
-                  @for (p of staffList(); track p.id) {
-                    @if (hasRole(p.role, ['MEDECIN', 'ADMIN_CLINIQUE'])) {
-                      <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
-                    }
+                  @for (p of eligiblePractitioners(); track p.id) {
+                    <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
                   }
                 </select>
+                @if (selectedWardId() && eligiblePractitioners().length === 0) {
+                  <p class="text-[10px] text-amber-600 font-semibold mt-1">{{ t('patients.hospitalization.noPractitionerForService', 'Aucun médecin n’est affecté à ce service.') }}</p>
+                }
               </div>
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.service') }}*</label>

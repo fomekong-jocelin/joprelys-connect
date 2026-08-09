@@ -103,6 +103,13 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
         role: 'MEDECIN',
         enabled: true,
         createdAt: '2026-07-21T00:00:00Z',
+        activeOrganizationalUnits: [{
+          id: 'unit-med',
+          code: 'MED',
+          nameFr: 'Médecine',
+          nameEn: 'Medicine',
+          primary: true,
+        }],
       }])),
     };
 
@@ -139,6 +146,13 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
     fixture.componentInstance.selectUnit('unit-med');
 
     expect(fixture.componentInstance.eligibleSpaces().map((space) => space.name)).toEqual(['Chambre 101']);
+  });
+
+  it('only proposes physicians assigned to the selected unit', () => {
+    fixture.componentInstance.selectUnit('unit-med');
+
+    expect(fixture.componentInstance.eligiblePractitioners().map((practitioner) => practitioner.displayName))
+      .toEqual(['Dr Test']);
   });
 
   it('admits from emergency with structured unit, space and bed UUIDs and secures documents', () => {

@@ -6,6 +6,7 @@ import { HospitalOrganizationApiService } from '../clinic/hospital-organization/
 import { HospitalServiceCatalogEntry, OrganizationalUnit } from '../clinic/hospital-organization/hospital-organization.models';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
+import { StaffMember } from '../clinic/staff/staff.models';
 import { BedConfiguration, FacilitySpace, UnitSpaceAssignment } from '../clinic/spatial/spatial-configuration.models';
 import { I18nService } from '../core/i18n/i18n.service';
 import { HospitalizationConsumptionPanelComponent } from './hospitalization-consumption-panel.component';
@@ -18,6 +19,7 @@ import { HospitalizationStayHeaderComponent } from './hospitalization-stay-heade
 import { PatientApiService } from './patient-api.service';
 import { SpatialApiService } from './spatial-api.service';
 import { isAdmissibleBed } from './bed-placement-policies';
+import { isEligibleHospitalizationPractitioner } from './staff-placement-policies';
 
 interface PlacementBed extends BedConfiguration {
   readonly roomNumber: string;
@@ -52,7 +54,7 @@ export class PatientHospitalizationComponent implements OnInit {
   readonly t = (key: string, defaultValue?: string) => this.i18n.t(key, defaultValue);
 
   readonly list = signal<StructuredHospitalization[]>([]);
-  readonly staffList = signal<any[]>([]);
+  readonly staffList = signal<StaffMember[]>([]);
   readonly patientVisits = signal<any[]>([]);
 
   readonly showAdmitModal = signal(false);
@@ -143,6 +145,9 @@ export class PatientHospitalizationComponent implements OnInit {
     for (const practitioner of this.staffList()) map.set(practitioner.id, practitioner.displayName);
     return map;
   });
+
+  readonly eligiblePractitioners = computed(() => this.staffList().filter((member) =>
+    isEligibleHospitalizationPractitioner(member, this.selectedUnitId())));
 
   ngOnInit(): void {
     if (this.patientId) {
@@ -238,6 +243,9 @@ export class PatientHospitalizationComponent implements OnInit {
     this.selectedSpaceId.set('');
     this.selectedBedId.set('');
     this.freeBeds.set([]);
+    if (!this.eligiblePractitioners().some((practitioner) => practitioner.id === this.responsiblePractitionerId)) {
+      this.responsiblePractitionerId = '';
+    }
     this.loadFreeBedsForUnit(this.selectedUnitId());
   }
 

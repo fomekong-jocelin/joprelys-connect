@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BUG-20260809 — Filtrage du médecin responsable par service** :
+  - les modales d’admission normale et de continuité urgence proposent uniquement les médecins actifs affectés à l’unité sélectionnée ;
+  - le choix est réinitialisé lors d’un changement de service s’il devient invalide ;
+  - **SemVer** : correctif rétrocompatible candidat `PATCH`.
+
 - **DIAG-20260809 — Durcissement du parcours d’attribution du lit** :
   - les admissions normales et la continuité urgence ne proposent que les lits disponibles, ouverts et prêts ;
   - le backend contrôle le tenant, l’activation, le rôle `MEDECIN` et l’affectation active du praticien responsable ;

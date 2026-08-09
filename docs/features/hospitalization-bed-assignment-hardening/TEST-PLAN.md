@@ -11,3 +11,6 @@
 | Praticien désactivé | HTTP 409, aucune création | Spring unit |
 | Praticien sans affectation active à l’unité | HTTP 409, aucune création | Spring unit |
 | Praticien affecté à l’unité | Admission nominale | Spring unit |
+| Médecin affecté à un autre service | Non proposé | Angular |
+| Compte médecin désactivé | Non proposé | Angular |
+| Profil `ADMIN_CLINIQUE` | Non proposé comme médecin responsable | Angular |
