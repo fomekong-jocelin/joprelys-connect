@@ -14,3 +14,5 @@
 | Médecin affecté à un autre service | Non proposé | Angular |
 | Compte médecin désactivé | Non proposé | Angular |
 | Profil `ADMIN_CLINIQUE` | Non proposé comme médecin responsable | Angular |
+| Aucun service sélectionné | Sélecteur médecin désactivé | Angular |
+| Service sélectionné | Médecins du service affichés ensuite | Angular |

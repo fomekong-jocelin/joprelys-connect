@@ -6,7 +6,7 @@
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-08-09 — correctifs bornés du parcours urgence/admission : lits réellement admissibles, médecins filtrés par service, récupération documentaire et validation du praticien responsable ; workflow structurant restant à cadrer. |
+| Dernière mise à jour | 2026-08-09 — correctifs bornés du parcours urgence/admission : service avant médecin, lits réellement admissibles, médecins filtrés par service, récupération documentaire et validation du praticien responsable ; workflow structurant restant à cadrer. |
 | Responsable mise à jour | Amp |
 | État global | La livraison mobile est dans `main`, mais BUG-20260802 bloque la validation clinique de MOB-2816/MOB-2811 : répétitions, anciens transcripts et pertes de mots sont en correction cross-stack. |
 | Risques majeurs | P0 clinique : tant que les tests et la recette Android de BUG-20260802 ne sont pas verts, la dictée Consultation/Constantes ne doit pas être déclarée fiable. Restent aussi les gates Maven/PostgreSQL et Flutter exact-HEAD de TASK-20260801. |

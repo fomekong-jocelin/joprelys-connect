@@ -397,6 +397,7 @@
   "patients.hospitalization.responsiblePractitioner": "Responsible practitioner",
   "patients.hospitalization.selectVisit": "Select visit",
   "patients.hospitalization.selectPractitioner": "Select practitioner",
+  "patients.hospitalization.selectServiceFirst": "Select a service first",
   "patients.hospitalization.noPractitionerForService": "No physician is assigned to this service.",
   "patients.hospitalization.number": "Hospitalization number",
   "patients.status": "Status",

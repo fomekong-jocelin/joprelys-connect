@@ -11,6 +11,7 @@ La modale d’hospitalisation normale affichait tous les comptes portant un rôl
 ## Correction
 
 - règle frontend partagée entre admission normale et continuité urgence : rôle `MEDECIN`, compte actif et affectation active à l’unité sélectionnée ;
+- ordre de saisie corrigé : service avant médecin ; le sélecteur médecin reste désactivé sans service ;
 - réinitialisation du praticien choisi lors d’un changement de service s’il n’est plus éligible ;
 - message explicite lorsqu’aucun médecin n’est affecté au service ;
 - tests de non-régression sur le service sélectionné, le rôle et l’état actif.

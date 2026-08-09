@@ -10,6 +10,7 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 - **BUG-20260809 — Filtrage du médecin responsable par service** :
   - les modales d’admission normale et de continuité urgence proposent uniquement les médecins actifs affectés à l’unité sélectionnée ;
+  - l’admission normale impose maintenant l’ordre service → médecin et désactive le médecin avant la sélection du service ;
   - le choix est réinitialisé lors d’un changement de service s’il devient invalide ;
   - **SemVer** : correctif rétrocompatible candidat `PATCH`.
 
