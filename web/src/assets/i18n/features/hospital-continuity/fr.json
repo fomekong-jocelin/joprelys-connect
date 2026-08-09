@@ -7,6 +7,11 @@
   "patients.hospitalization.emergencyContinuation.submit": "Admettre et sécuriser la continuité",
   "patients.hospitalization.emergencyContinuation.success": "Hospitalisation créée avec continuité clinique sécurisée.",
   "patients.hospitalization.emergencyContinuation.documentWarning": "L’hospitalisation est créée, mais le lot documentaire doit être régénéré depuis le dossier d’urgence.",
+  "patients.hospitalization.emergencyContinuation.documentRecoveryTitle": "L’hospitalisation est créée. Le lot documentaire doit encore être sécurisé.",
+  "patients.hospitalization.emergencyContinuation.documentRetry": "Régénérer le lot documentaire",
+  "patients.hospitalization.emergencyContinuation.documentRetrySaving": "Régénération…",
+  "patients.hospitalization.emergencyContinuation.documentRetrySuccess": "Lot documentaire régénéré. La continuité est complète.",
+  "patients.hospitalization.emergencyContinuation.documentRetryError": "La régénération du lot documentaire a échoué. Réessayez.",
   "patients.hospitalization.emergencyContinuation.error": "La continuité vers l’hospitalisation n’a pas pu être finalisée.",
   "patients.hospitalization.noFreeBed": "Aucun lit libre dans ce service."
 }

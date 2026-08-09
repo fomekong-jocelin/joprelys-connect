@@ -11,6 +11,9 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import com.joprelys.backend.audit.application.AuditService;
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentRepository;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
@@ -38,6 +41,7 @@ import com.joprelys.backend.visit.application.VisitNumberGenerator;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import java.time.Instant;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
@@ -55,6 +59,7 @@ import org.springframework.web.server.ResponseStatusException;
 class HospitalizationAdmissionServiceTest {
 
     @Mock private HospitalizationRepository hospitalizationRepository;
+    @Mock private StaffOrganizationalUnitAssignmentRepository staffUnitAssignmentRepository;
     @Mock private UserAccountRepository userAccountRepository;
     @Mock private AuditService auditService;
     @Mock private BedRepository bedRepository;
@@ -204,6 +209,24 @@ class HospitalizationAdmissionServiceTest {
     }
 
     @Test
+    void shouldRejectAdmissionWhenResponsiblePractitionerIsNotAssignedToUnit() {
+        prepareVisitBasedAdmission();
+        preparePlacementWithBed(configuredBed(request.bedId()));
+        when(staffUnitAssignmentRepository.findAllByOrganizationIdAndStaffIdOrderByValidFromDesc(
+                organizationId,
+                request.responsiblePractitionerId())).thenReturn(List.of());
+
+        ResponseStatusException exception = assertThrows(
+                ResponseStatusException.class,
+                () -> service.admitPatient(request));
+
+        assertEquals(HttpStatus.CONFLICT, exception.getStatusCode());
+        assertEquals("Le praticien responsable n'est pas affecté à l'unité sélectionnée.", exception.getReason());
+        verify(bedRepository, never()).claimIfAvailable(any(), any(), any(), any(), any());
+        verify(hospitalizationRepository, never()).save(any());
+    }
+
+    @Test
     void shouldCreateAVisitAndRetainEmergencyLinkWhenNoVisitWasProvided() {
         prepareCanonicalPatient();
         UUID emergencyId = UUID.randomUUID();
@@ -218,6 +241,7 @@ class HospitalizationAdmissionServiceTest {
                 request.responsiblePractitionerId());
         EmergencyEntity emergency = org.mockito.Mockito.mock(EmergencyEntity.class);
         BedEntity bed = configuredBed(request.bedId());
+        prepareResponsiblePractitioner(emergencyRequest.responsiblePractitionerId(), emergencyRequest.serviceUnitId());
         preparePlacementWithBed(bed);
 
         when(emergencyRepository.findByIdWithPatientAndLogs(emergencyId)).thenReturn(Optional.of(emergency));
@@ -259,6 +283,7 @@ class HospitalizationAdmissionServiceTest {
 
     private VisitEntity prepareVisitBasedAdmission() {
         prepareCanonicalPatient();
+        prepareResponsiblePractitioner(request.responsiblePractitionerId(), request.serviceUnitId());
         VisitEntity visit = org.mockito.Mockito.mock(VisitEntity.class);
         lenient().when(visit.getPatient()).thenReturn(patient);
         lenient().when(visitRepository.findById(request.visitId())).thenReturn(Optional.of(visit));
@@ -267,6 +292,21 @@ class HospitalizationAdmissionServiceTest {
         lenient().when(bedAssignmentRepository.findActiveByBedId(request.bedId())).thenReturn(Optional.empty());
         lenient().when(hospitalizationRepository.findActiveByBedId(request.bedId())).thenReturn(Optional.empty());
         return visit;
+    }
+
+    private void prepareResponsiblePractitioner(UUID practitionerId, UUID unitId) {
+        UserAccountEntity practitioner = org.mockito.Mockito.mock(UserAccountEntity.class);
+        lenient().when(practitioner.isEnabled()).thenReturn(true);
+        lenient().when(practitioner.hasRole("MEDECIN")).thenReturn(true);
+        lenient().when(userAccountRepository.findByIdAndOrganizationId(practitionerId, organizationId))
+                .thenReturn(Optional.of(practitioner));
+        StaffOrganizationalUnitAssignmentEntity assignment =
+                org.mockito.Mockito.mock(StaffOrganizationalUnitAssignmentEntity.class);
+        lenient().when(assignment.getOrganizationalUnitId()).thenReturn(unitId);
+        lenient().when(assignment.activeAt(any(Instant.class))).thenReturn(true);
+        lenient().when(staffUnitAssignmentRepository
+                .findAllByOrganizationIdAndStaffIdOrderByValidFromDesc(organizationId, practitionerId))
+                .thenReturn(List.of(assignment));
     }
 
     private void prepareCanonicalPatient() {

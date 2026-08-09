@@ -15,6 +15,7 @@ import { ButtonComponent } from '../shared/ui/button.component';
 import { HospitalizationLocationApiService } from './hospitalization-location-api.service';
 import { PatientIdentityStatus } from './patient.models';
 import { SpatialApiService } from './spatial-api.service';
+import { isAdmissibleBed } from './bed-placement-policies';
 
 @Component({
   selector: 'app-emergency-hospitalization-continuation',
@@ -54,6 +55,20 @@ import { SpatialApiService } from './spatial-api.service';
         <app-ui-alert tone="warning">{{ t('patients.hospitalization.emergencyContinuation.admissionForbidden', 'Votre profil ne peut pas créer un séjour hospitalier.') }}</app-ui-alert>
       } @else if (loading()) {
         <p class="text-sm font-semibold text-[var(--text-muted)]">{{ t('common.loading', 'Chargement…') }}</p>
+      } @else if (admissionCreated()) {
+        <div class="space-y-4">
+          <p class="text-sm font-semibold text-[var(--text-secondary)]">
+            {{ t('patients.hospitalization.emergencyContinuation.documentRecoveryTitle', 'L’hospitalisation est créée. Le lot documentaire doit encore être sécurisé.') }}
+          </p>
+          <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <app-ui-button variant="secondary" type="button" (pressed)="cancelled.emit()" [disabled]="documentsRecoveryInProgress()">
+              {{ t('common.close', 'Fermer') }}
+            </app-ui-button>
+            <app-ui-button variant="primary" type="button" (pressed)="retryDocuments()" [disabled]="documentsRecoveryInProgress()">
+              {{ documentsRecoveryInProgress() ? t('patients.hospitalization.emergencyContinuation.documentRetrySaving', 'Régénération…') : t('patients.hospitalization.emergencyContinuation.documentRetry', 'Régénérer le lot documentaire') }}
+            </app-ui-button>
+          </div>
+        </div>
       } @else {
         <form class="grid min-w-0 grid-cols-1 gap-4 lg:grid-cols-2" (submit)="submit($event)">
           <label class="block min-w-0">
@@ -134,6 +149,8 @@ export class EmergencyHospitalizationContinuationComponent {
   readonly selectedBedId = signal('');
   readonly loading = signal(true);
   readonly saving = signal(false);
+  readonly admissionCreated = signal(false);
+  readonly documentsRecoveryInProgress = signal(false);
   readonly error = signal<string | null>(null);
   readonly documentWarning = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -154,11 +171,11 @@ export class EmergencyHospitalizationContinuationComponent {
   });
 
   readonly freeBeds = computed(() => (this.bedsBySpace()[this.selectedSpaceId()] ?? [])
-    .filter((bed) => bed.available && bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'READY'));
+    .filter(isAdmissibleBed));
 
   readonly eligiblePractitioners = computed(() => this.staff().filter((member) => {
     const roles = member.role.split(',').map((role) => role.trim());
-    return roles.includes('MEDECIN') || roles.includes('ADMIN_CLINIQUE');
+    return roles.includes('MEDECIN');
   }));
 
   constructor() {
@@ -241,6 +258,7 @@ export class EmergencyHospitalizationContinuationComponent {
     if (!this.canSubmit() || this.saving()) return;
 
     this.saving.set(true);
+    this.admissionCreated.set(false);
     this.error.set(null);
     this.documentWarning.set(null);
     this.success.set(null);
@@ -269,6 +287,12 @@ export class EmergencyHospitalizationContinuationComponent {
             'patients.hospitalization.emergencyContinuation.documentWarning',
             'L’hospitalisation est créée, mais le lot documentaire doit être régénéré depuis le dossier d’urgence.',
           ));
+          this.admissionCreated.set(true);
+          this.success.set(this.t(
+            'patients.hospitalization.emergencyContinuation.success',
+            'Hospitalisation créée avec continuité clinique sécurisée.',
+          ));
+          return;
         }
         this.success.set(this.t(
           'patients.hospitalization.emergencyContinuation.success',
@@ -284,6 +308,29 @@ export class EmergencyHospitalizationContinuationComponent {
           'La continuité vers l’hospitalisation n’a pas pu être finalisée.',
         ),
       ),
+    });
+  }
+
+  retryDocuments(): void {
+    if (!this.admissionCreated() || this.documentsRecoveryInProgress()) return;
+
+    this.documentsRecoveryInProgress.set(true);
+    this.error.set(null);
+    this.documentWarning.set(null);
+    this.documentApi.generateBundle(this.emergencyId()).pipe(
+      finalize(() => this.documentsRecoveryInProgress.set(false)),
+    ).subscribe({
+      next: () => {
+        this.success.set(this.t(
+          'patients.hospitalization.emergencyContinuation.documentRetrySuccess',
+          'Lot documentaire régénéré. La continuité est complète.',
+        ));
+        this.admitted.emit();
+      },
+      error: () => this.documentWarning.set(this.t(
+        'patients.hospitalization.emergencyContinuation.documentRetryError',
+        'La régénération du lot documentaire a échoué. Réessayez.',
+      )),
     });
   }
 }

@@ -1,5 +1,5 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
@@ -162,6 +162,31 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
       responsiblePractitionerId: 'doctor-1',
     });
     expect(documentApi.generateBundle).toHaveBeenCalledWith('emergency-1');
+    expect(admitted).toHaveBeenCalledOnce();
+  });
+
+  it('keeps the created admission recoverable when document generation fails', () => {
+    const admitted = vi.fn();
+    documentApi.generateBundle.mockReturnValueOnce(throwError(() => new Error('document service unavailable')));
+    fixture.componentInstance.admitted.subscribe(admitted);
+    fixture.componentInstance.selectUnit('unit-med');
+    fixture.componentInstance.selectSpace('space-101');
+    fixture.componentInstance.selectedBedId.set('bed-1');
+    fixture.componentInstance.responsiblePractitionerId = 'doctor-1';
+    fixture.componentInstance.admissionReason = 'Surveillance après stabilisation';
+
+    fixture.componentInstance.submit(new Event('submit'));
+    fixture.detectChanges();
+
+    expect(hospitalizationApi.admit).toHaveBeenCalledOnce();
+    expect(admitted).not.toHaveBeenCalled();
+    expect(fixture.componentInstance.admissionCreated()).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('doit être régénéré');
+
+    documentApi.generateBundle.mockReturnValueOnce(of([{ id: 'doc-2' }]));
+    fixture.componentInstance.retryDocuments();
+
+    expect(documentApi.generateBundle).toHaveBeenCalledTimes(2);
     expect(admitted).toHaveBeenCalledOnce();
   });
 

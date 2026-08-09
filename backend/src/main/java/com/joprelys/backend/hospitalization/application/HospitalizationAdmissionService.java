@@ -1,6 +1,8 @@
 package com.joprelys.backend.hospitalization.application;
 
 import com.joprelys.backend.audit.application.AuditService;
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity;
@@ -53,6 +55,7 @@ public class HospitalizationAdmissionService {
 
     private final HospitalizationRepository hospitalizationRepository;
     private final UserAccountRepository userAccountRepository;
+    private final StaffOrganizationalUnitAssignmentRepository staffUnitAssignmentRepository;
     private final AuditService auditService;
     private final BedRepository bedRepository;
     private final BedAssignmentRepository bedAssignmentRepository;
@@ -70,6 +73,7 @@ public class HospitalizationAdmissionService {
     public HospitalizationAdmissionService(
             HospitalizationRepository hospitalizationRepository,
             UserAccountRepository userAccountRepository,
+            StaffOrganizationalUnitAssignmentRepository staffUnitAssignmentRepository,
             AuditService auditService,
             BedRepository bedRepository,
             BedAssignmentRepository bedAssignmentRepository,
@@ -85,6 +89,7 @@ public class HospitalizationAdmissionService {
             OrganizationalUnitSpaceAssignmentRepository unitSpaceAssignmentRepository) {
         this.hospitalizationRepository = hospitalizationRepository;
         this.userAccountRepository = userAccountRepository;
+        this.staffUnitAssignmentRepository = staffUnitAssignmentRepository;
         this.auditService = auditService;
         this.bedRepository = bedRepository;
         this.bedAssignmentRepository = bedAssignmentRepository;
@@ -110,6 +115,10 @@ public class HospitalizationAdmissionService {
 
         rejectActiveHospitalization(patientContext);
         rejectDuplicateEmergencyHospitalization(emergency);
+        validateResponsiblePractitioner(
+                request.responsiblePractitionerId(),
+                organizationId,
+                placement.unit().getId());
         rejectActiveBedAssignment(placement.bed().getId());
 
         BedEntity occupiedBed = claimConfiguredBed(placement.bed());
@@ -278,6 +287,32 @@ public class HospitalizationAdmissionService {
                 || hospitalizationRepository.findActiveByBedId(bedId).isPresent()) {
             throw conflict("Le lit demandé est déjà occupé par un autre séjour.");
         }
+    }
+
+    private void validateResponsiblePractitioner(UUID practitionerId, UUID organizationId, UUID unitId) {
+        UserAccountEntity practitioner = userAccountRepository
+                .findByIdAndOrganizationId(practitionerId, organizationId)
+                .filter(UserAccountEntity::isEnabled)
+                .orElseThrow(() -> conflict("Le praticien responsable n'est pas actif dans cet établissement."));
+        if (!practitioner.hasRole("MEDECIN")) {
+            throw conflict("Le praticien responsable doit être un médecin habilité.");
+        }
+
+        Instant now = Instant.now();
+        boolean assignedToUnit = staffUnitAssignmentRepository
+                .findAllByOrganizationIdAndStaffIdOrderByValidFromDesc(organizationId, practitionerId)
+                .stream()
+                .anyMatch(assignment -> isActiveAssignmentForUnit(assignment, unitId, now));
+        if (!assignedToUnit) {
+            throw conflict("Le praticien responsable n'est pas affecté à l'unité sélectionnée.");
+        }
+    }
+
+    private boolean isActiveAssignmentForUnit(
+            StaffOrganizationalUnitAssignmentEntity assignment,
+            UUID unitId,
+            Instant at) {
+        return unitId.equals(assignment.getOrganizationalUnitId()) && assignment.activeAt(at);
     }
 
     private BedEntity claimConfiguredBed(BedEntity configuredBed) {

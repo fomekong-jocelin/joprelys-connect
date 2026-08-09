@@ -7,6 +7,11 @@
   "patients.hospitalization.emergencyContinuation.submit": "Admit and secure continuity",
   "patients.hospitalization.emergencyContinuation.success": "Hospitalization created with secured clinical continuity.",
   "patients.hospitalization.emergencyContinuation.documentWarning": "The hospitalization was created, but the emergency document bundle must be regenerated from the emergency record.",
+  "patients.hospitalization.emergencyContinuation.documentRecoveryTitle": "The hospitalization was created. The document bundle still needs to be secured.",
+  "patients.hospitalization.emergencyContinuation.documentRetry": "Regenerate document bundle",
+  "patients.hospitalization.emergencyContinuation.documentRetrySaving": "Regenerating…",
+  "patients.hospitalization.emergencyContinuation.documentRetrySuccess": "Document bundle regenerated. Continuity is complete.",
+  "patients.hospitalization.emergencyContinuation.documentRetryError": "Document bundle regeneration failed. Please retry.",
   "patients.hospitalization.emergencyContinuation.error": "The transition to hospitalization could not be completed.",
   "patients.hospitalization.noFreeBed": "No free bed is available in this service."
 }

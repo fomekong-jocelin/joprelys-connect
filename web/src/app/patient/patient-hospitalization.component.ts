@@ -17,6 +17,7 @@ import { HospitalizationNotesPanelComponent } from './hospitalization-notes-pane
 import { HospitalizationStayHeaderComponent } from './hospitalization-stay-header.component';
 import { PatientApiService } from './patient-api.service';
 import { SpatialApiService } from './spatial-api.service';
+import { isAdmissibleBed } from './bed-placement-policies';
 
 interface PlacementBed extends BedConfiguration {
   readonly roomNumber: string;
@@ -358,7 +359,7 @@ export class PatientHospitalizationComponent implements OnInit {
         for (const space of spaces) {
           const beds = (bedsBySpace[space.id] ?? []) as BedConfiguration[];
           for (const bed of beds) {
-            if (bed.available) candidates.push({ ...bed, roomNumber: space.name });
+            if (isAdmissibleBed(bed)) candidates.push({ ...bed, roomNumber: space.name });
           }
         }
         this.freeBeds.set(candidates);

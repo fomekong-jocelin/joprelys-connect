@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **DIAG-20260809 — Durcissement du parcours d’attribution du lit** :
+  - les admissions normales et la continuité urgence ne proposent que les lits disponibles, ouverts et prêts ;
+  - le backend contrôle le tenant, l’activation, le rôle `MEDECIN` et l’affectation active du praticien responsable ;
+  - un échec de génération documentaire reste visible et récupérable sans rejouer l’admission ;
+  - les workflows de demande, réservation, arrivée et handoff restent dans les lots `HOS-ADM`, `HOS-MOV` et `HOS-PATH` ;
+  - **SemVer** : candidat `MINOR`, aucun bump ni release préparé.
+
 - **BUG-20260804 — Support ordonnances/examens, captation continue non-bloquante et chunking strict backend** :
   - **Assistant IA Mobile** : ajout du support des prescriptions et examens complémentaires (`prescriptions` et `labOrders`) dans `ConsultationNote`, extrait par l'IA et affiché dans l'aperçu clinique `ClinicalAcceptedPreview`. Notification explicite du praticien si des ordonnances/examens sont détectés pour leur saisie dans les modules dédiés.
   - **Performance Écoute** : passage de l'analyse progressive (`analyzeProgressiveSegment`) en mode non-bloquant (`unawaited`) dans `ClinicalVoiceProgressiveCoordinator` pour éviter tout blocage de la boucle de sérialisation audio.
