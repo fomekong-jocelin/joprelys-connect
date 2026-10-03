@@ -85,7 +85,7 @@ export class UnifiedAdmissionComponent implements OnInit {
   readonly error = signal<string | null>(null);
   readonly currentStep = signal<AdmissionStep>(1);
   readonly steps: readonly AdmissionStep[] = [1, 2, 3];
-  readonly orientationOptions = ADMISSION_ORIENTATION_OPTIONS;
+  readonly orientationOptions = ADMISSION_ORIENTATION_OPTIONS.filter((option) => option.code !== 'EMERGENCY');
   readonly availableServices = signal<string[]>([...DEFAULT_HOSPITAL_SERVICES]);
   readonly isDraftRestored = signal(false);
   private readonly ADMISSION_DRAFT_KEY = 'joprelys_admission_draft';
@@ -143,13 +143,13 @@ export class UnifiedAdmissionComponent implements OnInit {
         patientMode: this.patientMode,
         formValue: this.form.getRawValue(),
       };
-      localStorage.setItem(this.ADMISSION_DRAFT_KEY, JSON.stringify(draft));
+      sessionStorage.setItem(this.ADMISSION_DRAFT_KEY, JSON.stringify(draft));
     } catch {}
   }
 
   private restoreDraftIfAvailable(): void {
     try {
-      const raw = localStorage.getItem(this.ADMISSION_DRAFT_KEY);
+      const raw = sessionStorage.getItem(this.ADMISSION_DRAFT_KEY);
       if (!raw) return;
       const draft = JSON.parse(raw);
       if (draft && draft.formValue) {
@@ -166,7 +166,7 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   clearDraft(): void {
     try {
-      localStorage.removeItem(this.ADMISSION_DRAFT_KEY);
+      sessionStorage.removeItem(this.ADMISSION_DRAFT_KEY);
     } catch {}
     this.isDraftRestored.set(false);
   }

@@ -277,7 +277,7 @@
                       <td class="py-4 px-4">
                         <span
                           class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]  dark:text-[var(--brand-success-text)] whitespace-nowrap">
-                          {{ visit.status }}
+                          {{ t('dashboard.queue.status.' + visit.status) }}
                         </span>
                       </td>
                       <td class="py-4 px-4 text-right whitespace-nowrap">
@@ -638,6 +638,10 @@
                   <p
                     class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.diastolic') }}</p>
                 }
+                @if (isBloodPressureInconsistent()) {
+                  <p
+                    class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.bloodPressureOrder') }}</p>
+                }
               </div>
 
               <!-- Fréquence Respiratoire (Full Row) -->
@@ -713,6 +717,9 @@
                 @if (isGlycemiaInvalid()) {
                   <p
                     class="text-[10px] text-[var(--brand-danger)] font-bold leading-none mt-1">{{ t('dashboard.vitals.error.glycemia') }}</p>
+                } @else if (isGlycemiaUnitSuspicious()) {
+                  <p
+                    class="text-[10px] text-[var(--brand-warning-text)] font-bold leading-snug mt-1">{{ t('dashboard.vitals.warning.glycemiaUnit') }}</p>
                 }
               </div>
             </div>

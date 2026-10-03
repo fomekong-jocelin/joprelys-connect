@@ -271,8 +271,22 @@ export class DashboardComponent implements OnInit {
     );
   }
 
+  isBloodPressureInconsistent(): boolean {
+    return (
+      typeof this.vitalsSystolic === 'number' &&
+      typeof this.vitalsDiastolic === 'number' &&
+      this.vitalsSystolic <= this.vitalsDiastolic
+    );
+  }
+
+  /** Une glycémie > 3 g/L est rare : souvent une saisie en mmol/L dans le champ g/L. */
+  isGlycemiaUnitSuspicious(): boolean {
+    return typeof this.vitalsGlycemia === 'number' && this.vitalsGlycemia > 3;
+  }
+
   isAnyVitalInvalid(): boolean {
     return (
+      this.isBloodPressureInconsistent() ||
       this.isTempInvalid() ||
       this.isWeightInvalid() ||
       this.isHeightInvalid() ||

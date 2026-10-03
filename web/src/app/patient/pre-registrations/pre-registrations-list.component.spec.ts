@@ -49,7 +49,8 @@ describe('PreRegistrationsListComponent', () => {
     };
 
     mockPatientApi = {
-      getPendingPreRegistrations: vi.fn().mockImplementation(() => of(JSON.parse(JSON.stringify(mockPreRegistrationsPage)))),
+      getPreRegistrations: vi.fn().mockImplementation(() => of(JSON.parse(JSON.stringify(mockPreRegistrationsPage)))),
+      getAdmissionQrCode: vi.fn().mockReturnValue(of(new Blob())),
       validatePreRegistration: vi.fn().mockReturnValue(of({ patientId: 'patient-new-123', status: 'VALIDATED' })),
       rejectPreRegistration: vi.fn().mockReturnValue(of(null)),
       downloadSummaryPdf: vi.fn().mockReturnValue(of(new Blob()))
@@ -83,17 +84,23 @@ describe('PreRegistrationsListComponent', () => {
 
   it('should initialize and load awaiting pre-registrations list', () => {
     expect(component).toBeTruthy();
-    expect(mockPatientApi.getPendingPreRegistrations).toHaveBeenCalledWith(0, 10);
+    expect(mockPatientApi.getPreRegistrations).toHaveBeenCalledWith('AWAITING_VALIDATION', 0, 10);
     expect(component.preRegistrations().length).toBe(2);
     expect(component.preRegistrations()[0].id).toBe('prereg-1');
   });
 
-  it('should filter pre-registrations list by status validated', () => {
-    mockPreRegistrationsPage.content[0].status = 'VALIDATED';
+  it('should request validated pre-registrations from the backend', () => {
+    mockPreRegistrationsPage.content = [{ ...mockPreRegistrationsPage.content[0], status: 'VALIDATED' }];
     component.setFilter('VALIDATED');
     expect(component.filter()).toBe('VALIDATED');
+    expect(mockPatientApi.getPreRegistrations).toHaveBeenLastCalledWith('VALIDATED', 0, 10);
     expect(component.preRegistrations().length).toBe(1);
     expect(component.preRegistrations()[0].id).toBe('prereg-1');
+  });
+
+  it('should expose the linked patient of a validated request', () => {
+    const validated = { ...component.preRegistrations()[1], status: 'VALIDATED' as const, validatedPatientId: 'patient-42' };
+    expect(component.linkedPatientId(validated)).toBe('patient-42');
   });
 
   it('should open details drawer and set reconciliation options', () => {
@@ -119,7 +126,7 @@ describe('PreRegistrationsListComponent', () => {
     expect(confirmSpy).toHaveBeenCalled();
     expect(mockPatientApi.rejectPreRegistration).toHaveBeenCalledWith('prereg-2');
     expect(component.successMessage()).toBe('preRegistrations.successRejected');
-    expect(mockPatientApi.getPendingPreRegistrations).toHaveBeenCalled();
+    expect(mockPatientApi.getPreRegistrations).toHaveBeenCalled();
   });
 
   it('should validate a pre-registration request as a new patient and trigger PDF download', () => {
@@ -190,10 +197,15 @@ describe('PreRegistrationsListComponent', () => {
     expect(component.validatedPatientId()).toBeNull();
   });
 
-  it('should generate clinic admission link and QR code url based on token claims', () => {
-    expect(component.getOrganizationId()).toBe('3ffc3039-8213-4613-975a-39503dc0ce5d');
-    expect(component.getAdmissionLink()).toContain('/public/register?orgId=3ffc3039-8213-4613-975a-39503dc0ce5d');
-    expect(component.getQrCodeUrl()).toContain('https://api.qrserver.com/v1/create-qr-code/');
+  it('should load the admission QR code from the backend, never from a third party', () => {
+    const createObjectUrl = vi.fn().mockReturnValue('blob:qr');
+    Object.defineProperty(window.URL, 'createObjectURL', { value: createObjectUrl, configurable: true });
+    Object.defineProperty(window.URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
+
+    component.openQrModal();
+
+    expect(mockPatientApi.getAdmissionQrCode).toHaveBeenCalledTimes(1);
+    expect(component.qrCodeUrl()).toBe('blob:qr');
   });
 
   it('should open and close QR code modal', () => {

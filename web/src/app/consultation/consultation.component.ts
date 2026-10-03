@@ -1,5 +1,4 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,7 +9,7 @@ import { PatientApiService } from '../patient/patient-api.service';
 import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patient.models';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { VisitApiService } from '../visit/visit-api.service';
-import { Visit, Vitals } from '../visit/visit.models';
+import { Vitals } from '../visit/visit.models';
 import {
   AiConsultationDraft,
   AiPrescriptionLine,
@@ -50,7 +49,6 @@ export class ConsultationComponent implements OnInit {
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly patientApi = inject(PatientApiService);
@@ -257,17 +255,15 @@ export class ConsultationComponent implements OnInit {
     if (!this.visitId) return;
     this.isLoading.set(true);
 
-    this.http
-      .get<{ visitNumber?: string } & Vitals>(`/api/visits/${this.visitId}/vitals`)
-      .subscribe({
-        next: (data) => {
-          this.vitals.set(data);
-          this.isLoading.set(false);
-        },
-        error: () => this.isLoading.set(false),
-      });
+    this.visitApi.getVitals(this.visitId).subscribe({
+      next: (data) => {
+        this.vitals.set(data);
+        this.isLoading.set(false);
+      },
+      error: () => this.isLoading.set(false),
+    });
 
-    this.http.get<Visit>(`/api/visits/${this.visitId}`).subscribe({
+    this.visitApi.getById(this.visitId).subscribe({
       next: (visit) => {
         if (visit?.visitNumber) this.visitNumber.set(visit.visitNumber);
         this.visitReason.set(visit?.reason || '');
@@ -289,7 +285,7 @@ export class ConsultationComponent implements OnInit {
           });
         }
       },
-      error: () => undefined,
+      error: () => this.errorMessage.set(this.i18n.t('consultation.errors.loadVisit')),
     });
 
     this.consultationApi.getConsultation(this.visitId).subscribe({
@@ -358,6 +354,7 @@ export class ConsultationComponent implements OnInit {
         conclusion: conclusion || undefined,
         advice: advice || undefined,
         followUp: followUp || undefined,
+        expectedUpdatedAt: this.consultation()?.updatedAt,
       })
       .subscribe({
         next: (savedConsultation) => {

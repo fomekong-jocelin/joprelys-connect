@@ -258,12 +258,17 @@ public class VisitService {
 	}
 
 	@Transactional
-	public VitalsEntity saveVitals(UUID visitId, SaveVitalsRequest request) {
+	public VitalsEntity saveVitals(UUID visitId, SaveVitalsRequest request, UUID actorUserId, UUID actorOrganizationId) {
 		VisitEntity visit = visitRepository.findById(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"EN_COURS".equals(visit.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les constantes ne peuvent être saisies que sur une visite active.");
+		}
+
+		if (request.systolic() != null && request.diastolic() != null && request.systolic() <= request.diastolic()) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"La tension systolique doit être supérieure à la tension diastolique.");
 		}
 
 		java.math.BigDecimal bmi = null;
@@ -291,7 +296,39 @@ public class VisitService {
 		vitals.setPainScale(request.painScale());
 		vitals.setBmi(bmi);
 
-		return vitalsRepository.save(vitals);
+		VitalsEntity saved = vitalsRepository.save(vitals);
+
+		// Une seule fiche de constantes par visite : chaque saisie est tracée (auteur, heure, valeurs).
+		auditService.logSuccess(
+				actorUserId,
+				actorOrganizationId,
+				visit.getPatient().getId(),
+				"VISIT",
+				visitId,
+				"VISIT_VITALS_RECORDED",
+				vitalsAuditSummary(request));
+
+		return saved;
+	}
+
+	private String vitalsAuditSummary(SaveVitalsRequest request) {
+		try {
+			Map<String, Object> values = new java.util.LinkedHashMap<>();
+			values.put("temperature", request.temperature());
+			values.put("weight", request.weight());
+			values.put("height", request.height());
+			values.put("pulse", request.pulse());
+			values.put("systolic", request.systolic());
+			values.put("diastolic", request.diastolic());
+			values.put("spo2", request.spo2());
+			values.put("glycemia", request.glycemia());
+			values.put("respiratoryRate", request.respiratoryRate());
+			values.put("painScale", request.painScale());
+			values.values().removeIf(java.util.Objects::isNull);
+			return objectMapper.writeValueAsString(values);
+		} catch (Exception e) {
+			return "Constantes enregistrées";
+		}
 	}
 
 	@Transactional(readOnly = true)

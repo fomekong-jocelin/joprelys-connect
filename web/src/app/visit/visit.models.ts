@@ -10,6 +10,8 @@ export interface Vitals {
   respiratoryRate?: number;
   painScale?: number;
   bmi?: number;
+  /** Heure de la dernière saisie des constantes (renvoyée par le backend). */
+  recordedAt?: string;
 }
 
 export interface Visit {

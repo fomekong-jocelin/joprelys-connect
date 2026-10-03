@@ -134,8 +134,14 @@ public class VisitController {
 			@ApiResponse(responseCode = "200", description = "Constantes vitales enregistrées"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
 	})
-	public VitalsResponse saveVitals(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id, @Valid @RequestBody SaveVitalsRequest request) {
-		var vitals = visitService.saveVitals(id, request);
+	public VitalsResponse saveVitals(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id, @Valid @RequestBody SaveVitalsRequest request,
+			Authentication authentication) {
+		var claims = (com.joprelys.backend.auth.security.JwtClaims) authentication.getDetails();
+		UUID userId = UUID.fromString(claims.subject());
+		UUID organizationId = claims.organizationId() != null && !claims.organizationId().isBlank()
+				? UUID.fromString(claims.organizationId())
+				: null;
+		var vitals = visitService.saveVitals(id, request, userId, organizationId);
 		return VitalsResponse.fromEntity(vitals);
 	}
 

@@ -69,13 +69,20 @@ public class ConsultationService {
 							request.advice(), request.followUp());
 				});
 
+		if (request.expectedUpdatedAt() != null && consultation.getUpdatedAt() != null
+				&& !consultation.getUpdatedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS)
+						.equals(request.expectedUpdatedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS))) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Cette consultation a été modifiée entre-temps par un autre poste. Rechargez-la avant d'enregistrer.");
+		}
+
+		// L'auteur de la consultation reste le praticien qui l'a créée.
 		consultation.setSymptoms(symptoms);
 		consultation.setClinicalExam(request.clinicalExam());
 		consultation.setDiagnosis(diagnosis);
 		consultation.setConclusion(request.conclusion());
 		consultation.setAdvice(request.advice());
 		consultation.setFollowUp(request.followUp());
-		consultation.setDoctor(doctor);
 
 		return consultationRepository.save(consultation);
 	}

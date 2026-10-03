@@ -322,6 +322,36 @@ public class VisitControllerTest {
 	}
 
 	@Test
+	void givenActiveVisit_whenSaveVitalsWithDiastolicAboveSystolic_thenBadRequest() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-A", "Motif A", "Tri");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/vitals")
+				.header("Authorization", "Bearer " + tokenAgentA)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"systolic\": 80, \"diastolic\": 120}"))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("systolique doit être supérieure")));
+	}
+
+	@Test
+	void givenActiveVisit_whenSaveVitals_thenReturnsRecordedAt() throws Exception {
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-A", "Motif A", "Tri");
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/vitals")
+				.header("Authorization", "Bearer " + tokenAgentA)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"temperature\": 37.0}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.recordedAt").isNotEmpty());
+	}
+
+	@Test
 	void givenVisitWithVitals_whenGetVitals_thenSuccess() throws Exception {
 		// Create visit in Tenant A
 		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());

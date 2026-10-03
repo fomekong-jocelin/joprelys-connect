@@ -8,6 +8,21 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **TICKET-20261003-PATIENT-JOURNEY-AUDIT — Correctifs ciblés du parcours patient (pré-enregistrement → constantes → consultation)** :
+  - un seul bon d'examens actif par visite : un nouvel enregistrement de la consultation ne crée plus de doublon au laboratoire ;
+  - consultation : l'auteur reste figé et un enregistrement concurrent est refusé (409, `expectedUpdatedAt`) au lieu d'un écrasement silencieux ;
+  - constantes : contrôle serveur systolique > diastolique, audit `VISIT_VITALS_RECORDED`, heure de mesure (`recordedAt`) visible du médecin, avertissement sur l'unité de glycémie ;
+  - pré-enregistrements : filtres par statut côté serveur, lien `validatedPatientId` (Flyway V111), action « Ouvrir le dossier », QR code généré par le backend (plus d'appel à `api.qrserver.com`), libellés traduits FR/EN ;
+  - admission : brouillon en `sessionStorage` (purgé à chaque changement d'utilisateur), plus d'orientation « Urgences » dans le parcours normal, praticien principal limité aux médecins et infirmiers ;
+  - file d'attente : statut de visite traduit ; consultation : erreur de chargement affichée, appels HTTP déplacés dans `VisitApiService` ;
+  - **SemVer** : nouveaux champs d'API et migration additive, rétrocompatibles → candidat `MINOR` (0.10.1 → 0.11.0).
+
+- **BUG-20261003 — Correction du démarrage Spring Boot sans IA (`FinalClinicalReview`)** :
+  - ajout de `@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")` sur `FinalClinicalReviewController`, `FinalClinicalReviewService` et `OpenAiFinalClinicalReviewGateway` ;
+  - élimination de l'`UnsatisfiedDependencyException` liée à l'absence du bean `AiConsultationService` lorsque `joprelys.ai.enabled=false` ;
+  - déblocage des migrations Flyway V88 à V110 sur environnement local ;
+  - **SemVer** : correctif rétrocompatible candidat `PATCH`.
+
 - **BUG-20260809 — Clarification de la navigation clinique** :
   - remplacement des libellés ambigus par `Services & unités de soins`, `Suivi des lits` et `Configurer chambres & lits` ;
   - regroupement sous `Établissement` et `Capacité d’accueil` ;

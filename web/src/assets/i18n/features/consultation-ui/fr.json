@@ -50,5 +50,6 @@
   "consultation.errors.savePrescription": "La consultation a été enregistrée, mais l’ordonnance n’a pas pu être sauvegardée.",
   "consultation.errors.saveConsultation": "La consultation n’a pas pu être enregistrée.",
   "consultation.errors.saveLabOrder": "La consultation a été enregistrée, mais la demande d’examens n’a pas pu être sauvegardée.",
-  "consultation.errors.closeVisit": "La consultation est enregistrée, mais la visite n’a pas pu être clôturée."
+  "consultation.errors.closeVisit": "La consultation est enregistrée, mais la visite n’a pas pu être clôturée.",
+  "consultation.errors.loadVisit": "Impossible de charger la visite : le contexte patient peut être incomplet. Rechargez la page."
 }

@@ -23,5 +23,6 @@ public record PatientPreRegistrationResponse(
         Instant createdAt,
         Double similarityScore,
         UUID similarPatientId,
-        String similarPatientName
+        String similarPatientName,
+        UUID validatedPatientId
 ) {}

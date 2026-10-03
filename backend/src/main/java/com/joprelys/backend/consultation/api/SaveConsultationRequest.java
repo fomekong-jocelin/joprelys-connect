@@ -1,5 +1,6 @@
 package com.joprelys.backend.consultation.api;
 
+import java.time.Instant;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 
@@ -22,6 +23,9 @@ public record SaveConsultationRequest(
 		String advice,
 
 		@Size(max = 1000, message = "Le suivi recommandé ne doit pas dépasser 1000 caractères.")
-		String followUp
+		String followUp,
+
+		/** Date de dernière modification connue du client ; détecte un enregistrement concurrent. */
+		Instant expectedUpdatedAt
 ) {
 }

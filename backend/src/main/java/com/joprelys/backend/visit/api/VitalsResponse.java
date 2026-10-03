@@ -2,6 +2,7 @@ package com.joprelys.backend.visit.api;
 
 import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
 import java.math.BigDecimal;
+import java.time.Instant;
 
 public record VitalsResponse(
 		BigDecimal temperature,
@@ -14,7 +15,8 @@ public record VitalsResponse(
 		BigDecimal glycemia,
 		Integer respiratoryRate,
 		Integer painScale,
-		BigDecimal bmi
+		BigDecimal bmi,
+		Instant recordedAt
 ) {
 	public static VitalsResponse fromEntity(VitalsEntity entity) {
 		if (entity == null) return null;
@@ -29,7 +31,8 @@ public record VitalsResponse(
 				entity.getGlycemia(),
 				entity.getRespiratoryRate(),
 				entity.getPainScale(),
-				entity.getBmi()
+				entity.getBmi(),
+				entity.getUpdatedAt() != null ? entity.getUpdatedAt() : entity.getCreatedAt()
 		);
 	}
 }

@@ -216,38 +216,20 @@ export class PatientVisitAdmissionDialogComponent implements OnInit {
     });
   }
 
+  /** Praticien principal d'une visite : médecin ou infirmier, du service choisi s'il en a. */
   getFilteredPractitioners(): StaffMember[] {
-    const list = this.staffList();
+    const hasRole = (member: StaffMember, role: string) =>
+      Boolean(member.role?.split(',').map(value => value.trim()).includes(role));
+    const isClinician = (member: StaffMember) => hasRole(member, 'MEDECIN') || hasRole(member, 'INFIRMIER');
+
+    const clinicians = this.staffList().filter(isClinician);
     const service = this.visitService;
-    const orientation = this.visitOrientation;
-
-    const hasRole = (member: StaffMember, role: string) => {
-      if (!member.role) return false;
-      return member.role.split(',').map(value => value.trim()).includes(role);
-    };
-
     if (service) {
-      const byService = list.filter(member =>
-        member.department?.toLowerCase() === service.toLowerCase()
-        && (hasRole(member, 'MEDECIN') || hasRole(member, 'INFIRMIER') || hasRole(member, 'PHARMACIEN') || hasRole(member, 'BIOLOGISTE')),
-      );
+      const byService = clinicians.filter(member => member.department?.toLowerCase() === service.toLowerCase());
       if (byService.length > 0) return byService;
     }
 
-    if (orientation === 'Médecine générale' || orientation === 'Pédiatrie' || orientation === 'Gynécologie') {
-      const doctors = list.filter(member => hasRole(member, 'MEDECIN'));
-      if (doctors.length > 0) return doctors;
-    } else if (orientation === 'Pharmacie') {
-      const pharmacists = list.filter(member => hasRole(member, 'PHARMACIEN'));
-      if (pharmacists.length > 0) return pharmacists;
-    } else if (orientation === 'Tri / Urgences') {
-      const emergencyStaff = list.filter(member => hasRole(member, 'INFIRMIER') || hasRole(member, 'MEDECIN'));
-      if (emergencyStaff.length > 0) return emergencyStaff;
-    }
-
-    return list.filter(member =>
-      hasRole(member, 'MEDECIN') || hasRole(member, 'INFIRMIER') || hasRole(member, 'PHARMACIEN') || hasRole(member, 'BIOLOGISTE'),
-    );
+    return clinicians;
   }
 
   onOrientationChange(): void {
