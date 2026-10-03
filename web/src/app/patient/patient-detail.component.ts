@@ -1,3 +1,4 @@
+import { ToastService } from '../shared/ui/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
@@ -223,6 +224,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   private readonly activePatientService = inject(ActivePatientService);
   private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   readonly loadedPatient = signal<Patient | null>(null);
   readonly loading = signal(false);
@@ -402,6 +404,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
 
   onVisitCreated(): void {
     this.showVisitModal.set(false);
+    this.toasts.show(`${this.i18n.t('admission.toast.visitCreated')} ${this.patient()?.fullName ?? ''}. ${this.i18n.t('admission.toast.nextStepVitals')}`);
     this.initializeDetails();
   }
 }

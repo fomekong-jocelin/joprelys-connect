@@ -137,3 +137,14 @@ Audit seul, sans livraison. Les corrections P0 relèveront d'un bump **MINOR** (
   - résumé de file au pluriel fautif (« 1 visites ») ; rôles affichés en code brut ;
   - « Propositions IA appliquées » affiché lors du passage en saisie manuelle ; sévérité des allergies en anglais brut.
 - Restent ouverts (hors périmètre, à planifier) : Entrée ne valide pas l'écran OTP ; pas de confirmation visuelle après création d'une visite ; brouillon d'admission restauré avec une heure d'arrivée ancienne ; le catalogue de repli propose des services non consultants (Laboratoire, Pharmacie, Bloc) tant qu'aucune unité n'est configurée ; le bandeau « Compte rendu validé » s'affiche aussi en saisie manuelle ; « Mon service » reste vide tant que les praticiens ne sont pas affectés à des unités.
+
+## Finalisation des anomalies restantes (2026-10-04)
+| Anomalie | Correctif | Vérifié |
+|---|---|---|
+| Entrée ne valide pas l'OTP | `submitOtpOnEnter` (personnel et patient) + garde de longueur dans `verifyStaffOtp` / `verifyOtp` | Chrome + tests unitaires |
+| Pas de confirmation après création de visite | `ToastService` + `ToastHostComponent` (shared/ui, monté dans `app.html`) ; message à l'admission unifiée et depuis le dossier patient | Chrome |
+| Brouillon restauré avec une heure d'arrivée ancienne | Au-delà de 30 min, heure remise à maintenant + avertissement | Test unitaire |
+| Consultation sans identité ni alertes avant le choix IA / manuel | `ConsultationPatientBannerComponent` : identité, âge, sexe, DPU, motif, allergies actives, alertes de constantes | Chrome |
+| Structure non configurée : catalogue complet proposé, « Mon service » vide | Backend : services de support exclus (Pharmacie, Bloc, Anesthésie, Réanimation) ; liste d'admission = unités de soins + services sans unité ; libellés de service issus du catalogue ; « Mon service » et filtre des praticiens incluent les services parents (`OrganizationalUnitNamesService`). Données locales : structure TC2CDK configurée via l'API (7 services, 3 unités de soins) et 5 affectations QA | Chrome + `VisitCareFlowControllerTest` |
+
+Non configuré : **Kinésithérapie / Rééducation** (service réel du TC2CDK) n'existe pas dans le catalogue national des services. Il faut une entrée de catalogue (migration) avant de pouvoir le créer.

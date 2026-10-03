@@ -59,7 +59,12 @@
       @if (isDraftRestored()) {
         <app-ui-alert tone="info" class="mb-4">
           <div class="flex items-center justify-between gap-2">
-            <span>{{ text('draftRestored') }}</span>
+            <span>
+              {{ text('draftRestored') }}
+              @if (draftArrivalReset()) {
+                <span class="mt-1 block text-xs">{{ text('draftArrivalReset') }}</span>
+              }
+            </span>
             <button type="button" (click)="clearDraft()" class="text-xs font-bold underline hover:no-underline cursor-pointer shrink-0">{{ text('clearDraft') }}</button>
           </div>
         </app-ui-alert>

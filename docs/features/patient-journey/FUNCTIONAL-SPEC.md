@@ -72,6 +72,19 @@ Le statut administratif (`EN_COURS` / `TERMINEE` / `ANNULEE`) est inchangé. Une
 - **Recherche du patient existant** par nom, téléphone ou numéro de dossier, dès 2 caractères. Chaque résultat affiche le numéro de dossier, la date de naissance et le téléphone pour distinguer les homonymes.
 - Les visites créées avant l'harmonisation gardent leur orientation en texte libre, qui est affichée telle quelle.
 
+## Compléments du 2026-10-04
+- **Connexion :** la touche Entrée valide le code OTP.
+- **Admission :**
+  - un message confirme la création de la visite et annonce l'étape suivante (attente des constantes) ;
+  - un brouillon repris plus de 30 minutes après sa création reçoit l'heure actuelle comme heure d'arrivée, avec un avertissement ;
+  - le récapitulatif reprend l'orientation, le service et le praticien.
+- **Services proposés à l'admission :**
+  - les unités de soins configurées, ainsi que les services qui n'en ont pas (ex. Imagerie, Laboratoire) ;
+  - jamais les services de support : Pharmacie, Bloc opératoire, Anesthésie, Réanimation ;
+  - sans structure configurée, le catalogue national sert de repli, avec la même exclusion.
+- **« Mon service » :** il inclut les visites orientées vers le service parent des unités du praticien.
+- **Consultation :** un bandeau affiche l'identité, l'âge, le sexe, le DPU, le motif, les allergies actives et les alertes de constantes, dès l'ouverture.
+
 ## Restant à arbitrer (PO + médecin référent)
 - Validation clinique des étapes et des seuils d'alerte, et seuils pédiatriques (âge du patient).
 - Tri de la file par gravité plutôt que par heure d'arrivée (aujourd'hui, les alertes sont signalées mais l'ordre reste l'heure d'arrivée).

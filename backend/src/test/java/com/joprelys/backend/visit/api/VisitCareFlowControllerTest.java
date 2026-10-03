@@ -5,12 +5,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.hospitalorganization.domain.OrganizationalUnitType;
+import com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
@@ -51,6 +54,14 @@ class VisitCareFlowControllerTest {
 	@Autowired
 	private JwtService jwtService;
 
+	@Autowired
+	private com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitRepository unitRepository;
+
+	@Autowired
+	private com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentRepository staffUnitAssignmentRepository;
+
+	private OrganizationEntity organization;
+	private UserAccountEntity savedDoctorA;
 	private String tokenAgent;
 	private String tokenDoctorA;
 	private String tokenDoctorB;
@@ -60,10 +71,12 @@ class VisitCareFlowControllerTest {
 	void setUp() {
 		jdbcTemplate.update("DELETE FROM visits");
 		jdbcTemplate.update("DELETE FROM patients");
+		jdbcTemplate.update("DELETE FROM staff_organizational_unit_assignments");
+		jdbcTemplate.update("DELETE FROM organizational_units");
 		userAccountRepository.deleteAll();
 		organizationRepository.deleteAll();
 
-		OrganizationEntity org = organizationRepository.save(
+		OrganizationEntity org = organization = organizationRepository.save(
 				new OrganizationEntity("Clinique A", "contacta@joprelys.local", "123", "Street A", "Douala"));
 
 		UserAccountEntity agent = new UserAccountEntity("agent@joprelys.local", "Agent", "AGENT_ACCUEIL", "passhash");
@@ -73,7 +86,8 @@ class VisitCareFlowControllerTest {
 		UserAccountEntity doctorB = new UserAccountEntity("doc.b@joprelys.local", "Dr Beta", "MEDECIN", "passhash");
 		doctorB.setOrganizationId(org.getId());
 		tokenAgent = jwtService.createToken(userAccountRepository.save(agent)).value();
-		tokenDoctorA = jwtService.createToken(userAccountRepository.save(doctorA)).value();
+		savedDoctorA = userAccountRepository.save(doctorA);
+		tokenDoctorA = jwtService.createToken(savedDoctorA).value();
 		tokenDoctorB = jwtService.createToken(userAccountRepository.save(doctorB)).value();
 
 		TenantContext.setTenantId(org.getId());
@@ -191,6 +205,9 @@ class VisitCareFlowControllerTest {
 				.header("Authorization", "Bearer " + tokenAgent))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.services").isNotEmpty())
+				.andExpect(jsonPath("$.services", org.hamcrest.Matchers.hasItem("Médecine générale")))
+				.andExpect(jsonPath("$.services", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("Pharmacie"))))
+				.andExpect(jsonPath("$.services", org.hamcrest.Matchers.not(org.hamcrest.Matchers.hasItem("Bloc opératoire"))))
 				.andExpect(jsonPath("$.practitioners.length()").value(2))
 				.andExpect(jsonPath("$.practitioners[*].displayName",
 						org.hamcrest.Matchers.containsInAnyOrder("Dr Alpha", "Dr Beta")));
@@ -198,6 +215,39 @@ class VisitCareFlowControllerTest {
 		mockMvc.perform(get("/api/staff")
 				.header("Authorization", "Bearer " + tokenAgent))
 				.andExpect(status().isForbidden());
+	}
+
+	@Test
+	void configuredStructureDrivesAdmissionServicesAndPractitionerUnits() throws Exception {
+		TenantContext.setTenantId(organization.getId());
+		var medicine = unitRepository.save(new OrganizationalUnitEntity(
+				organization.getId(), null, "SRV-MG", null, OrganizationalUnitType.SERVICE, "GENERAL_MEDICINE"));
+		var consultations = unitRepository.save(new OrganizationalUnitEntity(
+				organization.getId(), medicine.getId(), "UNIT-CONSULT", "Consultations", OrganizationalUnitType.CARE_UNIT, null));
+		unitRepository.save(new OrganizationalUnitEntity(
+				organization.getId(), null, "SRV-IMG", null, OrganizationalUnitType.SERVICE, "IMAGING"));
+		unitRepository.save(new OrganizationalUnitEntity(
+				organization.getId(), null, "SRV-PHARMA", null, OrganizationalUnitType.SERVICE, "PHARMACY"));
+		staffUnitAssignmentRepository.save(new StaffOrganizationalUnitAssignmentEntity(
+				organization.getId(), savedDoctorA.getId(), consultations.getId(), "PRACTITIONER", true,
+				java.time.Instant.now().minusSeconds(60), null));
+		TenantContext.clear();
+
+		mockMvc.perform(get("/api/visits/admission-options")
+				.header("Authorization", "Bearer " + tokenAgent))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.services", org.hamcrest.Matchers.contains("Consultations", "Imagerie")))
+				.andExpect(jsonPath("$.practitioners[?(@.displayName == 'Dr Alpha')].unitNames[0]").value("Consultations"));
+
+		// Visite orientée au niveau du service : visible pour les soignants de ses unités de soins.
+		jdbcTemplate.update("UPDATE visits SET service_name = 'Médecine générale' WHERE id = ?", visit.getId());
+		mockMvc.perform(get("/api/visits/active").param("scope", "SERVICE")
+				.header("Authorization", "Bearer " + tokenDoctorA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(1));
+		mockMvc.perform(get("/api/visits/active").param("scope", "SERVICE")
+				.header("Authorization", "Bearer " + tokenDoctorB))
+				.andExpect(jsonPath("$.length()").value(0));
 	}
 
 	private void postVitals(String json) throws Exception {

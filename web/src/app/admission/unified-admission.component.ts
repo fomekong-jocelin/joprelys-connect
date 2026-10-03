@@ -15,7 +15,9 @@ import { VisitApiService } from '../visit/visit-api.service';
 import { VisitAdmissionOptionsService, OTHER_SERVICE } from './visit-admission-options.service';
 import { VisitDetailsFieldsComponent } from './visit-details-fields.component';
 import { orientationLabel } from '../visit/visit-orientation.util';
-import { hasRequiredVisitDetails, toCreateVisitRequest, visitDetailsControls } from './visit-details-form';
+import { hasRequiredVisitDetails, localDateTimeNow, toCreateVisitRequest, visitDetailsControls } from './visit-details-form';
+
+const STALE_DRAFT_ARRIVAL_MS = 30 * 60_000;
 
 export type AdmissionCarePath = 'NORMAL' | 'EMERGENCY';
 export type AdmissionPatientMode = 'EXISTING' | 'NEW' | 'PROVISIONAL';
@@ -55,6 +57,7 @@ export class UnifiedAdmissionComponent implements OnInit {
   readonly currentStep = signal<AdmissionStep>(1);
   readonly steps: readonly AdmissionStep[] = [1, 2, 3];
   readonly isDraftRestored = signal(false);
+  readonly draftArrivalReset = signal(false);
   private readonly ADMISSION_DRAFT_KEY = 'joprelys_admission_draft';
 
   readonly form: FormGroup = this.fb.group({
@@ -118,6 +121,7 @@ export class UnifiedAdmissionComponent implements OnInit {
         if (draft.carePath) this.form.patchValue({ carePath: draft.carePath });
         if (draft.patientMode) this.form.patchValue({ patientMode: draft.patientMode });
         this.form.patchValue(draft.formValue);
+        this.refreshStaleDraftArrival();
         if (draft.selectedPatient) this.selectedPatient.set(draft.selectedPatient);
         if (draft.currentStep && [1, 2, 3].includes(draft.currentStep)) {
           this.currentStep.set(draft.currentStep as AdmissionStep);
@@ -125,6 +129,16 @@ export class UnifiedAdmissionComponent implements OnInit {
         this.isDraftRestored.set(true);
       }
     } catch {}
+  }
+
+  /** Un brouillon repris tard ne doit pas imposer une heure d'arrivée périmée. */
+  private refreshStaleDraftArrival(): void {
+    const arrivalAt = this.form.get('arrivalAt')?.value;
+    const arrival = arrivalAt ? Date.parse(arrivalAt) : Number.NaN;
+    if (Number.isNaN(arrival) || Date.now() - arrival > STALE_DRAFT_ARRIVAL_MS) {
+      this.form.patchValue({ arrivalAt: localDateTimeNow() });
+      this.draftArrivalReset.set(!Number.isNaN(arrival));
+    }
   }
 
   clearDraft(): void {

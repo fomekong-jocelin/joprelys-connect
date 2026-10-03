@@ -145,6 +145,7 @@ export class LoginComponent {
   }
 
   verifyStaffOtp(): void {
+    if (this.loading() || this.staffOtpCode().length !== 6) return;
     this.loading.set(true);
     this.error.set(null);
     this.authApi.verifyStaffOtp(this.email(), this.staffOtpCode()).subscribe({
@@ -199,6 +200,7 @@ export class LoginComponent {
   }
 
   verifyOtp(): void {
+    if (this.loading() || this.otpCode().length !== 6) return;
     this.loading.set(true);
     this.error.set(null);
     this.portalService.verifyOtp({
@@ -223,6 +225,22 @@ export class LoginComponent {
   updatePatientBirthDate(event: Event): void { this.patientBirthDate.set(this.inputValue(event)); }
   updateOtpCode(event: Event): void { this.otpCode.set(this.inputValue(event)); }
   updateStaffOtpCode(event: Event): void { this.staffOtpCode.set(this.inputValue(event)); }
+
+  /**
+   * Entrée valide le code même si le bouton n'est pas encore réactivé à l'écran
+   * (saisie rapide ou collage suivi immédiatement d'Entrée).
+   */
+  submitOtpOnEnter(event: Event, mode: 'staff' | 'patient'): void {
+    event.preventDefault();
+    const value = this.inputValue(event);
+    if (mode === 'staff') {
+      this.staffOtpCode.set(value);
+      this.verifyStaffOtp();
+    } else {
+      this.otpCode.set(value);
+      this.verifyOtp();
+    }
+  }
 
   t(key: string): string {
     return this.i18n.t(key);

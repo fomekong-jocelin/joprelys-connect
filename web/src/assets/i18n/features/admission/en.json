@@ -130,5 +130,9 @@
   "admission.mainPractitionerPlaceholder": "-- Unassigned (shared queue) --",
   "admission.arrivalAt": "Arrival date and time",
   "admission.optionsLoadError": "Departments and practitioners unavailable: you can type the department under “Other” and leave the practitioner unassigned.",
-  "admission.summaryVisitChoices": "Orientation · Department · Main practitioner"
+  "admission.summaryVisitChoices": "Orientation · Department · Main practitioner",
+  "admission.toast.visitCreated": "Visit opened for",
+  "admission.toast.nextStepVitals": "The patient is now in the queue, awaiting vital signs.",
+  "admission.toast.emergencyCreated": "Emergency registered for",
+  "admission.draftArrivalReset": "The draft arrival time was replaced by the current time: correct it if the patient arrived earlier."
 }

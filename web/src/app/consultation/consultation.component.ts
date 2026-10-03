@@ -19,6 +19,7 @@ import {
 } from './ai-consultation-api.service';
 import { ClinicalNoteEditorComponent } from './clinical-note-editor.component';
 import { ConsultationApiService } from './consultation-api.service';
+import { ConsultationPatientBannerComponent } from './consultation-patient-banner.component';
 import { ConsultationFeedbackStore } from './consultation-feedback.store';
 import { ConsultationPrescriptionFacade } from './consultation-prescription.facade';
 import { ConsultationUiLabelsService } from './consultation-ui-labels.service';
@@ -41,6 +42,7 @@ interface CommonExam {
     ClinicalNoteEditorComponent,
     VitalAlertsComponent,
     VitalsHistoryComponent,
+    ConsultationPatientBannerComponent,
   ],
   providers: [
     ConsultationFeedbackStore,

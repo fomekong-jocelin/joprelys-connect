@@ -39,6 +39,13 @@
       </div>
     </header>
 
+    <app-consultation-patient-banner
+      [patient]="patient()"
+      [allergies]="patientAllergies()"
+      [vitals]="vitals()"
+      [visitReason]="visitReason()"
+    />
+
     @if (successMessage()) {
       <div
         class="flex items-center gap-3 rounded-[var(--radius-brand-md)] border border-[var(--brand-success-muted)] bg-[var(--brand-success-subtle)] p-3 text-sm font-semibold text-[var(--brand-success-text)]"

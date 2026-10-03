@@ -199,4 +199,22 @@ describe('UnifiedAdmissionComponent', () => {
     expect(options('visit-practitioner')).toContain('Dr Péd');
     expect(options('visit-practitioner')).not.toContain('Dr MG');
   });
+
+  it("remplace l'heure d'arrivée périmée d'un brouillon restauré", () => {
+    const stale = new Date(Date.now() - 2 * 60 * 60_000);
+    const staleLocal = new Date(stale.getTime() - stale.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+    sessionStorage.setItem('joprelys_admission_draft', JSON.stringify({
+      currentStep: 2,
+      carePath: 'NORMAL',
+      patientMode: 'EXISTING',
+      formValue: { ...component.form.getRawValue(), carePath: 'NORMAL', arrivalAt: staleLocal },
+    }));
+
+    const restored = TestBed.createComponent(UnifiedAdmissionComponent);
+    restored.detectChanges();
+
+    expect(restored.componentInstance.form.get('arrivalAt')?.value).not.toBe(staleLocal);
+    expect(restored.componentInstance.draftArrivalReset()).toBe(true);
+    sessionStorage.removeItem('joprelys_admission_draft');
+  });
 });
