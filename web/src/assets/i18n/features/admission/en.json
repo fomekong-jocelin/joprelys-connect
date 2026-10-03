@@ -128,5 +128,7 @@
   "admission.error.EMERGENCY_ADMISSION_FAILED": "The emergency admission could not be created. Try again without closing the window.",
   "admission.mainPractitioner": "Main practitioner",
   "admission.mainPractitionerPlaceholder": "-- Unassigned (shared queue) --",
-  "admission.arrivalAt": "Arrival date and time"
+  "admission.arrivalAt": "Arrival date and time",
+  "admission.optionsLoadError": "Departments and practitioners unavailable: you can type the department under “Other” and leave the practitioner unassigned.",
+  "admission.summaryVisitChoices": "Orientation · Department · Main practitioner"
 }

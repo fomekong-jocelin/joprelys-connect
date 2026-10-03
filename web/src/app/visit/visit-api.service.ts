@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { ActiveVisitScope, CreateVisitRequest, Visit, VitalMeasurement, Vitals } from './visit.models';
+import { ActiveVisitScope, CreateVisitRequest, Visit, VisitAdmissionOptions, VitalMeasurement, Vitals } from './visit.models';
 
 @Injectable({
   providedIn: 'root',
@@ -11,6 +11,10 @@ export class VisitApiService {
 
   create(dto: CreateVisitRequest): Observable<Visit> {
     return this.http.post<Visit>('/api/visits', dto);
+  }
+
+  getAdmissionOptions(): Observable<VisitAdmissionOptions> {
+    return this.http.get<VisitAdmissionOptions>('/api/visits/admission-options');
   }
 
   getById(id: string): Observable<Visit> {

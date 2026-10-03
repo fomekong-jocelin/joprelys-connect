@@ -94,17 +94,18 @@ export class ActiveVisitQueueComponent implements OnInit {
   }
 
   queueSummaryLabel(): string {
+    // Format « libellé : valeur » : lisible quel que soit le nombre, sans règle de pluriel.
     const counts = this.stageCounts();
     const parts = [
-      `${this.activeVisits().length} ${this.t('dashboard.queue.summary.active')}`,
-      `${counts.ATTENTE_CONSTANTES} ${this.t('queue.summary.waitingVitals')}`,
-      `${counts.PRET_MEDECIN} ${this.t('queue.summary.ready')}`,
-      `${counts.EN_CONSULTATION} ${this.t('queue.summary.inConsultation')}`,
+      `${this.t('queue.summary.v2.active')} : ${this.activeVisits().length}`,
+      `${this.t('queue.summary.v2.waitingVitals')} : ${counts.ATTENTE_CONSTANTES}`,
+      `${this.t('queue.summary.v2.ready')} : ${counts.PRET_MEDECIN}`,
+      `${this.t('queue.summary.v2.inConsultation')} : ${counts.EN_CONSULTATION}`,
     ];
-    if (this.criticalCount() > 0) parts.push(`${this.criticalCount()} ${this.t('queue.summary.critical')}`);
+    if (this.criticalCount() > 0) parts.push(`${this.t('queue.summary.v2.critical')} : ${this.criticalCount()}`);
     const longestWait = this.longestQueueWaitMinutes();
     if (longestWait > 0) {
-      parts.push(`${this.t('dashboard.queue.summary.maxWait')} ${this.formatWaitDuration(longestWait)}`);
+      parts.push(`${this.t('queue.summary.v2.maxWait')} : ${this.formatWaitDuration(longestWait)}`);
     }
     return parts.join(' · ');
   }

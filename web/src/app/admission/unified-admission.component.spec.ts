@@ -3,8 +3,6 @@ import { of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { PatientApiService } from '../patient/patient-api.service';
-import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
-import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { Patient } from '../patient/patient.models';
 import { VisitApiService } from '../visit/visit-api.service';
 import { UnifiedAdmissionComponent } from './unified-admission.component';
@@ -37,10 +35,19 @@ describe('UnifiedAdmissionComponent', () => {
     'admission.requiredThirdParty': 'Renseignez le nom, le téléphone et le lien de la personne ayant amené le patient.',
   };
 
-  let visitApi: { create: ReturnType<typeof vi.fn> };
+  let visitApi: { create: ReturnType<typeof vi.fn>; getAdmissionOptions: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
-    visitApi = { create: vi.fn().mockReturnValue(of({ id: 'visit-1' })) };
+    visitApi = {
+      create: vi.fn().mockReturnValue(of({ id: 'visit-1' })),
+      getAdmissionOptions: vi.fn().mockReturnValue(of({
+        services: ['Médecine générale', 'Pédiatrie'],
+        practitioners: [
+          { id: 'doctor-1', displayName: 'Dr Péd', role: 'MEDECIN', unitNames: ['Pédiatrie'] },
+          { id: 'doctor-2', displayName: 'Dr MG', role: 'MEDECIN', unitNames: ['Médecine générale'] },
+        ],
+      })),
+    };
     emergencyApi = {
       create: vi.fn().mockReturnValue(of({ id: 'emergency-1' })),
       createProvisionalAdmission: vi.fn().mockReturnValue(of({
@@ -69,8 +76,6 @@ describe('UnifiedAdmissionComponent', () => {
         },
         { provide: EmergencyApiService, useValue: emergencyApi },
         { provide: VisitApiService, useValue: visitApi },
-        { provide: HospitalOrganizationApiService, useValue: { listServiceCatalog: vi.fn().mockReturnValue(of([])) } },
-        { provide: StaffApiService, useValue: { list: vi.fn().mockReturnValue(of([])) } },
       ],
     }).compileComponents();
 
@@ -178,5 +183,20 @@ describe('UnifiedAdmissionComponent', () => {
       .map((option) => (option as HTMLOptionElement).value);
     expect(options).not.toContain('EMERGENCY');
     expect(options).toContain('CONSULTATION');
+  });
+
+  it('lists services and filters practitioners by the selected service from admission options', () => {
+    component.setCarePath('NORMAL');
+    component.onPatientSelected(patient as unknown as Patient);
+    component.nextStep();
+    fixture.detectChanges();
+    component.form.patchValue({ service: 'Pédiatrie' });
+    fixture.detectChanges();
+
+    const options = (id: string) => Array.from(fixture.nativeElement.querySelectorAll(`#${id} option`))
+      .map((option) => (option as HTMLOptionElement).textContent?.trim());
+    expect(options('visit-service')).toEqual(expect.arrayContaining(['Médecine générale', 'Pédiatrie']));
+    expect(options('visit-practitioner')).toContain('Dr Péd');
+    expect(options('visit-practitioner')).not.toContain('Dr MG');
   });
 });

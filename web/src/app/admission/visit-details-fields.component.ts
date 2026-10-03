@@ -12,9 +12,11 @@ import { OTHER_SERVICE, VisitAdmissionOptionsService } from './visit-admission-o
   selector: 'app-visit-details-fields',
   standalone: true,
   imports: [ReactiveFormsModule],
-  providers: [VisitAdmissionOptionsService],
   template: `
     <div class="grid grid-cols-1 gap-3 sm:grid-cols-2" [formGroup]="form()">
+      @if (options.loadError()) {
+        <p class="sm:col-span-2 text-xs font-semibold text-[var(--brand-warning-text)]" role="alert">{{ text('optionsLoadError') }}</p>
+      }
       <div class="sm:col-span-2">
         <label class="ui-label mb-1.5" for="visit-reason">{{ text('reason') }} *</label>
         <textarea id="visit-reason" formControlName="reason" class="ui-input min-h-20 resize-y py-2.5"></textarea>

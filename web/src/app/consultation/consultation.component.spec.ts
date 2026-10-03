@@ -67,4 +67,11 @@ describe('ConsultationComponent AI draft application', () => {
     expect(component.form.contains('suspectedDiagnosis')).toBe(false);
     expect(component.form.contains('finalDiagnosis')).toBe(false);
   });
+
+  it("n'annonce pas de proposition IA appliquée lors du passage en saisie manuelle", () => {
+    component.applyAiDraft({});
+
+    expect(component.successMessage()).toBe('');
+    expect(component.form.dirty).toBe(false);
+  });
 });

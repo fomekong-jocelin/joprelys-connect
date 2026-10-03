@@ -154,8 +154,10 @@ export class ConsultationComponent implements OnInit {
       return;
     }
 
-    this.form.markAsDirty();
     const fieldCount = Object.keys(acceptedDraft).length;
+    // Passage en saisie manuelle : rien n'a été proposé, aucun message « IA appliquée ».
+    if (fieldCount === 0 && !draft.prescription && !draft.labOrders && !draft.vitals) return;
+    this.form.markAsDirty();
     this.successMessage.set(
       this.i18n.t('consultation.ai.applySuccessReview') +
         (fieldCount > 0

@@ -324,6 +324,10 @@
                   <dt class="ui-label">{{ text('summaryVisit') }}</dt>
                   <dd class="mt-1 text-[var(--text-secondary)]">{{ form.get('reason')?.value || '—' }}</dd>
                 </div>
+                <div class="sm:col-span-2">
+                  <dt class="ui-label">{{ text('summaryVisitChoices') }}</dt>
+                  <dd class="mt-1 font-bold text-[var(--text-primary)]">{{ visitChoicesSummary() }}</dd>
+                </div>
               }
             </dl>
           </section>

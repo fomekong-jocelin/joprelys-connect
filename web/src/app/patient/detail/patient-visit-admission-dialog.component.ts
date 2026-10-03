@@ -1,5 +1,6 @@
 import { Component, inject, input, output, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule } from '@angular/forms';
+import { VisitAdmissionOptionsService } from '../../admission/visit-admission-options.service';
 import { VisitDetailsFieldsComponent } from '../../admission/visit-details-fields.component';
 import {
   createVisitDetailsForm,
@@ -15,6 +16,7 @@ import { VisitApiService } from '../../visit/visit-api.service';
   selector: 'app-patient-visit-admission-dialog',
   standalone: true,
   imports: [ReactiveFormsModule, ButtonComponent, VisitDetailsFieldsComponent],
+  providers: [VisitAdmissionOptionsService],
   template: `
     <div class="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/50 p-0 backdrop-blur-xs sm:items-center sm:p-4 animate-fade-in">
       <section

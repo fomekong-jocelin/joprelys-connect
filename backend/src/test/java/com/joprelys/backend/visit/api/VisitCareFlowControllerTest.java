@@ -185,6 +185,21 @@ class VisitCareFlowControllerTest {
 				.andExpect(jsonPath("$.length()").value(1));
 	}
 
+	@Test
+	void receptionAgentGetsServicesAndCliniciansWithoutStaffManagementRights() throws Exception {
+		mockMvc.perform(get("/api/visits/admission-options")
+				.header("Authorization", "Bearer " + tokenAgent))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.services").isNotEmpty())
+				.andExpect(jsonPath("$.practitioners.length()").value(2))
+				.andExpect(jsonPath("$.practitioners[*].displayName",
+						org.hamcrest.Matchers.containsInAnyOrder("Dr Alpha", "Dr Beta")));
+
+		mockMvc.perform(get("/api/staff")
+				.header("Authorization", "Bearer " + tokenAgent))
+				.andExpect(status().isForbidden());
+	}
+
 	private void postVitals(String json) throws Exception {
 		mockMvc.perform(post("/api/visits/" + visit.getId() + "/vitals")
 				.header("Authorization", "Bearer " + tokenAgent)

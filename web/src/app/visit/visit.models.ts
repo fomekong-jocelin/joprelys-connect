@@ -64,3 +64,16 @@ export interface CreateVisitRequest {
   mainPractitionerId?: string;
   arrivalAt?: string;
 }
+
+export interface AdmissionPractitionerOption {
+  id: string;
+  displayName: string;
+  role: 'MEDECIN' | 'INFIRMIER';
+  unitNames: string[];
+}
+
+/** Référentiels d'ouverture de visite (accessibles à l'accueil). */
+export interface VisitAdmissionOptions {
+  services: string[];
+  practitioners: AdmissionPractitionerOption[];
+}

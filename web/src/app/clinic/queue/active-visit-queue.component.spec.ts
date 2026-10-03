@@ -14,12 +14,12 @@ describe('ActiveVisitQueueComponent', () => {
   let mockVisitApi: Record<string, ReturnType<typeof vi.fn>>;
 
   const translations: Record<string, string> = {
-    'dashboard.queue.summary.active': 'visites actives',
-    'queue.summary.waitingVitals': 'en attente de constantes',
-    'queue.summary.ready': 'prêts pour le médecin',
-    'queue.summary.inConsultation': 'en consultation',
-    'queue.summary.critical': 'alertes critiques',
-    'dashboard.queue.summary.maxWait': 'attente max',
+    'queue.summary.v2.active': 'Actives',
+    'queue.summary.v2.waitingVitals': 'Attente constantes',
+    'queue.summary.v2.ready': 'Prêts',
+    'queue.summary.v2.inConsultation': 'En consultation',
+    'queue.summary.v2.critical': 'Alertes critiques',
+    'queue.summary.v2.maxWait': 'Attente max',
   };
 
   beforeEach(async () => {
@@ -93,8 +93,8 @@ describe('ActiveVisitQueueComponent', () => {
     ]);
 
     expect(component.queueSummaryLabel()).toBe(
-      '3 visites actives · 1 en attente de constantes · 1 prêts pour le médecin · 1 en consultation'
-      + ' · 1 alertes critiques · attente max 30 min',
+      'Actives : 3 · Attente constantes : 1 · Prêts : 1 · En consultation : 1'
+      + ' · Alertes critiques : 1 · Attente max : 30 min',
     );
   });
 

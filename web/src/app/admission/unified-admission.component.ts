@@ -12,7 +12,9 @@ import { CreateProvisionalPatientRequest } from '../patient/provisional-patient.
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { VisitApiService } from '../visit/visit-api.service';
+import { VisitAdmissionOptionsService, OTHER_SERVICE } from './visit-admission-options.service';
 import { VisitDetailsFieldsComponent } from './visit-details-fields.component';
+import { orientationLabel } from '../visit/visit-orientation.util';
 import { hasRequiredVisitDetails, toCreateVisitRequest, visitDetailsControls } from './visit-details-form';
 
 export type AdmissionCarePath = 'NORMAL' | 'EMERGENCY';
@@ -31,6 +33,7 @@ export interface AdmissionCompleted {
   selector: 'app-unified-admission',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule, AlertComponent, ButtonComponent, PatientSearchPickerComponent, VisitDetailsFieldsComponent],
+  providers: [VisitAdmissionOptionsService],
   templateUrl: './unified-admission.component.html',
 })
 export class UnifiedAdmissionComponent implements OnInit {
@@ -39,6 +42,7 @@ export class UnifiedAdmissionComponent implements OnInit {
   private readonly emergencyApi = inject(EmergencyApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly i18n = inject(I18nService);
+  private readonly admissionOptions = inject(VisitAdmissionOptionsService);
   private readonly provisionalAdmissionRequestId = globalThis.crypto.randomUUID();
 
   readonly initialCarePath = input<AdmissionCarePath>('NORMAL');
@@ -202,6 +206,17 @@ export class UnifiedAdmissionComponent implements OnInit {
       return value.fullName?.trim() || this.text('new');
     }
     return this.text('provisional');
+  }
+
+  /** Orientation, service et praticien choisis, pour vérification avant création de la visite. */
+  visitChoicesSummary(): string {
+    const value = this.form.getRawValue();
+    const orientation = value.orientation === 'OTHER' && value.customOrientation?.trim()
+      ? value.customOrientation.trim()
+      : orientationLabel(value.orientation, this.i18n);
+    const service = value.service === OTHER_SERVICE ? value.customService?.trim() : value.service;
+    const practitioner = this.admissionOptions.practitionerName(value.mainPractitionerId) ?? this.text('mainPractitionerPlaceholder');
+    return [orientation, service || '—', practitioner].join(' · ');
   }
 
   arrivalSummary(): string {

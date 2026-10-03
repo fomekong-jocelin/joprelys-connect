@@ -128,5 +128,7 @@
   "admission.error.EMERGENCY_ADMISSION_FAILED": "L’admission d’urgence n’a pas pu être créée. Réessayez sans fermer la fenêtre.",
   "admission.mainPractitioner": "Praticien principal",
   "admission.mainPractitionerPlaceholder": "-- Non attribué (file commune) --",
-  "admission.arrivalAt": "Date et heure d’arrivée"
+  "admission.arrivalAt": "Date et heure d’arrivée",
+  "admission.optionsLoadError": "Services et praticiens indisponibles : vous pouvez saisir le service dans « Autre » et laisser le praticien non attribué.",
+  "admission.summaryVisitChoices": "Orientation · Service · Praticien principal"
 }

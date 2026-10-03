@@ -115,7 +115,7 @@ import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patie
                   >
                     {{ allergy.substance }}
                     @if (allergy.severity === 'CRITICAL' || allergy.severity === 'HIGH') {
-                      · {{ allergy.severity }}
+                      · {{ i18n.t('patients.medicalInfo.allergies.severity.' + allergy.severity) }}
                     }
                   </span>
                 }

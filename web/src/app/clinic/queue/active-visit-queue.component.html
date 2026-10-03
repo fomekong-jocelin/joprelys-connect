@@ -26,6 +26,7 @@
             </app-ui-button>
           </div>
 
+          @if (canStartConsultation()) {
           <div class="mb-4 flex flex-wrap items-center gap-2" role="group" [attr.aria-label]="t('queue.scope.label')">
             @for (option of scopes; track option) {
               <button
@@ -41,6 +42,7 @@
               </button>
             }
           </div>
+          }
 
           @if (actionError()) {
             <div class="mb-4 rounded-[6px] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
@@ -58,7 +60,7 @@
               {{ queueError() }}
             </div>
           } @else if (activeVisits().length === 0) {
-            <app-empty-state [message]="t('dashboard.queue.empty')"></app-empty-state>
+            <app-empty-state [message]="scope() === 'ALL' ? t('dashboard.queue.empty') : t('queue.empty.' + scope())"></app-empty-state>
           } @else {
             <!-- Desktop Table View -->
             <div class="hidden md:block overflow-x-auto">
