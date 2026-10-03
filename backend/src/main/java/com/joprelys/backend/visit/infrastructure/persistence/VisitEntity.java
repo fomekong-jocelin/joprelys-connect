@@ -59,6 +59,19 @@ public class VisitEntity {
 	@Column(name = "closed_at")
 	private Instant closedAt;
 
+	@jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
+	@Column(name = "care_stage", nullable = false, length = 30)
+	private VisitCareStage careStage = VisitCareStage.ATTENTE_CONSTANTES;
+
+	@Column(name = "consulting_practitioner_id")
+	private UUID consultingPractitionerId;
+
+	@Column(name = "consulting_practitioner_name")
+	private String consultingPractitionerName;
+
+	@Column(name = "consultation_started_at")
+	private Instant consultationStartedAt;
+
 	@jakarta.persistence.OneToOne(mappedBy = "visit", cascade = jakarta.persistence.CascadeType.ALL, fetch = FetchType.LAZY)
 	private VitalsEntity vitals;
 
@@ -202,5 +215,52 @@ public class VisitEntity {
 
 	public void setVitals(VitalsEntity vitals) {
 		this.vitals = vitals;
+	}
+
+	public VisitCareStage getCareStage() {
+		return careStage;
+	}
+
+	public UUID getConsultingPractitionerId() {
+		return consultingPractitionerId;
+	}
+
+	public String getConsultingPractitionerName() {
+		return consultingPractitionerName;
+	}
+
+	public Instant getConsultationStartedAt() {
+		return consultationStartedAt;
+	}
+
+	/** Les constantes saisies rendent le patient visible comme prêt pour le médecin. */
+	public void markVitalsRecorded() {
+		if (careStage == VisitCareStage.ATTENTE_CONSTANTES) {
+			careStage = VisitCareStage.PRET_MEDECIN;
+		}
+	}
+
+	public boolean isInConsultationWithAnotherPractitioner(UUID practitionerId) {
+		return careStage == VisitCareStage.EN_CONSULTATION
+				&& consultingPractitionerId != null
+				&& !consultingPractitionerId.equals(practitionerId);
+	}
+
+	public void startConsultation(UUID practitionerId, String practitionerName, Instant now) {
+		if (careStage == VisitCareStage.EN_CONSULTATION && practitionerId.equals(consultingPractitionerId)) {
+			return;
+		}
+		careStage = VisitCareStage.EN_CONSULTATION;
+		consultingPractitionerId = practitionerId;
+		consultingPractitionerName = practitionerName;
+		consultationStartedAt = now;
+	}
+
+	/** Remet le patient dans la file sans clôturer la visite. */
+	public void releaseConsultation() {
+		careStage = vitals != null ? VisitCareStage.PRET_MEDECIN : VisitCareStage.ATTENTE_CONSTANTES;
+		consultingPractitionerId = null;
+		consultingPractitionerName = null;
+		consultationStartedAt = null;
 	}
 }

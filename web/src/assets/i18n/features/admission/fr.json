@@ -125,5 +125,8 @@
   "admission.error.EMERGENCY_PROVISIONAL_PATIENT_REQUIRED": "Les informations du patient provisoire sont manquantes.",
   "admission.error.EMERGENCY_TRIAGE_REQUIRED": "Les informations de triage sont manquantes.",
   "admission.error.EMERGENCY_THIRD_PARTY_REQUIRED": "Renseignez le nom, le téléphone et le lien de la personne ayant amené le patient.",
-  "admission.error.EMERGENCY_ADMISSION_FAILED": "L’admission d’urgence n’a pas pu être créée. Réessayez sans fermer la fenêtre."
+  "admission.error.EMERGENCY_ADMISSION_FAILED": "L’admission d’urgence n’a pas pu être créée. Réessayez sans fermer la fenêtre.",
+  "admission.mainPractitioner": "Praticien principal",
+  "admission.mainPractitionerPlaceholder": "-- Non attribué (file commune) --",
+  "admission.arrivalAt": "Date et heure d’arrivée"
 }

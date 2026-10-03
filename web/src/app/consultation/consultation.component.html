@@ -179,6 +179,9 @@
                     {{ i18n.t('consultation.vitals.recordedAt') }} {{ recordedAt | date: 'dd/MM/yyyy HH:mm' }}
                   </p>
                 }
+                @if (vitals()?.alerts?.length) {
+                  <app-vital-alerts class="mb-2 block" [alerts]="vitals()?.alerts ?? []" />
+                }
                 @if (vitals()) {
                   <div class="grid grid-cols-2 gap-2.5">
                     <div class="ui-card-muted p-3">
@@ -269,6 +272,9 @@
                   <p class="py-6 text-center text-sm italic text-[var(--text-muted)]">
                     {{ i18n.t('consultation.vitals.noVitals') }}
                   </p>
+                }
+                @if (visitId) {
+                  <app-vitals-history class="mt-3 block" [visitId]="visitId" [refreshKey]="vitals()?.recordedAt" />
                 }
               </div>
             </section>

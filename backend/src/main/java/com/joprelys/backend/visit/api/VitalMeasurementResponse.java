@@ -1,12 +1,17 @@
 package com.joprelys.backend.visit.api;
 
 import com.joprelys.backend.visit.domain.VitalSignAlertPolicy;
-import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
+import com.joprelys.backend.visit.infrastructure.persistence.VitalMeasurementEntity;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
-public record VitalsResponse(
+public record VitalMeasurementResponse(
+		UUID id,
+		Instant recordedAt,
+		UUID recordedBy,
+		String recordedByName,
 		BigDecimal temperature,
 		BigDecimal weight,
 		Integer height,
@@ -18,12 +23,14 @@ public record VitalsResponse(
 		Integer respiratoryRate,
 		Integer painScale,
 		BigDecimal bmi,
-		Instant recordedAt,
 		List<VitalSignAlertPolicy.VitalAlert> alerts
 ) {
-	public static VitalsResponse fromEntity(VitalsEntity entity) {
-		if (entity == null) return null;
-		return new VitalsResponse(
+	public static VitalMeasurementResponse fromEntity(VitalMeasurementEntity entity) {
+		return new VitalMeasurementResponse(
+				entity.getId(),
+				entity.getRecordedAt(),
+				entity.getRecordedBy(),
+				entity.getRecordedByName(),
 				entity.getTemperature(),
 				entity.getWeight(),
 				entity.getHeight(),
@@ -35,7 +42,6 @@ public record VitalsResponse(
 				entity.getRespiratoryRate(),
 				entity.getPainScale(),
 				entity.getBmi(),
-				entity.getUpdatedAt() != null ? entity.getUpdatedAt() : entity.getCreatedAt(),
 				VitalSignAlertPolicy.evaluate(
 						entity.getTemperature(),
 						entity.getPulse(),
@@ -44,7 +50,6 @@ public record VitalsResponse(
 						entity.getSpo2(),
 						entity.getGlycemia(),
 						entity.getRespiratoryRate(),
-						entity.getPainScale())
-		);
+						entity.getPainScale()));
 	}
 }

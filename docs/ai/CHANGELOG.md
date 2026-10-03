@@ -8,6 +8,16 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **TICKET-20261003-PATIENT-JOURNEY-AUDIT (lot 2) — Prise en charge, historique des constantes, admission unifiée** :
+  - étapes de prise en charge d'une visite (attente constantes → prêt pour le médecin → en consultation chez Dr X), un seul praticien à la fois, reprise explicite tracée (`take-charge`, `release`, Flyway V112) ;
+  - historique horodaté et signé des mesures de constantes, visible dans la file et dans la consultation ;
+  - alertes de constantes calculées par le backend (`VitalSignAlertPolicy`, seuils adultes à valider) ;
+  - file active filtrable (Toute la file / Mes patients / Mon service), avec résumé par étape et alertes critiques ;
+  - formulaire de visite commun aux deux admissions (codes d'orientation, service, praticien du service, heure d'arrivée) ;
+  - recherche serveur du patient existant, avec date de naissance, DPU et téléphone pour distinguer les homonymes ;
+  - refactor : tableau de bord découpé en composants (469 → 69 lignes), admission unifiée 504 → 432 lignes ;
+  - **SemVer** : nouvelles fonctionnalités rétrocompatibles (champs et endpoints additifs) → `MINOR` (0.10.1 → 0.11.0, regroupé avec le lot 1).
+
 - **TICKET-20261003-PATIENT-JOURNEY-AUDIT — Correctifs ciblés du parcours patient (pré-enregistrement → constantes → consultation)** :
   - un seul bon d'examens actif par visite : un nouvel enregistrement de la consultation ne crée plus de doublon au laboratoire ;
   - consultation : l'auteur reste figé et un enregistrement concurrent est refusé (409, `expectedUpdatedAt`) au lieu d'un écrasement silencieux ;

@@ -8,13 +8,10 @@ import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.api.CorrectVisitRequest;
 import com.joprelys.backend.visit.api.CreateVisitRequest;
-import com.joprelys.backend.visit.api.SaveVitalsRequest;
-import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitCorrectionEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitCorrectionRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
-import com.joprelys.backend.visit.infrastructure.persistence.VitalsRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,7 +31,6 @@ public class VisitService {
 	private final VisitRepository visitRepository;
 	private final PatientRepository patientRepository;
 	private final VisitNumberGenerator visitNumberGenerator;
-	private final VitalsRepository vitalsRepository;
 	private final DocumentService documentService;
 	private final VisitCorrectionRepository visitCorrectionRepository;
 	private final AuditService auditService;
@@ -49,7 +45,6 @@ public class VisitService {
 			VisitRepository visitRepository,
 			PatientRepository patientRepository,
 			VisitNumberGenerator visitNumberGenerator,
-			VitalsRepository vitalsRepository,
 			@org.springframework.context.annotation.Lazy DocumentService documentService,
 			VisitCorrectionRepository visitCorrectionRepository,
 			AuditService auditService,
@@ -61,7 +56,6 @@ public class VisitService {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
-		this.vitalsRepository = vitalsRepository;
 		this.documentService = documentService;
 		this.visitCorrectionRepository = visitCorrectionRepository;
 		this.auditService = auditService;
@@ -251,92 +245,9 @@ public class VisitService {
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 	}
 
-
 	@Transactional(readOnly = true)
 	public List<VisitEntity> getActiveVisits() {
 		return visitRepository.findActiveVisits();
-	}
-
-	@Transactional
-	public VitalsEntity saveVitals(UUID visitId, SaveVitalsRequest request, UUID actorUserId, UUID actorOrganizationId) {
-		VisitEntity visit = visitRepository.findById(visitId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
-
-		if (!"EN_COURS".equals(visit.getStatus())) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Les constantes ne peuvent être saisies que sur une visite active.");
-		}
-
-		if (request.systolic() != null && request.diastolic() != null && request.systolic() <= request.diastolic()) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-					"La tension systolique doit être supérieure à la tension diastolique.");
-		}
-
-		java.math.BigDecimal bmi = null;
-		if (request.weight() != null && request.height() != null && request.height() > 0) {
-			double heightM = request.height() / 100.0;
-			double rawBmi = request.weight().doubleValue() / (heightM * heightM);
-			bmi = java.math.BigDecimal.valueOf(rawBmi).setScale(2, java.math.RoundingMode.HALF_UP);
-		}
-
-		VitalsEntity vitals = vitalsRepository.findByVisitId(visitId)
-				.orElseGet(() -> {
-					var v = new VitalsEntity(visit, null, null, null, null, null, null, null, null, null, null, null);
-					return v;
-				});
-
-		vitals.setTemperature(request.temperature());
-		vitals.setWeight(request.weight());
-		vitals.setHeight(request.height());
-		vitals.setPulse(request.pulse());
-		vitals.setSystolic(request.systolic());
-		vitals.setDiastolic(request.diastolic());
-		vitals.setSpo2(request.spo2());
-		vitals.setGlycemia(request.glycemia());
-		vitals.setRespiratoryRate(request.respiratoryRate());
-		vitals.setPainScale(request.painScale());
-		vitals.setBmi(bmi);
-
-		VitalsEntity saved = vitalsRepository.save(vitals);
-
-		// Une seule fiche de constantes par visite : chaque saisie est tracée (auteur, heure, valeurs).
-		auditService.logSuccess(
-				actorUserId,
-				actorOrganizationId,
-				visit.getPatient().getId(),
-				"VISIT",
-				visitId,
-				"VISIT_VITALS_RECORDED",
-				vitalsAuditSummary(request));
-
-		return saved;
-	}
-
-	private String vitalsAuditSummary(SaveVitalsRequest request) {
-		try {
-			Map<String, Object> values = new java.util.LinkedHashMap<>();
-			values.put("temperature", request.temperature());
-			values.put("weight", request.weight());
-			values.put("height", request.height());
-			values.put("pulse", request.pulse());
-			values.put("systolic", request.systolic());
-			values.put("diastolic", request.diastolic());
-			values.put("spo2", request.spo2());
-			values.put("glycemia", request.glycemia());
-			values.put("respiratoryRate", request.respiratoryRate());
-			values.put("painScale", request.painScale());
-			values.values().removeIf(java.util.Objects::isNull);
-			return objectMapper.writeValueAsString(values);
-		} catch (Exception e) {
-			return "Constantes enregistrées";
-		}
-	}
-
-	@Transactional(readOnly = true)
-	public java.util.Optional<VitalsEntity> getVitals(UUID visitId) {
-		if (!visitRepository.existsById(visitId)) {
-			throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable.");
-		}
-		return vitalsRepository.findByVisitId(visitId);
 	}
 
 	@Transactional(readOnly = true)

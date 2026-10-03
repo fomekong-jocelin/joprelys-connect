@@ -76,10 +76,13 @@ Total : 45 points, soit environ 2 sprints selon `docs/pm/ESTIMATION-GUIDE.md`. L
 - [x] Proposer un découpage estimé
 - [x] Rédiger `docs/features/patient-journey/FUNCTIONAL-SPEC.md` et `TECHNICAL-DESIGN.md`
 - [x] Correctifs ciblés (2026-10-03), voir tableau ci-dessous
-- [ ] Valider les priorités avec le PO et un médecin référent
-- [ ] PJ-02 : machine à états de visite (validation médicale requise)
-- [ ] PJ-04 (reste) : historique multi-mesures des constantes dans un modèle dédié
-- [ ] PJ-05, PJ-07, PJ-08, PJ-10
+- [ ] Valider avec un médecin référent les étapes de prise en charge et les seuils d'alerte
+- [x] PJ-02 : étapes de prise en charge (attente constantes / prêt médecin / en consultation chez Dr X), prise en charge unique, reprise explicite tracée
+- [x] PJ-04 (reste) : historique horodaté et signé des mesures (`visit_vital_measurements`, V112)
+- [x] PJ-05 : formulaire de visite commun aux deux admissions, codes d'orientation partagés
+- [x] PJ-07 : recherche serveur du patient existant (homonymes distingués)
+- [x] PJ-08 : file filtrable (Toute / Mes patients / Mon service), étapes et alertes de constantes calculées par le backend
+- [x] PJ-10 : tableau de bord découpé (469 → 69 lignes), admission unifiée 504 → 432 lignes
 
 ## Correctifs livrés le 2026-10-03
 | Constat | Correctif | Statut |
@@ -99,7 +102,11 @@ Total : 45 points, soit environ 2 sprints selon `docs/pm/ESTIMATION-GUIDE.md`. L
 | 18 — i18n | Libellés du pré-enregistrement traduits FR/EN | DONE (pré-enregistrement) |
 | 19 — `HttpClient` dans la consultation | Passage par `VisitApiService` | DONE |
 | 20 — erreurs silencieuses | Message `consultation.errors.loadVisit` | DONE |
-| 2, 6, 12, 13, 16, 21 | Structurels ou décision métier | À PLANIFIER |
+| 2 — pas de statut intermédiaire | Étape de prise en charge + prise en charge unique (V112) | DONE (à valider médecin) |
+| 6 — deux formulaires d'admission | `VisitDetailsFieldsComponent` commun | DONE |
+| 13 — sélection du patient | `PatientSearchPickerComponent` (recherche serveur) | DONE |
+| 16 — file sans priorité ni alertes | Filtres praticien / service, étapes, alertes backend | DONE (tri par gravité à arbitrer) |
+| 12, 21 | Ville par défaut à la validation ; arrondis du formulaire public | À PLANIFIER |
 
 ## SemVer
 Audit seul, sans livraison. Les corrections P0 relèveront d'un bump **MINOR** (nouveaux statuts de visite, modèle de constantes).
@@ -109,3 +116,9 @@ Audit seul, sans livraison. Les corrections P0 relèveront d'un bump **MINOR** (
 - Backend, suite complète : 879 tests, 7 échecs, tous dans `HospitalizationControllerTest` (409 à l'admission). Ces 7 échecs **existent déjà sur `HEAD` f0e0cc00 sans ces correctifs** (vérifié dans un worktree propre) : dette de la branche `hospital-bed-assignment-hardening`, à traiter à part.
 - Front : `ng build` OK ; `ng test` 109 fichiers, 575/575 verts.
 - Non fait : QA visuelle navigateur (clair/sombre, mobile) des écrans modifiés.
+
+## Vérifications du lot 2 (2026-10-03)
+- Backend, suite complète : 887 tests, 7 échecs, uniquement dans `HospitalizationControllerTest`. Ce sont les mêmes échecs, déjà présents sur `HEAD` avant ces travaux.
+- Nouveaux tests backend : `VisitCareFlowControllerTest` (5 tests) et `VitalSignAlertPolicyTest` (3 tests), tous verts.
+- Front : `ng build` OK ; `ng test` 112 fichiers, tous verts.
+- Non fait : QA visuelle navigateur (file, tiroir, admission, consultation ; clair/sombre ; mobile).

@@ -29,10 +29,50 @@ Audit praticien du 2026-10-03 (`docs/ai/tickets/TICKET-20261003-PATIENT-JOURNEY-
 - Un seul bon d'examens actif par visite et par type d'examen. Un nouvel enregistrement ajoute seulement les examens manquants, sans toucher aux examens déjà en cours de traitement.
 - Un échec de chargement de la visite affiche un message au lieu d'un écran vide.
 
+## Parcours de prise en charge (livré le 2026-10-03, à valider par le médecin référent)
+
+### Étapes d'une visite active
+Le statut administratif (`EN_COURS` / `TERMINEE` / `ANNULEE`) est inchangé. Une **étape** s'y ajoute :
+
+| Étape | Entrée | Sortie |
+|---|---|---|
+| Attente constantes | Création de la visite | Première mesure de constantes |
+| Prêt pour le médecin | Constantes saisies, ou patient remis dans la file | Prise en charge par un praticien |
+| En consultation chez Dr X | « Démarrer la consultation » ou premier enregistrement de la consultation | « Remettre dans la file » ou clôture de la visite |
+
+- Un médecin peut prendre en charge un patient sans constantes (urgence ressentie) : l'étape est un repère, pas un verrou.
+- Un patient en consultation chez Dr X ne peut pas être ouvert par un confrère sans **reprise explicite**. La reprise est confirmée à l'écran et tracée dans l'audit (`VISIT_CONSULTATION_TAKEN_OVER`).
+- Enregistrer une consultation sur un patient pris en charge par un confrère est refusé (409).
+- Seul le praticien qui a le patient en charge peut le remettre dans la file.
+
+### Constantes
+- Chaque saisie ajoute une **mesure horodatée et signée** à l'historique de la visite. La dernière mesure reste affichée en premier.
+- Une nouvelle mesure part des valeurs de la précédente : l'infirmier corrige ce qui a changé.
+- L'historique est visible dans le tiroir de la file et dans l'écran de consultation.
+- **Alertes** calculées par le serveur, selon des seuils **adultes** à valider par le médecin référent (non adaptés à la pédiatrie) :
+
+| Paramètre | Avertissement | Critique |
+|---|---|---|
+| Température | ≥ 38,0 °C ou < 35,5 °C | ≥ 40,0 °C ou < 35,0 °C |
+| SpO2 | < 94 % | < 90 % |
+| Tension | ≥ 140/90 ou systolique < 90 | ≥ 180/110 ou systolique < 80 |
+| Pouls | > 100 ou < 50 bpm | > 130 ou < 40 bpm |
+| Fréquence respiratoire | > 20 ou < 12 /min | > 30 ou < 10 /min |
+| Glycémie | ≥ 2,0 ou < 0,70 g/L | ≥ 3,0 ou < 0,54 g/L |
+| Douleur | ≥ 7/10 | — |
+
+### File d'attente
+- Filtres : **Toute la file**, **Mes patients** (praticien principal ou patient en consultation chez moi), **Mon service** (service de la visite = une unité à laquelle je suis affecté).
+- Chaque ligne affiche l'étape, le praticien en charge et les alertes. Une alerte critique est signalée par une bordure rouge.
+- Le résumé compte les patients par étape et le nombre d'alertes critiques.
+- L'heure affichée est l'heure d'arrivée déclarée (et non l'heure de saisie).
+
+### Admission
+- **Un seul formulaire de visite** pour l'admission unifiée et pour l'admission depuis le dossier patient : motif, orientation (codes communs), service (catalogue de l'établissement ou « Autre »), praticien principal (médecins et infirmiers du service choisi), date et heure d'arrivée.
+- **Recherche du patient existant** par nom, téléphone ou numéro de dossier, dès 2 caractères. Chaque résultat affiche le numéro de dossier, la date de naissance et le téléphone pour distinguer les homonymes.
+- Les visites créées avant l'harmonisation gardent leur orientation en texte libre, qui est affichée telle quelle.
+
 ## Restant à arbitrer (PO + médecin référent)
-- **PJ-02** : états de visite intermédiaires (attente constantes / prêt médecin / en consultation chez Dr X).
-- Historique multi-mesures des constantes (réévaluations) dans un modèle dédié.
-- **PJ-05** : fusion des deux formulaires d'admission et référentiel unique orientation / service.
-- **PJ-07** : recherche patient dans l'admission.
-- **PJ-08** : file filtrée par médecin ou service, avec alertes sur les constantes anormales.
-- **PJ-10** : refactor des composants trop volumineux.
+- Validation clinique des étapes et des seuils d'alerte, et seuils pédiatriques (âge du patient).
+- Tri de la file par gravité plutôt que par heure d'arrivée (aujourd'hui, les alertes sont signalées mais l'ordre reste l'heure d'arrivée).
+- Rattachement de `visits.service_name` (texte) aux unités structurées (identifiant), pour un filtre « Mon service » exact.

@@ -1,17 +1,19 @@
 import { CommonModule } from '@angular/common';
 import { Component, inject, input, OnInit, output, signal } from '@angular/core';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
-import { Observable, catchError, finalize, map, of, switchMap } from 'rxjs';
-import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
+import { Observable, finalize, map, of, switchMap } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { CreateEmergencyRequest, EmergencyTriageRequest } from '../emergency/emergency.models';
 import { PatientApiService } from '../patient/patient-api.service';
 import { Patient } from '../patient/patient.models';
+import { PatientSearchPickerComponent } from '../patient/patient-search-picker.component';
 import { CreateProvisionalPatientRequest } from '../patient/provisional-patient.models';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { VisitApiService } from '../visit/visit-api.service';
+import { VisitDetailsFieldsComponent } from './visit-details-fields.component';
+import { hasRequiredVisitDetails, toCreateVisitRequest, visitDetailsControls } from './visit-details-form';
 
 export type AdmissionCarePath = 'NORMAL' | 'EMERGENCY';
 export type AdmissionPatientMode = 'EXISTING' | 'NEW' | 'PROVISIONAL';
@@ -25,45 +27,10 @@ export interface AdmissionCompleted {
   emergencyId?: string;
 }
 
-export interface AdmissionOrientationOption {
-  code: string;
-  translationKey: string;
-}
-
-export const ADMISSION_ORIENTATION_OPTIONS: readonly AdmissionOrientationOption[] = [
-  { code: 'CONSULTATION', translationKey: 'orientationOption.CONSULTATION' },
-  { code: 'SPECIALIZED_CONSULTATION', translationKey: 'orientationOption.SPECIALIZED_CONSULTATION' },
-  { code: 'EMERGENCY', translationKey: 'orientationOption.EMERGENCY' },
-  { code: 'HOSPITALIZATION', translationKey: 'orientationOption.HOSPITALIZATION' },
-  { code: 'AMBULATORY', translationKey: 'orientationOption.AMBULATORY' },
-  { code: 'DAY_CARE', translationKey: 'orientationOption.DAY_CARE' },
-  { code: 'CHECKUP', translationKey: 'orientationOption.CHECKUP' },
-  { code: 'OTHER', translationKey: 'orientationOption.OTHER' },
-];
-
-export const DEFAULT_HOSPITAL_SERVICES: readonly string[] = [
-  'Médecine générale',
-  'Pédiatrie',
-  'Gynécologie-Obstétrique',
-  'Chirurgie générale',
-  'Urgences',
-  'Réanimation',
-  'Cardiologie',
-  'Radiologie / Imagerie',
-  'Laboratoire',
-  'Pharmacie',
-  'Odontologie / Stomatologie',
-  'Ophtalmologie',
-  'ORL',
-  'Dermatologie',
-  'Neurologie',
-  'Orthopédie / Traumatologie',
-];
-
 @Component({
   selector: 'app-unified-admission',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, AlertComponent, ButtonComponent],
+  imports: [CommonModule, ReactiveFormsModule, AlertComponent, ButtonComponent, PatientSearchPickerComponent, VisitDetailsFieldsComponent],
   templateUrl: './unified-admission.component.html',
 })
 export class UnifiedAdmissionComponent implements OnInit {
@@ -71,7 +38,6 @@ export class UnifiedAdmissionComponent implements OnInit {
   private readonly patientApi = inject(PatientApiService);
   private readonly emergencyApi = inject(EmergencyApiService);
   private readonly visitApi = inject(VisitApiService);
-  private readonly hospitalOrgApi = inject(HospitalOrganizationApiService);
   private readonly i18n = inject(I18nService);
   private readonly provisionalAdmissionRequestId = globalThis.crypto.randomUUID();
 
@@ -79,14 +45,11 @@ export class UnifiedAdmissionComponent implements OnInit {
   readonly cancelled = output<void>();
   readonly completed = output<AdmissionCompleted>();
 
-  readonly patients = signal<Patient[]>([]);
-  readonly isLoadingPatients = signal(false);
+  readonly selectedPatient = signal<Patient | null>(null);
   readonly isSubmitting = signal(false);
   readonly error = signal<string | null>(null);
   readonly currentStep = signal<AdmissionStep>(1);
   readonly steps: readonly AdmissionStep[] = [1, 2, 3];
-  readonly orientationOptions = ADMISSION_ORIENTATION_OPTIONS.filter((option) => option.code !== 'EMERGENCY');
-  readonly availableServices = signal<string[]>([...DEFAULT_HOSPITAL_SERVICES]);
   readonly isDraftRestored = signal(false);
   private readonly ADMISSION_DRAFT_KEY = 'joprelys_admission_draft';
 
@@ -106,11 +69,7 @@ export class UnifiedAdmissionComponent implements OnInit {
     estimatedAgeRange: [''],
     physicalDescription: [''],
     foundLocation: [''],
-    reason: [''],
-    orientation: ['CONSULTATION', [Validators.required]],
-    customOrientation: [''],
-    service: [''],
-    customService: [''],
+    ...visitDetailsControls(),
     arrivalMode: ['AMBULANCE'],
     thirdPartyName: [''],
     thirdPartyPhone: [''],
@@ -129,8 +88,6 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   ngOnInit(): void {
     this.form.patchValue({ carePath: this.initialCarePath() });
-    this.loadPatients();
-    this.loadHospitalServices();
     this.restoreDraftIfAvailable();
     this.form.valueChanges.subscribe(() => this.saveDraft());
   }
@@ -141,6 +98,7 @@ export class UnifiedAdmissionComponent implements OnInit {
         currentStep: this.currentStep(),
         carePath: this.carePath,
         patientMode: this.patientMode,
+        selectedPatient: this.selectedPatient(),
         formValue: this.form.getRawValue(),
       };
       sessionStorage.setItem(this.ADMISSION_DRAFT_KEY, JSON.stringify(draft));
@@ -156,6 +114,7 @@ export class UnifiedAdmissionComponent implements OnInit {
         if (draft.carePath) this.form.patchValue({ carePath: draft.carePath });
         if (draft.patientMode) this.form.patchValue({ patientMode: draft.patientMode });
         this.form.patchValue(draft.formValue);
+        if (draft.selectedPatient) this.selectedPatient.set(draft.selectedPatient);
         if (draft.currentStep && [1, 2, 3].includes(draft.currentStep)) {
           this.currentStep.set(draft.currentStep as AdmissionStep);
         }
@@ -169,18 +128,6 @@ export class UnifiedAdmissionComponent implements OnInit {
       sessionStorage.removeItem(this.ADMISSION_DRAFT_KEY);
     } catch {}
     this.isDraftRestored.set(false);
-  }
-
-  private loadHospitalServices(): void {
-    this.hospitalOrgApi.listServiceCatalog().pipe(
-      catchError(() => of([])),
-    ).subscribe((entries) => {
-      if (entries && entries.length > 0) {
-        const catalogNames = entries.map((e) => e.nameFr || e.nameEn || e.code).filter(Boolean);
-        const merged = Array.from(new Set([...catalogNames, ...DEFAULT_HOSPITAL_SERVICES])).sort();
-        this.availableServices.set(merged);
-      }
-    });
   }
 
   get carePath(): AdmissionCarePath {
@@ -205,6 +152,13 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   setPatientMode(mode: AdmissionPatientMode): void {
     this.form.patchValue({ patientMode: mode, patientId: '' });
+    this.selectedPatient.set(null);
+    this.error.set(null);
+  }
+
+  onPatientSelected(patient: Patient | null): void {
+    this.selectedPatient.set(patient);
+    this.form.patchValue({ patientId: patient?.id ?? '' });
     this.error.set(null);
   }
 
@@ -241,7 +195,7 @@ export class UnifiedAdmissionComponent implements OnInit {
   patientSummary(): string {
     const value = this.form.getRawValue();
     if (this.patientMode === 'EXISTING') {
-      const patient = this.patients().find((item) => item.id === value.patientId);
+      const patient = this.selectedPatient();
       return patient ? this.displayPatient(patient) : this.text('existing');
     }
     if (this.patientMode === 'NEW') {
@@ -316,16 +270,6 @@ export class UnifiedAdmissionComponent implements OnInit {
     this.form.markAllAsTouched();
   }
 
-  private loadPatients(): void {
-    this.isLoadingPatients.set(true);
-    this.patientApi.list().pipe(
-      finalize(() => this.isLoadingPatients.set(false)),
-    ).subscribe({
-      next: (patients) => this.patients.set(patients),
-      error: () => this.error.set(this.text('loadPatientsError')),
-    });
-  }
-
   private createProvisionalEmergency(
     value: ReturnType<FormGroup['getRawValue']>,
   ): Observable<AdmissionCompleted> {
@@ -358,23 +302,7 @@ export class UnifiedAdmissionComponent implements OnInit {
       })));
     }
 
-    const rawOrientation = value.orientation;
-    const orientationValue = rawOrientation === 'OTHER'
-      ? (value.customOrientation?.trim() || 'OTHER')
-      : rawOrientation;
-
-    const rawService = value.service;
-    const serviceValue = rawService === 'Autre'
-      ? this.optional(value.customService)
-      : this.optional(rawService);
-
-    return this.visitApi.create({
-      patientId: patient.id,
-      reason: value.reason.trim(),
-      orientation: orientationValue,
-      service: serviceValue,
-      arrivalAt: new Date().toISOString(),
-    }).pipe(map((visit) => ({
+    return this.visitApi.create(toCreateVisitRequest(patient.id, value)).pipe(map((visit) => ({
       carePath: this.carePath,
       patientId: patient.id,
       patientDisplayName: patient.displayName,
@@ -386,11 +314,11 @@ export class UnifiedAdmissionComponent implements OnInit {
     const value = this.form.getRawValue();
 
     if (this.patientMode === 'EXISTING') {
-      const patient = this.patients().find((item) => item.id === value.patientId);
-      if (!patient) {
-        return of({ id: '', displayName: this.text('existing') });
-      }
-      return of({ id: patient.id, displayName: this.displayPatient(patient) });
+      const patient = this.selectedPatient();
+      return of({
+        id: patient?.id ?? value.patientId,
+        displayName: patient ? this.displayPatient(patient) : this.text('existing'),
+      });
     }
 
     return this.patientApi.create({
@@ -461,7 +389,7 @@ export class UnifiedAdmissionComponent implements OnInit {
     }
 
     if (step === 2) {
-      if (this.carePath === 'NORMAL' && (!value.reason?.trim() || !value.orientation?.trim())) {
+      if (this.carePath === 'NORMAL' && !hasRequiredVisitDetails(value)) {
         return this.text('requiredVisit');
       }
       if (this.carePath === 'EMERGENCY' && !value.arrivalMode) {

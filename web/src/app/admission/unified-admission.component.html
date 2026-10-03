@@ -145,13 +145,11 @@
 
             @if (patientMode === 'EXISTING') {
               <div class="mt-4">
-                <label class="ui-label mb-1.5" for="admission-patient">{{ text('selectPatient') }}</label>
-                <select id="admission-patient" formControlName="patientId" class="ui-input">
-                  <option value="">{{ text('selectPatientPlaceholder') }}</option>
-                  @for (patient of patients(); track patient.id) {
-                    <option [value]="patient.id">{{ displayPatient(patient) }} — {{ patient.globalPatientNumber }}</option>
-                  }
-                </select>
+                <app-patient-search-picker
+                  inputId="admission-patient"
+                  [selected]="selectedPatient()"
+                  (patientSelected)="onPatientSelected($event)"
+                />
               </div>
             }
 
@@ -232,44 +230,7 @@
         @if (carePath === 'NORMAL') {
           <fieldset>
             <legend class="ui-label mb-3">{{ text('visit') }}</legend>
-            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              <div class="sm:col-span-2">
-                <label class="ui-label mb-1.5" for="admission-reason">{{ text('reason') }} *</label>
-                <textarea id="admission-reason" formControlName="reason" class="ui-input min-h-20 resize-y py-2.5"></textarea>
-              </div>
-              <div>
-                <label class="ui-label mb-1.5" for="admission-orientation">{{ text('orientation') }} *</label>
-                <select id="admission-orientation" formControlName="orientation" class="ui-input">
-                  @for (opt of orientationOptions; track opt.code) {
-                    <option [value]="opt.code">{{ text(opt.translationKey) }}</option>
-                  }
-                </select>
-              </div>
-              <div>
-                <label class="ui-label mb-1.5" for="admission-service">{{ text('service') }}</label>
-                <select id="admission-service" formControlName="service" class="ui-input">
-                  <option value="">{{ text('serviceSelectPlaceholder') }}</option>
-                  @for (srv of availableServices(); track srv) {
-                    <option [value]="srv">{{ srv }}</option>
-                  }
-                  <option value="Autre">{{ text('serviceOptionOther') }}</option>
-                </select>
-              </div>
-
-              @if (form.get('orientation')?.value === 'OTHER') {
-                <div class="sm:col-span-2">
-                  <label class="ui-label mb-1.5" for="admission-custom-orientation">{{ text('orientationOption.OTHER') }}</label>
-                  <input id="admission-custom-orientation" formControlName="customOrientation" class="ui-input" [placeholder]="text('orientationOption.OTHER')" />
-                </div>
-              }
-
-              @if (form.get('service')?.value === 'Autre') {
-                <div class="sm:col-span-2">
-                  <label class="ui-label mb-1.5" for="admission-custom-service">{{ text('customServicePlaceholder') }}</label>
-                  <input id="admission-custom-service" formControlName="customService" class="ui-input" [placeholder]="text('customServicePlaceholder')" />
-                </div>
-              }
-            </div>
+            <app-visit-details-fields [form]="form" />
           </fieldset>
         } @else {
           <div class="space-y-5">
@@ -427,11 +388,11 @@
       }
 
       @if (currentStep() < 3) {
-        <app-ui-button variant="primary" class="w-full sm:w-auto" (pressed)="nextStep()" [disabled]="isLoadingPatients()">
+        <app-ui-button variant="primary" class="w-full sm:w-auto" (pressed)="nextStep()">
           {{ text('next') }}
         </app-ui-button>
       } @else {
-        <app-ui-button variant="primary" class="w-full sm:w-auto" (pressed)="submit()" [disabled]="isSubmitting() || isLoadingPatients()">
+        <app-ui-button variant="primary" class="w-full sm:w-auto" (pressed)="submit()" [disabled]="isSubmitting()">
           {{ isSubmitting() ? text('saving') : (carePath === 'EMERGENCY' ? text('saveEmergency') : text('saveNormal')) }}
         </app-ui-button>
       }

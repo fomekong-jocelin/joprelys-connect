@@ -10,6 +10,8 @@ import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patie
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Vitals } from '../visit/visit.models';
+import { VitalAlertsComponent } from '../visit/vital-alerts.component';
+import { VitalsHistoryComponent } from '../visit/vitals-history.component';
 import {
   AiConsultationDraft,
   AiPrescriptionLine,
@@ -37,6 +39,8 @@ interface CommonExam {
     AppShellComponent,
     VoiceAssistantPanelComponent,
     ClinicalNoteEditorComponent,
+    VitalAlertsComponent,
+    VitalsHistoryComponent,
   ],
   providers: [
     ConsultationFeedbackStore,

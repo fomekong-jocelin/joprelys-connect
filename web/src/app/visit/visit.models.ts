@@ -12,7 +12,28 @@ export interface Vitals {
   bmi?: number;
   /** Heure de la dernière saisie des constantes (renvoyée par le backend). */
   recordedAt?: string;
+  /** Alertes calculées par le backend (seuils adultes). */
+  alerts?: VitalAlert[];
 }
+
+export type VitalAlertSeverity = 'WARNING' | 'CRITICAL';
+
+export interface VitalAlert {
+  code: string;
+  severity: VitalAlertSeverity;
+}
+
+export interface VitalMeasurement extends Vitals {
+  id: string;
+  recordedAt: string;
+  recordedBy?: string;
+  recordedByName?: string;
+}
+
+/** Étape de prise en charge d'une visite active. */
+export type VisitCareStage = 'ATTENTE_CONSTANTES' | 'PRET_MEDECIN' | 'EN_CONSULTATION';
+
+export type ActiveVisitScope = 'ALL' | 'MINE' | 'SERVICE';
 
 export interface Visit {
   id: string;
@@ -29,6 +50,10 @@ export interface Visit {
   createdAt: string;
   closedAt?: string;
   vitals?: Vitals;
+  careStage?: VisitCareStage;
+  consultingPractitionerId?: string;
+  consultingPractitionerName?: string;
+  consultationStartedAt?: string;
 }
 
 export interface CreateVisitRequest {

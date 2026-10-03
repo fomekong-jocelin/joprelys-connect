@@ -9,6 +9,7 @@ import com.joprelys.backend.consultation.api.ConsultationResponse;
 import com.joprelys.backend.prescription.api.PrescriptionItemResponse;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
 import com.joprelys.backend.visit.api.VitalsResponse;
+import com.joprelys.backend.visit.application.VisitCareFlowUseCase;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
@@ -31,18 +32,21 @@ public class ConsultationService {
 	private final UserAccountRepository userAccountRepository;
 	private final MedicalDocumentRepository medicalDocumentRepository;
 	private final PrescriptionRepository prescriptionRepository;
+	private final VisitCareFlowUseCase visitCareFlow;
 
 	public ConsultationService(
 			ConsultationRepository consultationRepository,
 			VisitRepository visitRepository,
 			UserAccountRepository userAccountRepository,
 			MedicalDocumentRepository medicalDocumentRepository,
-			PrescriptionRepository prescriptionRepository) {
+			PrescriptionRepository prescriptionRepository,
+			VisitCareFlowUseCase visitCareFlow) {
 		this.consultationRepository = consultationRepository;
 		this.visitRepository = visitRepository;
 		this.userAccountRepository = userAccountRepository;
 		this.medicalDocumentRepository = medicalDocumentRepository;
 		this.prescriptionRepository = prescriptionRepository;
+		this.visitCareFlow = visitCareFlow;
 	}
 
 	@Transactional
@@ -57,6 +61,9 @@ public class ConsultationService {
 
 		UserAccountEntity doctor = userAccountRepository.findByEmail(doctorEmail)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Médecin introuvable."));
+
+		visitCareFlow.ensureConsultationOwnership(visit, doctor.getId(), doctor.getDisplayName());
+		visitRepository.save(visit);
 
 		String symptoms = textOrEmpty(request.symptoms());
 		String diagnosis = textOrEmpty(request.diagnosis());
