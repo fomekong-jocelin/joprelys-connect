@@ -9,6 +9,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.StaffOrganizationalUnitAssignmentRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.auth.security.JwtService;
@@ -74,6 +76,7 @@ class HospitalizationControllerTest {
     @Autowired private FacilitySpaceRepository facilitySpaceRepository;
     @Autowired private InpatientSpaceProfileRepository inpatientSpaceProfileRepository;
     @Autowired private OrganizationalUnitSpaceAssignmentRepository unitSpaceAssignmentRepository;
+    @Autowired private StaffOrganizationalUnitAssignmentRepository staffUnitAssignmentRepository;
     @Autowired private BedRepository bedRepository;
     @Autowired private BedAssignmentRepository bedAssignmentRepository;
     @Autowired private JdbcTemplate jdbcTemplate;
@@ -600,6 +603,16 @@ class HospitalizationControllerTest {
                 OrganizationalUnitType.CARE_UNIT,
                 null));
 
+        // Le médecin responsable doit être affecté à l'unité d'admission (règle d'admission hospitalière).
+        staffUnitAssignmentRepository.save(new StaffOrganizationalUnitAssignmentEntity(
+                organization.getId(),
+                doctor.getId(),
+                unit.getId(),
+                "PRACTITIONER",
+                false,
+                Instant.now().minusSeconds(60),
+                null));
+
         FacilitySpaceEntity space = facilitySpaceRepository.save(new FacilitySpaceEntity(
                 organization.getId(),
                 null,
@@ -679,6 +692,7 @@ class HospitalizationControllerTest {
         jdbcTemplate.update("DELETE FROM inpatient_space_profiles");
         jdbcTemplate.update("DELETE FROM facility_spaces");
         jdbcTemplate.update("DELETE FROM facility_location_nodes");
+        jdbcTemplate.update("DELETE FROM staff_organizational_unit_assignments");
         jdbcTemplate.update("DELETE FROM organizational_units");
         jdbcTemplate.update("DELETE FROM visits");
         jdbcTemplate.update("DELETE FROM patient_allergies");

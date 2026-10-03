@@ -122,3 +122,8 @@ Audit seul, sans livraison. Les corrections P0 relèveront d'un bump **MINOR** (
 - Nouveaux tests backend : `VisitCareFlowControllerTest` (5 tests) et `VitalSignAlertPolicyTest` (3 tests), tous verts.
 - Front : `ng build` OK ; `ng test` 112 fichiers, tous verts.
 - Non fait : QA visuelle navigateur (file, tiroir, admission, consultation ; clair/sombre ; mobile).
+
+## Suivi du 2026-10-04
+- `HospitalizationControllerTest` (7 échecs hérités) : corrigé. La fixture n'affectait pas le médecin responsable à l'unité d'admission, ce qu'exige la règle introduite par le commit `62f6d596`. Le test est maintenant aligné sur cette règle et passe à 7/7.
+- Suite backend complète : 887 tests, 1 échec non lié à ces travaux. `FullFinancialE2ETest.shouldExecuteFullFinancialLifecycleNominal` interroge l'export comptable avec `LocalDate.now()`, alors que les écritures sont datées en UTC. Le test échoue donc entre 00h00 et l'heure de décalage UTC (vu à 00h59 heure locale, UTC+2) et passe le reste de la journée. Ticket à ouvrir : export comptable et fuseau horaire.
+- QA navigateur : bloquée faute de compte de test (médecin et infirmier ou agent d'accueil) sur l'environnement local.
