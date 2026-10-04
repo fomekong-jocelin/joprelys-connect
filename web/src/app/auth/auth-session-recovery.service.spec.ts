@@ -84,7 +84,7 @@ describe('AuthSessionRecoveryService', () => {
     await Promise.resolve();
 
     expect(storage.session()).toBeNull();
-    expect(router.navigate).toHaveBeenCalledWith(['/'], {
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
       queryParams: {
         sessionExpired: 'true',
         returnUrl: '/patients',
@@ -101,7 +101,7 @@ describe('AuthSessionRecoveryService', () => {
     await Promise.resolve();
 
     expect(storage.session()).toBeNull();
-    expect(router.navigate).toHaveBeenCalledWith(['/'], {
+    expect(router.navigate).toHaveBeenCalledWith(['/login'], {
       queryParams: {
         mode: 'patient',
         sessionExpired: 'true',

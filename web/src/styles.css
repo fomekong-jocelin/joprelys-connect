@@ -27,6 +27,7 @@
    ============================================================ */
 html {
   color-scheme: light;
+  overflow-x: hidden;
 }
 
 html[data-theme='dark'] {
@@ -37,6 +38,8 @@ body {
   font-family: var(--font-sans);
   background-color: var(--app-bg);
   color: var(--text-primary);
+  overflow-x: hidden;
+  width: 100%;
 }
 
 /* ============================================================

@@ -1,11 +1,153 @@
 <!doctype html>
-<html lang="en">
+<html lang="fr" data-theme="light">
 <head>
   <meta charset="utf-8">
-  <title>Joprelys Connect</title>
-  <base href="/">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <base href="/">
+
+  <!-- Primary SEO -->
+  <title>Joprelys Connect · Plateforme Hospitalière, Dossier Patient Partagé & HealthTech au Cameroun</title>
+  <meta name="description" content="Joprelys Connect : la solution HealthTech unifiée pour cliniques, hôpitaux et praticiens. Dossier patient partagé (DPU), consultation assistée par IA vocale et interopérabilité des soins au Cameroun et en Afrique.">
+  <meta name="keywords" content="Joprelys, Joprelys Connect, HealthTech Cameroun, dossier patient partagé, DPU, logiciel clinique Douala, gestion hospitalière Yaoundé, consultation IA médicale, AllôPharma, santé numérique Afrique">
+  <meta name="author" content="Jocelin Fomekong">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1">
+  <meta name="language" content="French">
+  <link rel="canonical" href="https://joprelys.com/">
+
+  <!-- Geo (Douala, Yaoundé, Cameroun) -->
+  <meta name="geo.region" content="CM-LT">
+  <meta name="geo.placename" content="Douala, Cameroun">
+  <meta name="geo.position" content="4.0511;9.7679">
+  <meta name="ICBM" content="4.0511, 9.7679">
+
+  <!-- Open Graph / Facebook / LinkedIn / WhatsApp -->
+  <meta property="og:type" content="website">
+  <meta property="og:locale" content="fr_FR">
+  <meta property="og:site_name" content="Joprelys Connect">
+  <meta property="og:url" content="https://joprelys.com/">
+  <meta property="og:title" content="Joprelys Connect · Plateforme Hospitalière & Dossier Patient Partagé">
+  <meta property="og:description" content="Parce qu’elle est précieuse, nous innovons pour la protéger. Plateforme médicale unifiée pour cliniques, praticiens et patients au Cameroun et en Afrique.">
+  <meta property="og:image" content="https://joprelys.com/assets/branding/og-joprelys-connect.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Joprelys Connect · HealthTech & Dossier Médical Partagé">
+  <meta name="twitter:description" content="Parce qu’elle est précieuse, nous innovons pour la protéger. Solution clinique et hospitalière de pointe au Cameroun.">
+  <meta name="twitter:image" content="https://joprelys.com/assets/branding/og-joprelys-connect.png">
+
+  <!-- Favicon & PWA -->
   <link rel="icon" type="image/x-icon" href="favicon.ico">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#001D4A">
+
+  <!-- Fonts Preconnect -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;600;700;800&family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Données structurées JSON-LD (Schema.org) -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "MedicalOrganization",
+        "@id": "https://joprelys.com/#organization",
+        "name": "Joprelys HealthTech",
+        "url": "https://joprelys.com/",
+        "logo": "https://joprelys.com/assets/branding/logo_principal.png",
+        "slogan": "Parce qu’elle est précieuse, nous innovons pour la protéger.",
+        "founder": {
+          "@type": "Person",
+          "name": "Jocelin Fomekong"
+        },
+        "description": "Marque HealthTech dédiée à la transformation numérique du système de santé, à la coordination clinique hospitalière et à la protection des patients au Cameroun et en Afrique.",
+        "sameAs": [
+          "https://allopharma.online/",
+          "https://www.youtube.com/@Joprelys"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "@id": "https://joprelys.com/#website",
+        "url": "https://joprelys.com/",
+        "name": "Joprelys Connect",
+        "description": "Plateforme hospitalière unifiée, Dossier Patient Partagé (DPU) et consultation médicale assistée par IA.",
+        "publisher": {
+          "@id": "https://joprelys.com/#organization"
+        },
+        "inLanguage": "fr-FR"
+      },
+      {
+        "@type": "SoftwareApplication",
+        "@id": "https://joprelys.com/#software",
+        "name": "Joprelys Connect",
+        "applicationCategory": "MedicalSoftwareApplication",
+        "operatingSystem": "Web, iOS, Android",
+        "offers": {
+          "@type": "Offer",
+          "price": "0",
+          "priceCurrency": "XAF",
+          "description": "Démonstration personnalisée pour cliniques et hôpitaux pilotes"
+        },
+        "featureList": [
+          "Dossier Patient Unique et Partagé (DPU)",
+          "Consultation médicale augmentée par IA vocale",
+          "Gestion des admissions et des lits hospitaliers",
+          "Interopérabilité FHIR / HL7 et passerelle AllôPharma",
+          "Hébergement Données de Santé (HDS) & Piste d'audit inviolable"
+        ]
+      },
+      {
+        "@type": "MedicalWebPage",
+        "@id": "https://joprelys.com/#medicalwebpage",
+        "url": "https://joprelys.com/",
+        "name": "Joprelys Connect · Système d'Information Hospitalier et Clinique",
+        "inLanguage": "fr-FR",
+        "about": {
+          "@type": "MedicalSpecialty",
+          "name": "HospitalMedicine"
+        },
+        "audience": {
+          "@type": "MedicalAudience",
+          "audienceType": "Cliniques, Hôpitaux, Praticiens de santé et Patients"
+        }
+      },
+      {
+        "@type": "FAQPage",
+        "@id": "https://joprelys.com/#faq",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "Comment Joprelys Connect assure-t-il la sécurité des données médicales ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "Joprelys Connect utilise un chiffrement fort AES-256 en transit et au repos, une architecture conforme HDS avec piste d'audit inviolable (Audit Trail), et un contrôle d'accès basé sur les rôles (RBAC) garantissant le secret médical."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Quel est le rôle de l'assistant IA lors des consultations ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "L'assistant IA de Joprelys Connect agit en copilote sécurisé : il transcrit les échanges en temps réel et pré-remplit le dossier clinique, mais chaque proposition ou compte rendu requiert la validation explicite et souveraine du médecin."
+            }
+          },
+          {
+            "@type": "Question",
+            "name": "Comment Joprelys Connect s'articule-t-il avec AllôPharma ?",
+            "acceptedAnswer": {
+              "@type": "Answer",
+              "text": "AllôPharma et Joprelys Connect font partie du même écosystème Joprelys HealthTech. Les ordonnances prescrites dans Joprelys Connect peuvent être orientées vers les pharmacies du réseau AllôPharma pour vérifier la disponibilité immédiate des médicaments."
+            }
+          }
+        ]
+      }
+    ]
+  }
+  </script>
 </head>
 <body>
   <app-root></app-root>

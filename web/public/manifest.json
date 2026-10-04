@@ -1,0 +1,31 @@
+{
+  "name": "Joprelys Connect — Coordination clinique et hospitalière",
+  "short_name": "Joprelys",
+  "description": "Plateforme unifiée de santé numérique : Dossier Patient Partagé, consultation assistée par IA et gestion hospitalière au Cameroun.",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#001D4A",
+  "theme_color": "#001D4A",
+  "lang": "fr",
+  "categories": ["health", "medical", "business"],
+  "icons": [
+    {
+      "src": "favicon.ico",
+      "sizes": "64x64 32x32 24x24 16x16",
+      "type": "image/x-icon"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Connexion Praticien",
+      "short_name": "Praticien",
+      "url": "/login"
+    },
+    {
+      "name": "Espace Patient",
+      "short_name": "Patient",
+      "url": "/patient/login"
+    }
+  ]
+}

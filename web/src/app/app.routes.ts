@@ -6,8 +6,18 @@ import { PROFESSIONAL_ACCESS_POLICIES } from './auth/professional-access-policie
 export const routes: Routes = [
   {
     path: '',
+    loadComponent: () => import('./landing/landing-page.component').then((m) => m.LandingPageComponent),
+    pathMatch: 'full',
+  },
+  {
+    path: 'login',
     loadComponent: () => import('./auth/login.component').then((module) => module.LoginComponent),
     canActivate: [loginGuard],
+  },
+  {
+    path: 'auth/login',
+    redirectTo: 'login',
+    pathMatch: 'full',
   },
   {
     path: 'dashboard',

@@ -1,0 +1,14 @@
+User-agent: *
+Allow: /
+Allow: /login
+Allow: /patient/login
+Allow: /legal/
+Disallow: /api/
+Disallow: /dashboard
+Disallow: /clinic/
+Disallow: /patients/
+Disallow: /interop
+Disallow: /admission
+Disallow: /emergency
+
+Sitemap: https://joprelys.com/sitemap.xml

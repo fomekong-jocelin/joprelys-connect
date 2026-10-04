@@ -1,0 +1,833 @@
+<a class="skip" href="#main-content">{{ t().nav.skip }}</a>
+
+<!-- ==========================================
+     HEADER / NAVIGATION
+     ========================================== -->
+<header class="landing-header">
+  <div class="landing-header-container">
+    <div class="landing-logo-container">
+      <a routerLink="/" class="landing-logo-link" (click)="closeMobileMenu()" aria-label="Joprelys Accueil">
+        <app-logo [showName]="false" size="md"></app-logo>
+      </a>
+    </div>
+
+    <!-- Desktop Navigation -->
+    <nav class="landing-nav-desktop" aria-label="Navigation principale">
+      <a href="#features" class="landing-nav-link">{{ t().nav.dpu }}</a>
+      <a href="#assistant-ia" class="landing-nav-link">{{ t().nav.aiAssistant }}</a>
+      <a href="#hospital" class="landing-nav-link">{{ t().nav.clinicManagement }}</a>
+      <a href="#ecosystem" class="landing-nav-link">{{ t().nav.ecosystem }}</a>
+      <a href="#security" class="landing-nav-link">{{ t().nav.security }}</a>
+      <a href="#faq" class="landing-nav-link">{{ t().nav.faq }}</a>
+      <a href="https://allopharma.online/" target="_blank" rel="noopener noreferrer" class="landing-nav-link landing-nav-link-highlight" title="Accéder à l'Observatoire AllôPharma">
+        {{ t().nav.allopharma }}
+      </a>
+    </nav>
+
+    <!-- Header Actions -->
+    <div class="landing-header-actions">
+      <!-- Theme toggle -->
+      <button
+        type="button"
+        class="landing-icon-btn"
+        (click)="toggleTheme()"
+        [title]="themeService.theme() === 'dark' ? t().nav.themeLight : t().nav.themeDark"
+        [attr.aria-label]="themeService.theme() === 'dark' ? t().nav.themeLight : t().nav.themeDark"
+      >
+        @if (themeService.theme() === 'dark') {
+          <svg aria-hidden="true" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M12 3v2.25m0 13.5V21M4.978 4.978l1.59 1.59m10.862 10.862l1.59 1.59M3 12h2.25m13.5 0H21M4.978 19.022l1.59-1.59m10.862-10.862l1.59-1.59M12 7.5a4.5 4.5 0 100 9 4.5 4.5 0 000-9z"/>
+          </svg>
+        } @else {
+          <svg aria-hidden="true" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M21.752 15.002A9.718 9.718 0 0118 15.75c-5.385 0-9.75-4.365-9.75-9.75 0-1.33.266-2.597.748-3.752A9.753 9.753 0 003 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 009.002-5.998z"/>
+          </svg>
+        }
+      </button>
+
+      <!-- Language switch -->
+      <button
+        type="button"
+        class="landing-icon-btn landing-lang-btn"
+        (click)="toggleLang()"
+        [title]="t().nav.switchLang"
+        [attr.aria-label]="t().nav.switchLang"
+      >
+        <span class="font-bold text-xs uppercase">{{ i18n.currentLanguage() }}</span>
+      </button>
+
+      <!-- Desktop Auth Buttons (Hidden on mobile < 1024px) -->
+      <div class="landing-auth-desktop">
+        @if (isAuthenticated()) {
+          <a [routerLink]="dashboardUrl()" class="landing-btn landing-btn-primary">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2V6zM14 6a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2V6zM4 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2H6a2 2 0 01-2-2v-2zM14 16a2 2 0 012-2h2a2 2 0 012 2v2a2 2 0 01-2 2h-2a2 2 0 01-2-2v-2z" />
+            </svg>
+            {{ t().nav.dashboard }}
+          </a>
+        } @else {
+          <a routerLink="/patient/login" class="landing-btn landing-btn-ghost">
+            {{ t().nav.patientPortal }}
+          </a>
+          <a routerLink="/login" class="landing-btn landing-btn-primary">
+            <svg class="w-4 h-4 mr-1.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            {{ t().nav.doctorLogin }}
+          </a>
+        }
+      </div>
+
+      <!-- Mobile Menu Toggle Button -->
+      <button
+        type="button"
+        class="landing-mobile-toggle"
+        (click)="toggleMobileMenu()"
+        [attr.aria-expanded]="mobileMenuOpen()"
+        [attr.aria-label]="t().nav.openMenu"
+      >
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          @if (mobileMenuOpen()) {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          } @else {
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+          }
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Mobile Drawer Menu -->
+  @if (mobileMenuOpen()) {
+    <div class="landing-mobile-drawer" role="dialog" aria-modal="true" [attr.aria-label]="t().nav.openMenu">
+      <nav class="landing-mobile-nav">
+        <a href="#features" class="landing-mobile-link" (click)="closeMobileMenu()">{{ t().nav.dpu }}</a>
+        <a href="#assistant-ia" class="landing-mobile-link" (click)="closeMobileMenu()">{{ t().nav.aiAssistant }}</a>
+        <a href="#hospital" class="landing-mobile-link" (click)="closeMobileMenu()">{{ t().nav.clinicManagement }}</a>
+        <a href="#ecosystem" class="landing-mobile-link" (click)="closeMobileMenu()">{{ t().nav.ecosystem }}</a>
+        <a href="#security" class="landing-mobile-link" (click)="closeMobileMenu()">{{ t().nav.security }}</a>
+        <a href="#faq" class="landing-mobile-link" (click)="closeMobileMenu()">{{ t().nav.faq }}</a>
+        <a href="https://allopharma.online/" target="_blank" rel="noopener noreferrer" class="landing-mobile-link text-brand-green font-semibold" (click)="closeMobileMenu()">
+          {{ t().nav.allopharma }}
+        </a>
+        <div class="landing-mobile-actions pt-4 border-t border-[var(--app-border)] flex flex-col gap-3">
+          @if (isAuthenticated()) {
+            <a [routerLink]="dashboardUrl()" class="landing-btn landing-btn-primary w-full text-center py-2.5" (click)="closeMobileMenu()">
+              {{ t().nav.dashboard }}
+            </a>
+          } @else {
+            <a routerLink="/login" class="landing-btn landing-btn-primary w-full text-center py-2.5" (click)="closeMobileMenu()">
+              {{ t().nav.doctorLogin }}
+            </a>
+            <a routerLink="/patient/login" class="landing-btn landing-btn-secondary w-full text-center py-2.5" (click)="closeMobileMenu()">
+              {{ t().nav.patientPortal }}
+            </a>
+          }
+        </div>
+      </nav>
+    </div>
+  }
+</header>
+
+<main id="main-content" class="landing-main">
+  <!-- ==========================================
+       HERO SECTION
+       ========================================== -->
+  <section class="landing-hero-section" aria-labelledby="hero-title">
+    <!-- Rentila-style Organic Glowing Blobs -->
+    <div class="rentila-blob rentila-blob-1" aria-hidden="true"></div>
+    <div class="rentila-blob rentila-blob-2" aria-hidden="true"></div>
+
+    <div class="landing-container">
+      <div class="landing-hero-grid">
+        <!-- Hero Text -->
+        <div class="landing-hero-copy">
+          <h1 id="hero-title" class="landing-hero-title">
+            {{ t().hero.title }}
+          </h1>
+
+          <p class="landing-hero-subtitle">
+            {{ t().hero.subtitle }}
+          </p>
+
+          <div class="landing-hero-cta-group">
+            <a href="#contact-demo" class="landing-btn landing-btn-primary landing-btn-lg">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
+              </svg>
+              {{ t().hero.ctaDemo }}
+            </a>
+            <a routerLink="/login" class="landing-btn landing-btn-secondary landing-btn-lg">
+              <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              {{ t().hero.ctaDoctor }}
+            </a>
+          </div>
+
+          <div class="landing-hero-ecosystem-link">
+            <span>{{ t().hero.allopharmaLabel }}</span>
+            <a href="https://allopharma.online/" target="_blank" rel="noopener noreferrer" class="font-semibold text-[var(--brand-primary)] hover:underline inline-flex items-center gap-1">
+              {{ t().hero.allopharmaLink }}
+              <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
+            </a>
+          </div>
+        </div>
+
+        <!-- Hero Visual Showcase -->
+        <div class="landing-hero-visual" aria-hidden="true">
+          <div class="clinical-preview-card ui-card">
+            <!-- Mockup Card Header -->
+            <div class="clinical-preview-topbar">
+              <div class="flex items-center gap-1.5 min-w-0">
+                <span class="w-2.5 h-2.5 rounded-full bg-red-400 shrink-0"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-amber-400 shrink-0"></span>
+                <span class="w-2.5 h-2.5 rounded-full bg-green-400 shrink-0"></span>
+                <span class="ml-2 text-xs font-mono text-[var(--text-muted)] truncate">joprelys-connect.local/consultation</span>
+              </div>
+            </div>
+
+            <!-- Mockup Patient Context -->
+            <div class="clinical-preview-patient">
+              <div class="flex flex-col sm:flex-row sm:justify-between sm:items-start gap-2">
+                <div>
+                  <div class="flex flex-wrap items-center gap-1.5">
+                    <h4 class="font-bold text-sm sm:text-base text-[var(--text-primary)]">{{ t().hero.mockup.patientName }}</h4>
+                    <span class="patient-id-badge">{{ t().hero.mockup.patientId }}</span>
+                  </div>
+                  <p class="text-[11px] sm:text-xs text-[var(--text-secondary)] mt-0.5">{{ t().hero.mockup.patientInfo }}</p>
+                </div>
+                <span class="badge-dpu self-start">{{ t().hero.mockup.badgeDpu }}</span>
+              </div>
+
+              <!-- Vitals Row -->
+              <div class="vitals-strip">
+                <div class="vital-item">
+                  <span class="vital-label">{{ t().hero.mockup.vitalsBp }}</span>
+                  <span class="vital-val font-bold">128/82 <small class="text-xs font-normal">mmHg</small></span>
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">{{ t().hero.mockup.vitalsHr }}</span>
+                  <span class="vital-val font-bold">72 <small class="text-xs font-normal">bpm</small></span>
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">{{ t().hero.mockup.vitalsTemp }}</span>
+                  <span class="vital-val font-bold">37.1 <small class="text-xs font-normal">°C</small></span>
+                </div>
+                <div class="vital-item">
+                  <span class="vital-label">{{ t().hero.mockup.vitalsSpo2 }}</span>
+                  <span class="vital-val font-bold">98 <small class="text-xs font-normal">%</small></span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Voice Assistant Simulation Area -->
+            <div class="ai-stream-preview">
+              <div class="flex flex-wrap items-center justify-between gap-1 mb-2">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <div class="mic-wave-icon" aria-label="Recording waveform">
+                    <span class="wave-bar wave-bar-1"></span>
+                    <span class="wave-bar wave-bar-2"></span>
+                    <span class="wave-bar wave-bar-3"></span>
+                    <span class="wave-bar wave-bar-4"></span>
+                    <span class="wave-bar wave-bar-5"></span>
+                  </div>
+                  <span class="text-xs font-semibold text-[var(--brand-primary)]">{{ t().hero.mockup.aiTitle }}</span>
+                </div>
+                <span class="text-[10px] text-[var(--text-muted)] font-mono whitespace-nowrap">{{ t().hero.mockup.aiSecurity }}</span>
+              </div>
+              <p class="ai-transcript-text">
+                {{ t().hero.mockup.aiTranscript }}
+              </p>
+              <div class="ai-structured-output">
+                <span class="ai-tag">{{ t().hero.mockup.tagReason }}</span>
+                <span class="ai-tag">{{ t().hero.mockup.tagVitals }}</span>
+                <span class="ai-tag text-green-600">{{ t().hero.mockup.tagStock }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Trust Metrics Bar -->
+      <div class="landing-metrics-strip">
+        <div class="metric-card">
+          <div class="metric-number">{{ t().metrics.m1Value }}</div>
+          <div class="metric-label">{{ t().metrics.m1Label }}</div>
+          <div class="metric-sub">{{ t().metrics.m1Sub }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-number">{{ t().metrics.m2Value }}</div>
+          <div class="metric-label">{{ t().metrics.m2Label }}</div>
+          <div class="metric-sub">{{ t().metrics.m2Sub }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-number">{{ t().metrics.m3Value }}</div>
+          <div class="metric-label">{{ t().metrics.m3Label }}</div>
+          <div class="metric-sub">{{ t().metrics.m3Sub }}</div>
+        </div>
+        <div class="metric-card">
+          <div class="metric-number">{{ t().metrics.m4Value }}</div>
+          <div class="metric-label">{{ t().metrics.m4Label }}</div>
+          <div class="metric-sub">{{ t().metrics.m4Sub }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rentila-style Smooth Wave Curve -->
+  <div class="rentila-curve-divider" aria-hidden="true">
+    <svg viewBox="0 0 1440 48" fill="none" preserveAspectRatio="none">
+      <path d="M0 24C360 48 1080 0 1440 24V48H0V24Z" fill="var(--app-surface)"/>
+    </svg>
+  </div>
+
+  <!-- ==========================================
+       SECTION : CHALLENGES & VISION
+       ========================================== -->
+  <section class="landing-section bg-[var(--app-surface)]" aria-labelledby="challenges-title">
+    <div class="landing-container">
+      <div class="section-header text-center">
+        <span class="section-tag">{{ t().comparison.tag }}</span>
+        <h2 id="challenges-title" class="section-title">
+          {{ t().comparison.title }}
+        </h2>
+        <p class="section-subtitle">
+          {{ t().comparison.subtitle }}
+        </p>
+      </div>
+
+      <div class="comparison-grid">
+        <!-- The Old Way -->
+        <div class="comparison-card comparison-old">
+          <div class="comparison-header">
+            <span class="comparison-icon">⚠️</span>
+            <h3 class="comparison-title">{{ t().comparison.oldTitle }}</h3>
+          </div>
+          <ul class="comparison-list">
+            @for (point of t().comparison.oldPoints; track point) {
+              <li>
+                <span class="cross-icon">✕</span>
+                <span>{{ point }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+
+        <!-- The Joprelys Connect Way -->
+        <div class="comparison-card comparison-new">
+          <div class="comparison-header">
+            <span class="comparison-icon">✨</span>
+            <h3 class="comparison-title">{{ t().comparison.newTitle }}</h3>
+          </div>
+          <ul class="comparison-list">
+            @for (point of t().comparison.newPoints; track point) {
+              <li>
+                <span class="check-icon">✓</span>
+                <span>{{ point }}</span>
+              </li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       SECTION : 4 CORE PILLARS (FONCTIONNALITÉS)
+       ========================================== -->
+  <section id="features" class="landing-section" aria-labelledby="features-title">
+    <div class="landing-container">
+      <div class="section-header text-center">
+        <span class="section-tag">{{ t().features.tag }}</span>
+        <h2 id="features-title" class="section-title">
+          {{ t().features.title }}
+        </h2>
+        <p class="section-subtitle">
+          {{ t().features.subtitle }}
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <!-- Feature 1: DPU -->
+        <div class="feature-card ui-card">
+          <div class="feature-icon-wrapper text-brand-cyan">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </div>
+          <h3 class="feature-card-title">{{ t().features.f1Title }}</h3>
+          <p class="feature-card-desc">{{ t().features.f1Desc }}</p>
+          <ul class="feature-points">
+            @for (pt of t().features.f1Points; track pt) {
+              <li>{{ pt }}</li>
+            }
+          </ul>
+        </div>
+
+        <!-- Feature 2: Voice AI Assistant -->
+        <div id="assistant-ia" class="feature-card ui-card feature-card-highlight">
+          <div class="feature-badge-top">{{ t().features.f2Badge }}</div>
+          <div class="feature-icon-wrapper text-[var(--brand-primary)]">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+            </svg>
+          </div>
+          <h3 class="feature-card-title">{{ t().features.f2Title }}</h3>
+          <p class="feature-card-desc">{{ t().features.f2Desc }}</p>
+          <ul class="feature-points">
+            @for (pt of t().features.f2Points; track pt) {
+              <li>{{ pt }}</li>
+            }
+          </ul>
+        </div>
+
+        <!-- Feature 3: Hospital & Bed Management -->
+        <div id="hospital" class="feature-card ui-card">
+          <div class="feature-icon-wrapper text-brand-green">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+            </svg>
+          </div>
+          <h3 class="feature-card-title">{{ t().features.f3Title }}</h3>
+          <p class="feature-card-desc">{{ t().features.f3Desc }}</p>
+          <ul class="feature-points">
+            @for (pt of t().features.f3Points; track pt) {
+              <li>{{ pt }}</li>
+            }
+          </ul>
+        </div>
+
+        <!-- Feature 4: Interop & Patient Portal -->
+        <div class="feature-card ui-card">
+          <div class="feature-icon-wrapper text-indigo-500">
+            <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+            </svg>
+          </div>
+          <h3 class="feature-card-title">{{ t().features.f4Title }}</h3>
+          <p class="feature-card-desc">{{ t().features.f4Desc }}</p>
+          <ul class="feature-points">
+            @for (pt of t().features.f4Points; track pt) {
+              <li>{{ pt }}</li>
+            }
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rentila-style Smooth Wave Curve -->
+  <div class="rentila-curve-divider" aria-hidden="true">
+    <svg viewBox="0 0 1440 48" fill="none" preserveAspectRatio="none">
+      <path d="M0 24C360 0 1080 48 1440 24V48H0V24Z" fill="var(--app-surface)"/>
+    </svg>
+  </div>
+
+  <!-- ==========================================
+       SECTION : ÉCOSYSTÈME JOPRELYS HEALTHTECH
+       ========================================== -->
+  <section id="ecosystem" class="landing-section bg-[var(--app-surface)]" aria-labelledby="ecosystem-title">
+    <div class="landing-container">
+      <div class="section-header text-center">
+        <span class="section-tag">{{ t().ecosystem.tag }}</span>
+        <h2 id="ecosystem-title" class="section-title">
+          {{ t().ecosystem.title }}
+        </h2>
+        <p class="section-subtitle">
+          {{ t().ecosystem.subtitle }}
+        </p>
+      </div>
+
+      <div class="ecosystem-architecture-grid">
+        <!-- Module 1: Joprelys Connect -->
+        <div class="eco-card eco-card-active ui-card">
+          <div class="eco-card-header">
+            <span class="eco-indicator">{{ t().ecosystem.c1Badge }}</span>
+            <h3 class="eco-title">{{ t().ecosystem.c1Title }}</h3>
+          </div>
+          <p class="eco-desc">{{ t().ecosystem.c1Desc }}</p>
+          <div class="eco-target">{{ t().ecosystem.c1Target }}</div>
+        </div>
+
+        <!-- Module 2: AllôPharma -->
+        <div class="eco-card ui-card">
+          <div class="eco-card-header">
+            <span class="eco-indicator bg-green-100 text-green-800 dark:bg-green-950 dark:text-green-300">{{ t().ecosystem.c2Badge }}</span>
+            <h3 class="eco-title">{{ t().ecosystem.c2Title }}</h3>
+          </div>
+          <p class="eco-desc">{{ t().ecosystem.c2Desc }}</p>
+          <a href="https://allopharma.online/" target="_blank" rel="noopener noreferrer" class="eco-link">
+            {{ t().ecosystem.c2Link }}
+          </a>
+        </div>
+
+        <!-- Module 3: Joprelys Patient -->
+        <div class="eco-card ui-card">
+          <div class="eco-card-header">
+            <span class="eco-indicator bg-blue-100 text-blue-800 dark:bg-blue-950 dark:text-blue-300">{{ t().ecosystem.c3Badge }}</span>
+            <h3 class="eco-title">{{ t().ecosystem.c3Title }}</h3>
+          </div>
+          <p class="eco-desc">{{ t().ecosystem.c3Desc }}</p>
+          <div class="eco-target">{{ t().ecosystem.c3Target }}</div>
+        </div>
+
+        <!-- Module 4: Joprelys Interop -->
+        <div class="eco-card ui-card">
+          <div class="eco-card-header">
+            <span class="eco-indicator bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300">{{ t().ecosystem.c4Badge }}</span>
+            <h3 class="eco-title">{{ t().ecosystem.c4Title }}</h3>
+          </div>
+          <p class="eco-desc">{{ t().ecosystem.c4Desc }}</p>
+          <div class="eco-target">{{ t().ecosystem.c4Target }}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       SECTION : SÉCURITÉ, HDS & SOUVERAINETÉ
+       ========================================== -->
+  <section id="security" class="landing-section" aria-labelledby="security-title">
+    <div class="landing-container">
+      <div class="security-box ui-card">
+        <div class="security-grid">
+          <div class="security-content">
+            <span class="section-tag text-brand-green">{{ t().security.tag }}</span>
+            <h2 id="security-title" class="text-2xl lg:text-3xl font-extrabold text-[var(--text-primary)] font-display tracking-tight mt-2 mb-4">
+              {{ t().security.title }}
+            </h2>
+            <p class="text-[var(--text-secondary)] text-base mb-6 leading-relaxed">
+              {{ t().security.desc }}
+            </p>
+
+            <div class="security-badges-list">
+              <div class="security-badge-item">
+                <div class="security-badge-icon">🔒</div>
+                <div>
+                  <h4 class="font-bold text-sm text-[var(--text-primary)]">{{ t().security.b1Title }}</h4>
+                  <p class="text-xs text-[var(--text-secondary)]">{{ t().security.b1Desc }}</p>
+                </div>
+              </div>
+
+              <div class="security-badge-item">
+                <div class="security-badge-icon">📜</div>
+                <div>
+                  <h4 class="font-bold text-sm text-[var(--text-primary)]">{{ t().security.b2Title }}</h4>
+                  <p class="text-xs text-[var(--text-secondary)]">{{ t().security.b2Desc }}</p>
+                </div>
+              </div>
+
+              <div class="security-badge-item">
+                <div class="security-badge-icon">🛡️</div>
+                <div>
+                  <h4 class="font-bold text-sm text-[var(--text-primary)]">{{ t().security.b3Title }}</h4>
+                  <p class="text-xs text-[var(--text-secondary)]">{{ t().security.b3Desc }}</p>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="security-visual flex items-center justify-center p-6">
+            <div class="security-shield-card">
+              <div class="shield-circle">
+                <svg class="w-16 h-16 text-[var(--brand-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+                </svg>
+              </div>
+              <h4 class="font-bold text-base text-[var(--text-primary)] mt-3">{{ t().security.shieldTitle }}</h4>
+              <p class="text-xs text-[var(--text-muted)] mt-1 text-center">{{ t().security.shieldDesc }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Rentila-style Smooth Wave Curve -->
+  <div class="rentila-curve-divider" aria-hidden="true">
+    <svg viewBox="0 0 1440 48" fill="none" preserveAspectRatio="none">
+      <path d="M0 24C360 48 1080 0 1440 24V48H0V24Z" fill="var(--app-surface)"/>
+    </svg>
+  </div>
+
+  <!-- ==========================================
+       SECTION : FAQ INTERACTIVE
+       ========================================== -->
+  <section id="faq" class="landing-section bg-[var(--app-surface)]" aria-labelledby="faq-title">
+    <div class="landing-container max-w-4xl">
+      <div class="section-header text-center">
+        <span class="section-tag">{{ t().faq.tag }}</span>
+        <h2 id="faq-title" class="section-title">
+          {{ t().faq.title }}
+        </h2>
+        <p class="section-subtitle">
+          {{ t().faq.subtitle }}
+        </p>
+      </div>
+
+      <div class="faq-list">
+        @for (item of faqs(); track item.question; let idx = $index) {
+          <div class="faq-item ui-card" [class.faq-item-open]="activeFaq() === idx">
+            <button
+              type="button"
+              class="faq-trigger"
+              (click)="toggleFaq(idx)"
+              [attr.aria-expanded]="activeFaq() === idx"
+              [attr.aria-controls]="'faq-panel-' + idx"
+              [id]="'faq-header-' + idx"
+            >
+              <span class="faq-question">{{ item.question }}</span>
+              <span class="faq-arrow" aria-hidden="true">
+                <svg class="w-5 h-5 transition-transform duration-200" [class.rotate-180]="activeFaq() === idx" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </span>
+            </button>
+            @if (activeFaq() === idx) {
+              <div
+                class="faq-content"
+                [id]="'faq-panel-' + idx"
+                role="region"
+                [attr.aria-labelledby]="'faq-header-' + idx"
+              >
+                <p>{{ item.answer }}</p>
+              </div>
+            }
+          </div>
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- ==========================================
+       SECTION : LEAD CAPTURE / DEMANDE DE DÉMO
+       ========================================== -->
+  <section id="contact-demo" class="landing-section" aria-labelledby="demo-title">
+    <div class="landing-container max-w-3xl">
+      <div class="demo-card ui-card">
+        <div class="text-center mb-8">
+          <span class="section-tag">{{ t().demo.tag }}</span>
+          <h2 id="demo-title" class="text-2xl lg:text-3xl font-extrabold text-[var(--text-primary)] font-display tracking-tight mt-2 mb-2">
+            {{ t().demo.title }}
+          </h2>
+          <p class="text-sm text-[var(--text-secondary)]">
+            {{ t().demo.subtitle }}
+          </p>
+        </div>
+
+        @if (demoSuccess()) {
+          <div class="demo-success-box" role="alert">
+            <div class="w-12 h-12 rounded-full bg-green-100 text-green-600 flex items-center justify-center mx-auto mb-3">
+              <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h4 class="font-bold text-lg text-green-800 dark:text-green-200">{{ t().demo.successTitle }}</h4>
+            <p class="text-sm text-green-700 dark:text-green-300 mt-2">
+              {{ demoSubmittedLead()?.message || t().demo.successDesc }}
+            </p>
+            @if (demoSubmittedLead()?.id) {
+              <div class="mt-2 inline-block bg-white/70 dark:bg-black/20 text-xs font-mono px-2.5 py-1 rounded text-green-800 dark:text-green-300">
+                Réf dossier : {{ demoSubmittedLead()?.id }}
+              </div>
+            }
+            <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-3">
+              <a [href]="demoWhatsAppUrl()" target="_blank" rel="noopener noreferrer" class="landing-btn landing-btn-primary gap-2">
+                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
+                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                </svg>
+                {{ t().demo.whatsappBtn }}
+              </a>
+            </div>
+          </div>
+        } @else {
+          <form (ngSubmit)="submitDemoRequest()" class="demo-form" #form="ngForm">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div>
+                <label for="demo-name" class="demo-label">{{ t().demo.nameLabel }}</label>
+                <input
+                  type="text"
+                  id="demo-name"
+                  name="demoFullName"
+                  class="demo-input"
+                  [placeholder]="t().demo.namePlaceholder"
+                  required
+                  [(ngModel)]="demoFullName"
+                />
+              </div>
+              <div>
+                <label for="demo-org" class="demo-label">{{ t().demo.orgLabel }}</label>
+                <input
+                  type="text"
+                  id="demo-org"
+                  name="demoOrgName"
+                  class="demo-input"
+                  [placeholder]="t().demo.orgPlaceholder"
+                  required
+                  [(ngModel)]="demoOrgName"
+                />
+              </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+              <div>
+                <label for="demo-role" class="demo-label">{{ t().demo.roleLabel }}</label>
+                <select id="demo-role" name="demoRole" class="demo-input" [(ngModel)]="demoRole">
+                  @for (opt of t().demo.roleOptions; track opt.value) {
+                    <option [value]="opt.value">{{ opt.label }}</option>
+                  }
+                </select>
+              </div>
+              <div>
+                <label for="demo-phone" class="demo-label">{{ t().demo.phoneLabel }}</label>
+                <input
+                  type="tel"
+                  id="demo-phone"
+                  name="demoPhone"
+                  class="demo-input"
+                  [placeholder]="t().demo.phonePlaceholder"
+                  required
+                  [(ngModel)]="demoPhone"
+                />
+              </div>
+              <div>
+                <label for="demo-city" class="demo-label">{{ t().demo.cityLabel }}</label>
+                <input
+                  type="text"
+                  id="demo-city"
+                  name="demoCity"
+                  class="demo-input"
+                  [placeholder]="t().demo.cityPlaceholder"
+                  [(ngModel)]="demoCity"
+                />
+              </div>
+            </div>
+
+            <div class="mb-4">
+              <label for="demo-email" class="demo-label">{{ t().demo.emailLabel }}</label>
+              <input
+                type="email"
+                id="demo-email"
+                name="demoEmail"
+                class="demo-input"
+                [placeholder]="t().demo.emailPlaceholder"
+                [(ngModel)]="demoEmail"
+              />
+            </div>
+
+            <div class="mb-6">
+              <label for="demo-message" class="demo-label">{{ t().demo.messageLabel }}</label>
+              <textarea
+                id="demo-message"
+                name="demoMessage"
+                rows="3"
+                class="demo-input"
+                [placeholder]="t().demo.messagePlaceholder"
+                [(ngModel)]="demoMessage"
+              ></textarea>
+            </div>
+
+            <button
+              type="submit"
+              class="landing-btn landing-btn-primary w-full justify-center py-3 text-base font-bold"
+              [disabled]="isSubmittingDemo() || !form.form.valid"
+            >
+              @if (isSubmittingDemo()) {
+                <span>{{ t().demo.submittingBtn }}</span>
+              } @else {
+                <span>{{ t().demo.submitBtn }}</span>
+              }
+            </button>
+            <p class="text-xs text-[var(--text-muted)] text-center mt-3">
+              {{ t().demo.privacyNote }}
+            </p>
+          </form>
+        }
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- Rentila-style Curved Divider before Dark Navy Footer -->
+<div class="rentila-curve-divider rentila-curve-footer" aria-hidden="true">
+  <svg viewBox="0 0 1440 50" fill="none" preserveAspectRatio="none">
+    <path d="M0 25C360 50 1080 0 1440 25V50H0V25Z" fill="#001D4A"/>
+  </svg>
+</div>
+
+<!-- ==========================================
+     FOOTER COMPLET
+     ========================================== -->
+<footer class="landing-footer">
+  <div class="landing-container">
+    <div class="footer-grid">
+      <!-- Col 1: Brand Info -->
+      <div class="footer-col-brand">
+        <app-logo size="lg" appearance="on-dark"></app-logo>
+        <p class="footer-slogan font-medium text-white/90 mt-3 text-sm">
+          {{ t().footer.slogan }}
+        </p>
+        <p class="footer-desc text-xs text-white/70 mt-2 max-w-sm">
+          {{ t().footer.desc }}
+        </p>
+        <div class="mt-4 flex items-center gap-3">
+          <a href="https://www.youtube.com/@Joprelys" target="_blank" rel="noopener noreferrer" class="social-link" title="Suivre Joprelys sur YouTube">
+            <svg class="w-5 h-5 text-red-500 hover:text-red-400" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z"/>
+            </svg>
+            <span class="text-xs text-white/80">{{ t().footer.youtubeText }}</span>
+          </a>
+        </div>
+      </div>
+
+      <!-- Col 2: Solutions -->
+      <div class="footer-col">
+        <h4 class="footer-col-title">{{ t().footer.col1Title }}</h4>
+        <ul class="footer-links">
+          <li><a href="#features">{{ t().features.f1Title }}</a></li>
+          <li><a href="#assistant-ia">{{ t().features.f2Title }}</a></li>
+          <li><a href="#hospital">{{ t().features.f3Title }}</a></li>
+          <li><a routerLink="/login">{{ t().nav.doctorLogin }}</a></li>
+          <li><a routerLink="/patient/login">{{ t().nav.patientPortal }}</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 3: Écosystème -->
+      <div class="footer-col">
+        <h4 class="footer-col-title">{{ t().footer.col2Title }}</h4>
+        <ul class="footer-links">
+          <li>
+            <a href="https://allopharma.online/" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1 text-[var(--color-brand-cyan)] hover:underline">
+              {{ t().ecosystem.c2Link }}
+            </a>
+          </li>
+          <li><a href="#ecosystem">{{ t().ecosystem.c3Title }}</a></li>
+          <li><a href="#ecosystem">{{ t().ecosystem.c4Title }}</a></li>
+          <li><a href="#security">{{ t().security.title }}</a></li>
+          <li><a href="#faq">{{ t().faq.title }}</a></li>
+        </ul>
+      </div>
+
+      <!-- Col 4: Légal & Contact -->
+      <div class="footer-col">
+        <h4 class="footer-col-title">{{ t().footer.col3Title }}</h4>
+        <ul class="footer-links">
+          <li><a routerLink="/legal/terms">{{ t().footer.cgu }}</a></li>
+          <li><a routerLink="/legal/privacy">{{ t().footer.privacy }}</a></li>
+          <li><a routerLink="/legal/consent">{{ t().footer.consent }}</a></li>
+          <li><a href="mailto:support@joprelys.com">{{ t().footer.support }}</a></li>
+          <li><span class="text-xs text-white/70">{{ t().footer.location }}</span></li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Bottom Copyright -->
+    <div class="footer-bottom">
+      <p>{{ t().footer.copyright }}</p>
+      <p class="text-xs text-white/60">{{ t().footer.subCopyright }}</p>
+    </div>
+  </div>
+</footer>

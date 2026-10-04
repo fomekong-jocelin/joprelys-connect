@@ -60,9 +60,9 @@ export class AuthSessionRecoveryService implements OnDestroy {
       return;
     }
 
-    if (currentUrl && currentUrl !== '/' && !currentUrl.startsWith('/auth/login')) {
+    if (currentUrl && currentUrl !== '/' && !currentUrl.startsWith('/auth/login') && !currentUrl.startsWith('/login')) {
       this.isRedirectingToLogin = true;
-      void this.router.navigate(['/'], {
+      void this.router.navigate(['/login'], {
         queryParams: {
           ...(patientContext ? { mode: 'patient' } : {}),
           sessionExpired: 'true',
@@ -198,7 +198,7 @@ export class AuthSessionRecoveryService implements OnDestroy {
   }
 
   private resolveReturnUrl(currentUrl: string, patientContext: boolean): string | null {
-    if (!currentUrl || currentUrl === '/' || currentUrl.startsWith('//') || currentUrl.startsWith('/auth/login')) {
+    if (!currentUrl || currentUrl === '/' || currentUrl.startsWith('//') || currentUrl.startsWith('/auth/login') || currentUrl.startsWith('/login')) {
       return null;
     }
     if (patientContext && !currentUrl.startsWith('/patient/')) {
