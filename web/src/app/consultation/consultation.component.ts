@@ -72,6 +72,7 @@ export class ConsultationComponent implements OnInit {
   readonly vitals = signal<Vitals | null>(null);
   readonly pendingVitalsProposal = signal<Vitals | null>(null);
   readonly consultation = signal<Consultation | null>(null);
+  readonly formWorkspaceReady = signal(false);
   readonly visitNumber = signal('');
   readonly visitReason = signal('');
   readonly patient = signal<Patient | null>(null);
@@ -308,6 +309,7 @@ export class ConsultationComponent implements OnInit {
           followUp: existing.followUp ?? '',
         });
         this.prescriptions.load(existing.id);
+        this.formWorkspaceReady.set(true);
       },
       error: () => undefined,
     });

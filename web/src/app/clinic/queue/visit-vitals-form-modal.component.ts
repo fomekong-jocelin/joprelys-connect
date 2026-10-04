@@ -1,9 +1,10 @@
-import { Component, OnInit, inject, input, output, signal } from '@angular/core';
+import { AfterViewInit, Component, ElementRef, OnDestroy, OnInit, ViewChild, inject, input, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AiVitalField, AiVitalsProposal } from '../../consultation/ai-vitals-api.service';
 import { SmartVitalsAssistantComponent } from '../../consultation/smart-vitals-assistant.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
+import { IconComponent } from '../../shared/ui/icon.component';
 import { VisitApiService } from '../../visit/visit-api.service';
 import { Visit, Vitals } from '../../visit/visit.models';
 import { bmiClass } from '../../visit/vitals-display.util';
@@ -26,10 +27,10 @@ const VITAL_RANGES = {
 @Component({
   selector: 'app-visit-vitals-form-modal',
   standalone: true,
-  imports: [FormsModule, ButtonComponent, SmartVitalsAssistantComponent],
+  imports: [FormsModule, ButtonComponent, IconComponent, SmartVitalsAssistantComponent],
   templateUrl: './visit-vitals-form-modal.component.html',
 })
-export class VisitVitalsFormModalComponent implements OnInit {
+export class VisitVitalsFormModalComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly i18n = inject(I18nService);
   private readonly visitApi = inject(VisitApiService);
 
@@ -39,6 +40,9 @@ export class VisitVitalsFormModalComponent implements OnInit {
 
   readonly isSavingVitals = signal(false);
   readonly vitalsError = signal('');
+  readonly assistantActive = signal(false);
+  @ViewChild('dialogPanel') private dialogPanel?: ElementRef<HTMLElement>;
+  private previousFocus?: HTMLElement;
 
   vitalsTemp?: number;
   vitalsWeight?: number;
@@ -52,6 +56,7 @@ export class VisitVitalsFormModalComponent implements OnInit {
   vitalsPain?: number;
 
   ngOnInit(): void {
+    if (document.activeElement instanceof HTMLElement) this.previousFocus = document.activeElement;
     // Une nouvelle mesure part de la précédente : l'infirmier corrige ce qui a changé.
     const previous = this.visit().vitals;
     this.vitalsTemp = previous?.temperature;
@@ -64,6 +69,34 @@ export class VisitVitalsFormModalComponent implements OnInit {
     this.vitalsGlycemia = previous?.glycemia;
     this.vitalsResp = previous?.respiratoryRate;
     this.vitalsPain = previous?.painScale;
+  }
+
+  ngAfterViewInit(): void {
+    this.dialogPanel?.nativeElement.focus();
+  }
+
+  ngOnDestroy(): void {
+    this.previousFocus?.focus();
+  }
+
+  onDialogKeydown(event: KeyboardEvent): void {
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      this.close();
+    }
+    if (event.key !== 'Tab') return;
+    const panel = this.dialogPanel?.nativeElement;
+    const controls = Array.from(panel?.querySelectorAll<HTMLElement>('button, input, select, textarea, summary, [tabindex="0"]') ?? [])
+      .filter(element => !element.matches(':disabled') && !element.hidden);
+    const first = controls[0];
+    const last = controls.at(-1);
+    if (event.shiftKey && (document.activeElement === first || document.activeElement === panel)) {
+      event.preventDefault();
+      last?.focus();
+    } else if (!event.shiftKey && (document.activeElement === last || document.activeElement === panel)) {
+      event.preventDefault();
+      first?.focus();
+    }
   }
 
   t(key: string): string {
@@ -125,7 +158,7 @@ export class VisitVitalsFormModalComponent implements OnInit {
   }
 
   submitVitals(): void {
-    if (this.isSavingVitals() || this.isAnyVitalInvalid()) return;
+    if (this.isSavingVitals() || this.assistantActive() || this.isAnyVitalInvalid()) return;
     this.isSavingVitals.set(true);
     this.vitalsError.set('');
 

@@ -35,7 +35,10 @@
             >
           }
         </div>
-        <h1 class="ui-title truncate text-lg sm:text-xl">{{ i18n.t('consultation.title') }}</h1>
+        <h1 class="ui-title text-lg sm:text-xl">{{ i18n.t(formWorkspaceReady() ? 'consultation.title' : 'consultation.entry.title') }}</h1>
+        @if (!formWorkspaceReady()) {
+          <p class="mt-1 text-sm text-[var(--text-secondary)]">{{ i18n.t('consultation.entry.subtitle') }}</p>
+        }
       </div>
     </header>
 
@@ -102,11 +105,11 @@
         </p>
       </div>
     } @else {
-      @let formWorkspaceReady = !!consultation() || form.dirty;
+      @let workspaceReady = formWorkspaceReady();
       <div
-        [class]="formWorkspaceReady ? 'grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5' : 'block'"
+        [class]="workspaceReady ? 'grid grid-cols-1 gap-4 lg:grid-cols-3 lg:gap-5' : 'block'"
       >
-        @if (formWorkspaceReady) {
+        @if (workspaceReady) {
           <aside class="lg:col-span-1">
             <section class="ui-card overflow-hidden">
               <header
@@ -290,18 +293,20 @@
 
         <main
           [class]="
-            formWorkspaceReady
+            workspaceReady
               ? 'min-w-0 space-y-4 lg:col-span-2'
-              : 'mx-auto w-full max-w-5xl min-w-0 space-y-4'
+              : 'w-full min-w-0 space-y-4'
           "
         >
           <app-voice-assistant-panel
             [visitId]="visitId"
             [currentDraft]="currentVoiceDraft()"
+            [formReady]="workspaceReady"
             (applyDraft)="applyAiDraft($event)"
+            (formReadyChange)="formWorkspaceReady.set($event)"
           />
 
-          @if (formWorkspaceReady) {
+          @if (workspaceReady) {
             <form [formGroup]="form" (ngSubmit)="onSave()" class="space-y-4">
               <app-clinical-note-editor
                 [form]="form"

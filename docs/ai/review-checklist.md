@@ -446,6 +446,28 @@ Règles minimales :
 - [x] Analyse Dart de `lib` et `test` sans erreur.
 - [x] Suite Flutter complète : 53 tests réussis.
 - [x] Build web Flutter réussi.
-- [x] Goldens login/accueil sombre `393 × 852` et comparaison visuelle validées (`design-qa.md` : `passed`).
+- [x] Goldens login/accueil sombre `393 × 852` et comparaison visuelle validées (rapport archivé dans `docs/ai/validation/DESIGN-QA-20260730-MOBILE-AUTH.md` : `passed`).
 - [ ] Build APK debug sur CI ou poste autorisé à utiliser/télécharger Gradle 8.14.
 - [ ] Recette Android réelle FR/EN, light/dark, texte agrandi, clavier et biométrie.
+
+## Exécution — UX-20261004-CONSULTATION-ENTRY-MOCKUP
+
+- [x] Maquette acceptée avant implémentation ; spécification, conception, diagnostic, plan de test et guide mis à jour.
+- [x] Composant de sélection dédié, radios natives et CTA explicite ; aucun microphone activé par simple sélection.
+- [x] Visibilité parent/enfant explicite et testée : manuel pristine, consultation chargée, rapport accepté, reprise/erreurs.
+- [x] Tailwind v4, icônes partagées, thèmes/tokens et FR/EN conservés ; 37 nouvelles clés et 12 tokens vérifiés.
+- [x] API, RBAC, validations serveur, configuration/proxy, dépendances et stockage inchangés ; aucune sauvegarde clinique automatique.
+- [x] Suite Angular complète : 115 fichiers, 619 tests ; build production et i18n réussis.
+- [x] `.gitignore` contrôlé ; aucun secret, image patient, log ni artefact de build versionné ; tailles sous 500 lignes (alerte existante >300 tracée).
+- [ ] Comparaison visuelle maquette/rendu, desktop/mobile, light/dark FR/EN, focus clavier et microphone réel : accès navigateur précédemment refusé, `design-qa.md` bloqué.
+
+## Exécution — UX-20261004-VITALS-ENTRY-CLARITY
+
+- [x] Capture/code diagnostiqués ; documentation fonctionnelle, technique, tests et ticket présents au démarrage.
+- [x] Manuel / dictée / écoute continue : sélection sans capture, démarrage explicite ; texte optionnel séparé et report distinct de sauvegarde.
+- [x] Champs conservés au changement de mode ; radio, labels associés, focus confiné/restauré et Échap testés.
+- [x] Protection du double démarrage et de la permission tardive ; aucune sauvegarde pendant activité assistant, aucun report automatique.
+- [x] 14 nouveaux cas ; suite complète 115 fichiers / 633 tests réussis, shell i18n et constantes FR/EN/tokens contrôlés.
+- [x] API/DB/Flutter/configuration/proxy/dépendances et permissions inchangés ; `.gitignore` préserve gouvernance et ignore preuves/logs/builds.
+- [x] Build de production final après ajustement des cibles tactiles et `git diff --check` réussis.
+- [ ] Recette visuelle mobile/desktop, light/dark, FR/EN, zoom/clavier et microphone réel ; accès navigateur précédemment refusé.

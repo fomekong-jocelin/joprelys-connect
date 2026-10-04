@@ -138,6 +138,12 @@ Les champs texte utilisent un fond gris clair `var(--bg-input)` avec bordure fin
 
 Les conteneurs de cartes utilisent la classe `.ui-card` avec `8px` d'arrondi et l'ombre légère centralisée.
 
+### Entrée en consultation
+
+L'entrée suit la maquette acceptée du 2026-10-04 : contexte patient et alertes conservés, étapes lisibles, trois choix de même niveau (manuel, dictée, conversation) à gauche et description/action du choix à droite. Les panneaux s'empilent sous le breakpoint desktop. Les choix utilisent des radios natives, un focus visible et un état sélectionné porté par les tokens centraux ; sélectionner un mode ne démarre aucun microphone. L'action principale annonce ce qui démarre et la disponibilité du microphone est explicite. Rayons des choix : token `radius-brand-md` (6px) ; panneaux : `.ui-card`, 8px maximum. Textes FR/EN, typographies et thèmes restent centralisés.
+
+L'affichage du formulaire doit dépendre d'un état explicite partagé avec l'assistant, jamais d'une modification artificielle des champs. « Compte rendu validé » est réservé à l'acceptation explicite d'un rapport ; l'ouverture manuelle et le chargement d'une consultation affichent « Formulaire de consultation ».
+
 ### Confirmation dialogs
 
 Les actions financières destructives utilisent une modale maison, jamais le `confirm()` du navigateur. La surface conserve un rayon sobre compris entre `4px` et `8px`, l’overlay est centralisé, le focus reste visible, la fermeture par Échap est disponible et l’action destructive est clairement distincte dans les thèmes light et dark.
@@ -185,11 +191,15 @@ La page publique de connexion suit les règles suivantes :
 
 - mobile d'abord : sous `640px`, l'assistant de constantes démarre replié et ne monopolise pas la modale ;
 - l'explication et l'exemple de dictée utilisent une divulgation progressive ; la tâche principale reste la saisie ou la validation des constantes ;
-- une surface IA mobile est bornée par `dvh`, défilable intérieurement et conserve les actions dans la largeur utile ;
+- une surface IA mobile autonome est bornée par `dvh`, défilable intérieurement et conserve les actions dans la largeur utile ; lorsqu'elle est intégrée à la modale de constantes, le corps de la modale est l'unique zone de défilement et l'en-tête/footer restent visibles ;
 - les actions tactiles mesurent au moins `44px` et s'empilent en pleine largeur lorsque l'espace est contraint ;
 - replier ou détruire l'assistant coupe le microphone et la session Realtime ;
 - une proposition IA ne modifie que le brouillon visible ; l'enregistrement clinique reste une action explicite du professionnel ;
 - les composants IA utilisent les clés i18n de feature et les libellés partagés, en français et en anglais ;
+- la saisie manuelle est le mode initial ; sélectionner Dictée ou Écoute continue ne démarre pas le microphone. Les trois choix exposent leur usage ; le démarrage vocal utilise un CTA séparé avec état du microphone ;
+- la phrase à analyser est une aide optionnelle, dans un textarea pleine largeur avec label et bouton distincts, jamais comprimée entre deux actions vocales ;
+- « Reporter dans le formulaire » et « Enregistrer les constantes » sont deux actions distinctes. Le bouton final reste visible et attend la fin de la capture/analyse ;
+- la modale conserve un en-tête patient unique, des labels associés aux champs, un focus initial, un confinement du focus et une fermeture Échap ; largeur desktop maximale `max-w-3xl`, plein écran sous `640px`, rayons et ombres centraux.
 
 ### Notes cliniques SOAP cross-stack
 

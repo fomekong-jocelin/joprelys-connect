@@ -1,59 +1,29 @@
-  <!-- Vitals Form Modal Dialogue -->
-  @if (visit(); as selectedVisit) {
-    <div
-      class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] p-0 backdrop-blur-sm animate-fade-in sm:p-4">
-      <div
-        class="relative h-[100dvh] max-h-[100dvh] w-full max-w-xl overflow-y-auto rounded-none border border-[var(--app-border)]/80 bg-[var(--app-surface)] p-4 shadow-2xl sm:h-auto sm:max-h-[90dvh] sm:rounded-[8px] sm:p-6"
-        role="dialog"
-        aria-modal="true"
-        [attr.aria-label]="t('dashboard.vitals.title')"
-      >
-        <!-- Close button -->
-        <button
-          type="button"
-          (click)="close()"
-          class="absolute right-3 top-3 inline-flex h-11 w-11 cursor-pointer items-center justify-center rounded-[6px] text-[var(--text-muted)] transition-colors hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-secondary)] sm:right-4 sm:top-4"
-          [attr.aria-label]="t('dashboard.drawer.closeButton')"
-        >
-          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-          </svg>
-        </button>
-
-        <!-- Header -->
-        <div class="flex items-center gap-3 mb-1">
-          <div
-            class="flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] bg-brand-cyan/15 text-brand-cyan">
-            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-            </svg>
-          </div>
-          <div>
-            <h3
-              class="font-display font-black text-lg text-[var(--text-primary)] leading-tight">{{ t('dashboard.vitals.title') }}</h3>
-            <p class="text-xs text-[var(--text-muted)] mt-0.5">
-              {{ t('dashboard.vitals.patient') }} : <strong
-              class="text-[var(--text-secondary)]">{{ selectedVisit.patientName }}</strong>
-              ({{ selectedVisit.patientDpu }})
-            </p>
-          </div>
+@if (visit(); as selectedVisit) {
+  <div class="fixed inset-0 z-[60] flex items-center justify-center bg-[var(--overlay-bg)] p-0 backdrop-blur-sm sm:p-4">
+    <div #dialogPanel role="dialog" aria-modal="true" tabindex="-1" aria-labelledby="visit-vitals-title"
+      (keydown)="onDialogKeydown($event)"
+      class="relative flex h-[100dvh] max-h-[100dvh] w-full max-w-3xl flex-col overflow-hidden border border-[var(--app-border)] bg-[var(--app-surface)] shadow-[var(--shadow-panel)] sm:h-auto sm:max-h-[90dvh] sm:rounded-[var(--radius-brand-lg)]">
+      <header class="flex shrink-0 items-start justify-between gap-3 border-b border-[var(--app-border)] p-4 sm:px-6">
+        <div class="min-w-0">
+          <h2 id="visit-vitals-title" class="ui-title text-lg">{{ t('vitals.entry.modalTitle') }}</h2>
+          <p class="mt-1 break-words text-xs text-[var(--text-secondary)]">
+            {{ t('dashboard.vitals.patient') }} : <strong>{{ selectedVisit.patientName }}</strong> · {{ selectedVisit.patientDpu }}
+          </p>
         </div>
+        <button type="button" (click)="close()" [disabled]="isSavingVitals()" class="ui-button ui-button-secondary h-11 w-11 shrink-0 p-0" [attr.aria-label]="t('dashboard.drawer.closeButton')">
+          <app-ui-icon name="x-mark" aria-hidden="true" />
+        </button>
+      </header>
 
-        <hr class="border-[var(--app-border)]/80 my-4"/>
-
-        <app-smart-vitals-assistant
-          [visitId]="selectedVisit.id"
-          [patientName]="selectedVisit.patientName"
-          [currentVitals]="currentVitalsForAssistant()"
-          [disabled]="isSavingVitals()"
-          [embedded]="true"
-          (proposed)="applyVitalsAssistantProposal($event)"
-        />
-
+      <div class="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:px-6" data-testid="vitals-scroll-body">
+        <app-smart-vitals-assistant [visitId]="selectedVisit.id" [patientName]="selectedVisit.patientName"
+          [currentVitals]="currentVitalsForAssistant()" [disabled]="isSavingVitals()" [embedded]="true"
+          (activityChange)="assistantActive.set($event)" (proposed)="applyVitalsAssistantProposal($event)" />
+        <h3 class="ui-title mb-1 text-sm">{{ t('vitals.entry.measurementsTitle') }}</h3>
+        <p class="mb-4 text-xs leading-5 text-[var(--text-secondary)]">{{ t('vitals.entry.measurementsHelp') }}</p>
         @if (vitalsError()) {
           <div
-            class="mb-4 flex items-start gap-2 rounded-[6px] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold leading-relaxed text-[var(--brand-danger-text)]">
+            class="mb-4 flex items-start gap-2 rounded-[var(--radius-brand-md)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold leading-relaxed text-[var(--brand-danger-text)]">
             <svg class="w-4 h-4 shrink-0 text-[var(--brand-danger)] mt-0.5" fill="none" viewBox="0 0 24 24"
                  stroke="currentColor" stroke-width="2.5">
               <path stroke-linecap="round" stroke-linejoin="round"
@@ -66,24 +36,24 @@
         <div class="space-y-5">
           <!-- Section 1 : Paramètres Physiques & BMI -->
           <div
-            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            class="space-y-4 rounded-[var(--radius-brand-md)] border border-[var(--app-border)]/50 bg-[var(--app-surface)] p-3 sm:p-4">
             <h4
               class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>📏</span> {{ t('dashboard.vitals.measurementsTitle') }}
+              <app-ui-icon name="calculator" aria-hidden="true" /> {{ t('dashboard.vitals.measurementsTitle') }}
             </h4>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <!-- Poids -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.weight') }} (Kg)</label>
+                <label for="visit-vitals-weight" class="ui-label text-[11px]">{{ t('dashboard.vitals.weight') }} (kg)</label>
                 <div class="relative">
                   <input
                     type="number"
                     step="0.1"
+                    id="visit-vitals-weight"
                     [(ngModel)]="vitalsWeight"
                     [placeholder]="t('dashboard.vitals.placeholder.weight')"
                     class="ui-input pr-10 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isWeightInvalid()"
-                    [class.focus:border-red-500]="isWeightInvalid()"
+                    [attr.aria-invalid]="isWeightInvalid()" [style.border-color]="isWeightInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">kg</span>
@@ -96,15 +66,15 @@
 
               <!-- Taille -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.height') }} (Cm)</label>
+                <label for="visit-vitals-height" class="ui-label text-[11px]">{{ t('dashboard.vitals.height') }} (cm)</label>
                 <div class="relative">
                   <input
                     type="number"
+                    id="visit-vitals-height"
                     [(ngModel)]="vitalsHeight"
                     [placeholder]="t('dashboard.vitals.placeholder.height')"
                     class="ui-input pr-10 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isHeightInvalid()"
-                    [class.focus:border-red-500]="isHeightInvalid()"
+                    [attr.aria-invalid]="isHeightInvalid()" [style.border-color]="isHeightInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">cm</span>
@@ -119,7 +89,7 @@
             <!-- Calculated BMI Display inside Section -->
             @if (computedBmi) {
               <div
-                class="flex items-center justify-between rounded-[6px] border p-3 shadow-3xs transition-colors duration-300"
+                class="flex items-center justify-between rounded-[var(--radius-brand-md)] border p-3 shadow-3xs transition-colors duration-300"
                 [class]="getBmiClass(computedBmi) + ' border-current/10'">
                 <div class="space-y-0.5">
                   <span
@@ -143,24 +113,24 @@
 
           <!-- Section 2 : Cardiovasculaire & SpO2 -->
           <div
-            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            class="space-y-4 rounded-[var(--radius-brand-md)] border border-[var(--app-border)]/50 bg-[var(--app-surface)] p-3 sm:p-4">
             <h4
               class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>🩺</span> {{ t('dashboard.vitals.cardioTitle') }}
+              <app-ui-icon name="stethoscope" aria-hidden="true" /> {{ t('dashboard.vitals.cardioTitle') }}
             </h4>
 
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <!-- Pouls -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.pulse') }} (BPM)</label>
+                <label for="visit-vitals-pulse" class="ui-label text-[11px]">{{ t('dashboard.vitals.pulse') }} (bpm)</label>
                 <div class="relative">
                   <input
                     type="number"
+                    id="visit-vitals-pulse"
                     [(ngModel)]="vitalsPulse"
                     [placeholder]="t('dashboard.vitals.placeholder.pulse')"
                     class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isPulseInvalid()"
-                    [class.focus:border-red-500]="isPulseInvalid()"
+                    [attr.aria-invalid]="isPulseInvalid()" [style.border-color]="isPulseInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">bpm</span>
@@ -173,15 +143,15 @@
 
               <!-- SpO2 -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.spo2') }} (%)</label>
+                <label for="visit-vitals-spo2" class="ui-label text-[11px]">{{ t('dashboard.vitals.spo2') }} (%)</label>
                 <div class="relative">
                   <input
                     type="number"
+                    id="visit-vitals-spo2"
                     [(ngModel)]="vitalsSpo2"
                     [placeholder]="t('dashboard.vitals.placeholder.spo2')"
                     class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isSpo2Invalid()"
-                    [class.focus:border-red-500]="isSpo2Invalid()"
+                    [attr.aria-invalid]="isSpo2Invalid()" [style.border-color]="isSpo2Invalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">%</span>
@@ -194,15 +164,15 @@
 
               <!-- Tension Systolique -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.systolic') }}</label>
+                <label for="visit-vitals-systolic" class="ui-label text-[11px]">{{ t('dashboard.vitals.systolic') }}</label>
                 <div class="relative">
                   <input
                     type="number"
+                    id="visit-vitals-systolic"
                     [(ngModel)]="vitalsSystolic"
                     [placeholder]="t('dashboard.vitals.placeholder.systolic')"
                     class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isSystolicInvalid()"
-                    [class.focus:border-red-500]="isSystolicInvalid()"
+                    [attr.aria-invalid]="isSystolicInvalid()" [style.border-color]="isSystolicInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
@@ -215,15 +185,15 @@
 
               <!-- Tension Diastolique -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.diastolic') }}</label>
+                <label for="visit-vitals-diastolic" class="ui-label text-[11px]">{{ t('dashboard.vitals.diastolic') }}</label>
                 <div class="relative">
                   <input
                     type="number"
+                    id="visit-vitals-diastolic"
                     [(ngModel)]="vitalsDiastolic"
                     [placeholder]="t('dashboard.vitals.placeholder.diastolic')"
                     class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isDiastolicInvalid()"
-                    [class.focus:border-red-500]="isDiastolicInvalid()"
+                    [attr.aria-invalid]="isDiastolicInvalid()" [style.border-color]="isDiastolicInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">mmHg</span>
@@ -240,19 +210,19 @@
 
               <!-- Fréquence Respiratoire (Full Row) -->
               <div class="space-y-1 sm:col-span-2">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.respRate') }}</label>
+                <label for="visit-vitals-resp" class="ui-label text-[11px]">{{ t('dashboard.vitals.respRate') }}</label>
                 <div class="relative">
                   <input
                     type="number"
+                    id="visit-vitals-resp"
                     [(ngModel)]="vitalsResp"
                     [placeholder]="t('dashboard.vitals.placeholder.respRate')"
                     class="ui-input pr-16 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isRespInvalid()"
-                    [class.focus:border-red-500]="isRespInvalid()"
+                    [attr.aria-invalid]="isRespInvalid()" [style.border-color]="isRespInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span
-                    class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">cycles/min</span>
+                    class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">{{ t('vitals.assistant.unit.resp') }}</span>
                 </div>
                 @if (isRespInvalid()) {
                   <p
@@ -264,24 +234,24 @@
 
           <!-- Section 3 : Métabolisme & Température -->
           <div
-            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            class="space-y-4 rounded-[var(--radius-brand-md)] border border-[var(--app-border)]/50 bg-[var(--app-surface)] p-3 sm:p-4">
             <h4
               class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>🌡️</span> {{ t('dashboard.vitals.thermicTitle') }}
+              <app-ui-icon name="information-circle" aria-hidden="true" /> {{ t('dashboard.vitals.thermicTitle') }}
             </h4>
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <!-- Température -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.temp') }} (°C)</label>
+                <label for="visit-vitals-temp" class="ui-label text-[11px]">{{ t('dashboard.vitals.temp') }} (°C)</label>
                 <div class="relative">
                   <input
                     type="number"
                     step="0.1"
+                    id="visit-vitals-temp"
                     [(ngModel)]="vitalsTemp"
                     [placeholder]="t('dashboard.vitals.placeholder.temp')"
                     class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isTempInvalid()"
-                    [class.focus:border-red-500]="isTempInvalid()"
+                    [attr.aria-invalid]="isTempInvalid()" [style.border-color]="isTempInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">°C</span>
@@ -294,16 +264,16 @@
 
               <!-- Glycémie -->
               <div class="space-y-1">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.glycemia') }} (G/L)</label>
+                <label for="visit-vitals-glycemia" class="ui-label text-[11px]">{{ t('dashboard.vitals.glycemia') }} (g/L)</label>
                 <div class="relative">
                   <input
                     type="number"
                     step="0.01"
+                    id="visit-vitals-glycemia"
                     [(ngModel)]="vitalsGlycemia"
                     [placeholder]="t('dashboard.vitals.placeholder.glycemia')"
                     class="ui-input pr-8 pl-3 py-2 text-sm w-full font-semibold"
-                    [class.border-red-500]="isGlycemiaInvalid()"
-                    [class.focus:border-red-500]="isGlycemiaInvalid()"
+                    [attr.aria-invalid]="isGlycemiaInvalid()" [style.border-color]="isGlycemiaInvalid() ? 'var(--brand-danger)' : null"
                     [disabled]="isSavingVitals()"
                   />
                   <span class="absolute right-3 top-2.5 text-xs font-bold text-[var(--text-muted)]">g/L</span>
@@ -321,20 +291,20 @@
 
           <!-- Section 4 : Douleur (Échelle 0-10) -->
           <div
-            class="space-y-4 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface-muted)] p-3 sm:p-4">
+            class="space-y-4 rounded-[var(--radius-brand-md)] border border-[var(--app-border)]/50 bg-[var(--app-surface)] p-3 sm:p-4">
             <h4
               class="text-xs font-extrabold uppercase tracking-wider text-[var(--text-muted)] flex items-center gap-1.5">
-              <span>😣</span> {{ t('dashboard.vitals.pain') }}
+              <app-ui-icon name="bolt" aria-hidden="true" /> {{ t('dashboard.vitals.pain') }}
             </h4>
             <div class="space-y-2">
               <div class="flex items-center justify-between">
-                <label class="ui-label text-[11px]">{{ t('dashboard.vitals.painScaleLabel') }}</label>
+                <label for="visit-vitals-pain" class="ui-label text-[11px]">{{ t('dashboard.vitals.painScaleLabel') }}</label>
                 @if (vitalsPain !== undefined && vitalsPain !== null) {
                   <span class="text-xs font-extrabold px-2 py-0.5 rounded-md"
-                        [class]="vitalsPain === 0 ? 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)] bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]' :
-                             vitalsPain <= 3 ? 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)] bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]' :
-                             vitalsPain <= 6 ? 'bg-orange-50 text-orange-700 dark:bg-orange-950/25 dark:text-orange-300' :
-                             'bg-[var(--brand-danger-subtle)] text-red-700  dark:text-[var(--brand-danger-text)]'">
+                        [class]="vitalsPain === 0 ? 'bg-[var(--brand-success-subtle)] text-[var(--brand-success-text)]' :
+                             vitalsPain <= 3 ? 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]' :
+                             vitalsPain <= 6 ? 'bg-[var(--brand-warning-subtle)] text-[var(--brand-warning-text)]' :
+                             'bg-[var(--brand-danger-subtle)] text-[var(--brand-danger-text)]'">
                     {{ vitalsPain }}/10
                   </span>
                 }
@@ -344,10 +314,11 @@
                   type="number"
                   min="0"
                   max="10"
-                  [(ngModel)]="vitalsPain"
+                  id="visit-vitals-pain"
+                    [(ngModel)]="vitalsPain"
                   [placeholder]="t('dashboard.vitals.placeholder.pain')"
                   class="ui-input pr-12 pl-3 py-2 text-sm w-full font-semibold"
-                  [class.border-red-500]="isPainInvalid()"
+                  [attr.aria-invalid]="isPainInvalid()" [style.border-color]="isPainInvalid() ? 'var(--brand-danger)' : null"
                   [disabled]="isSavingVitals()"
                 />
                 <span class="absolute right-3 top-2.5 text-[10px] font-extrabold text-[var(--text-muted)]">/10</span>
@@ -368,26 +339,17 @@
           </div>
         </div>
 
-        <!-- Actions -->
-        <div
-          class="mt-6 flex flex-col-reverse gap-3 border-t border-[var(--app-border)]/80 pt-4 sm:flex-row sm:justify-end">
-          <app-ui-button class="w-full sm:w-auto" variant="secondary" (pressed)="close()"
-                         [disabled]="isSavingVitals()">
-            {{ t('common.cancel') }}
-          </app-ui-button>
-          <app-ui-button class="w-full sm:w-auto" variant="primary" (pressed)="submitVitals()"
-                         [disabled]="isSavingVitals() || isAnyVitalInvalid()">
-            <span class="flex items-center gap-1.5">
-              @if (isSavingVitals()) {
-                <div
-                  class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
-                {{ t('common.saving') }}
-              } @else {
-                {{ t('dashboard.vitals.title') }}
-              }
-            </span>
+      </div>
+
+      <footer class="shrink-0 border-t border-[var(--app-border)] bg-[var(--app-surface)] p-4 sm:px-6" data-testid="vitals-actions">
+        <p class="mb-3 text-xs leading-5 text-[var(--text-secondary)]" role="status">{{ t(assistantActive() ? 'vitals.entry.finishBeforeSave' : 'vitals.entry.saveNotice') }}</p>
+        <div class="flex flex-wrap justify-end gap-2">
+          <app-ui-button variant="secondary" class="min-h-11" (pressed)="close()" [disabled]="isSavingVitals()">{{ t('common.cancel') }}</app-ui-button>
+          <app-ui-button variant="primary" class="min-h-11" (pressed)="submitVitals()" [disabled]="isSavingVitals() || assistantActive() || isAnyVitalInvalid()">
+            {{ t(isSavingVitals() ? 'common.saving' : 'vitals.entry.save') }}
           </app-ui-button>
         </div>
-      </div>
+      </footer>
     </div>
-  }
+  </div>
+}

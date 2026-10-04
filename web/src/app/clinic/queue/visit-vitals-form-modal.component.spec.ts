@@ -1,6 +1,8 @@
 import { provideHttpClient } from '@angular/common/http';
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { SmartVitalsAssistantComponent } from '../../consultation/smart-vitals-assistant.component';
 import { provideRouter } from '@angular/router';
 import { of } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -28,7 +30,9 @@ describe('VisitVitalsFormModalComponent', () => {
   } as Visit;
 
   beforeEach(async () => {
-    mockVisitApi = { saveVitals: vi.fn().mockReturnValue(of({ weight: 70, height: 175, bmi: 22.86 })) };
+    mockVisitApi = {
+      saveVitals: vi.fn().mockReturnValue(of({ weight: 70, height: 175, bmi: 22.86 })),
+    };
 
     await TestBed.configureTestingModule({
       imports: [VisitVitalsFormModalComponent],
@@ -119,11 +123,96 @@ describe('VisitVitalsFormModalComponent', () => {
 
     component.submitVitals();
 
-    expect(mockVisitApi.saveVitals).toHaveBeenCalledWith('visit-1', expect.objectContaining({
-      weight: 70,
-      height: 175,
-      painScale: 6,
-    }));
+    expect(mockVisitApi.saveVitals).toHaveBeenCalledWith(
+      'visit-1',
+      expect.objectContaining({
+        weight: 70,
+        height: 175,
+        painScale: 6,
+      }),
+    );
     expect(saved).toHaveBeenCalled();
+  });
+
+  it('keeps patient header and saving actions outside the scrolling content', () => {
+    fixture.detectChanges();
+    const body = fixture.nativeElement.querySelector('[data-testid="vitals-scroll-body"]');
+    expect(body.className).toContain('overflow-y-auto');
+    expect(body.contains(fixture.nativeElement.querySelector('#visit-vitals-title'))).toBe(false);
+    expect(
+      body.contains(fixture.nativeElement.querySelector('[data-testid="vitals-actions"]')),
+    ).toBe(false);
+    for (const label of body.querySelectorAll('label[for^="visit-vitals-"]')) {
+      expect(body.querySelector(`#${label.htmlFor}`)).not.toBeNull();
+    }
+    expect(body.querySelectorAll('label[for^="visit-vitals-"]')).toHaveLength(10);
+  });
+
+  it('waits for assistant capture or analysis to finish before saving', () => {
+    fixture.detectChanges();
+    const assistant = fixture.debugElement.query(By.directive(SmartVitalsAssistantComponent))
+      .componentInstance as SmartVitalsAssistantComponent;
+    assistant.activityChange.emit(true);
+    component.submitVitals();
+    expect(mockVisitApi.saveVitals).not.toHaveBeenCalled();
+    assistant.activityChange.emit(false);
+    component.vitalsTemp = 37.5;
+    component.submitVitals();
+    expect(mockVisitApi.saveVitals).toHaveBeenCalledOnce();
+  });
+
+  it('transfers proposed values without saving until final confirmation', () => {
+    fixture.detectChanges();
+    const assistant = fixture.debugElement.query(By.directive(SmartVitalsAssistantComponent))
+      .componentInstance as SmartVitalsAssistantComponent;
+    assistant.handleProposal({
+      transcript: 'Test',
+      vitals: { temperature: 37.5 },
+      assistantMessage: '',
+      needsConfirmation: false,
+      confirmationReason: '',
+    });
+    expect(component.vitalsTemp).toBeUndefined();
+    assistant.applyCurrentProposal();
+    expect(component.vitalsTemp).toBe(37.5);
+    expect(mockVisitApi.saveVitals).not.toHaveBeenCalled();
+    component.submitVitals();
+    expect(mockVisitApi.saveVitals).toHaveBeenCalledOnce();
+  });
+
+  it('preserves typed measurements when entry mode changes', () => {
+    fixture.detectChanges();
+    component.vitalsTemp = 37.5;
+    const assistant = fixture.debugElement.query(By.directive(SmartVitalsAssistantComponent))
+      .componentInstance as SmartVitalsAssistantComponent;
+    assistant.selectMode('realtime');
+    assistant.selectMode('manual');
+    expect(component.vitalsTemp).toBe(37.5);
+    expect(mockVisitApi.saveVitals).not.toHaveBeenCalled();
+  });
+
+  it('contains keyboard focus and closes with Escape', () => {
+    fixture.detectChanges();
+    const dialog: HTMLElement = fixture.nativeElement.querySelector('[role="dialog"]');
+    const first: HTMLButtonElement = dialog.querySelector('button')!;
+    first.focus();
+    const backward = new KeyboardEvent('keydown', {
+      key: 'Tab',
+      shiftKey: true,
+      bubbles: true,
+      cancelable: true,
+    });
+    first.dispatchEvent(backward);
+    expect(backward.defaultPrevented).toBe(true);
+    expect(dialog.contains(document.activeElement)).toBe(true);
+    const last = document.activeElement as HTMLElement;
+    last.dispatchEvent(
+      new KeyboardEvent('keydown', { key: 'Tab', bubbles: true, cancelable: true }),
+    );
+    expect(document.activeElement).toBe(first);
+    const closed = vi.fn();
+    component.closed.subscribe(closed);
+    dialog.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    expect(closed).toHaveBeenCalledOnce();
   });
 });

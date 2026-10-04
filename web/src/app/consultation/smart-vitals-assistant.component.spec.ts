@@ -189,12 +189,7 @@ describe('SmartVitalsAssistantComponent', () => {
     component.correctionText = corrected.transcript;
     component.reanalyzeCorrection();
 
-    expect(vitalsApi.analyzeText).toHaveBeenCalledWith(
-      'visit-1',
-      corrected.transcript,
-      'fr',
-      {},
-    );
+    expect(vitalsApi.analyzeText).toHaveBeenCalledWith('visit-1', corrected.transcript, 'fr', {});
     expect(component.lastTranscript()).toBe(corrected.transcript);
     expect(component.proposalApplied()).toBe(false);
   });
@@ -204,8 +199,114 @@ describe('SmartVitalsAssistantComponent', () => {
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('app-voice-listening-surface')).not.toBeNull();
-    expect(fixture.nativeElement.textContent).toContain(
-      'Écoute en cours... Parlez naturellement',
-    );
+    expect(fixture.nativeElement.textContent).toContain('Écoute en cours... Parlez naturellement');
+  });
+
+  it('starts in manual mode and keeps text entry in its own labeled textarea', () => {
+    expect(component.inputMode()).toBe('manual');
+    expect(fixture.nativeElement.querySelector('input[value="manual"]').checked).toBe(true);
+    expect(fixture.nativeElement.querySelector('label[for="vitals-text-input"]')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('textarea#vitals-text-input')).not.toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="start-vitals-realtime"]')).toBeNull();
+    expect(component.realtimeEnabled()).toBe(false);
+  });
+
+  it('selects continuous listening without opening the microphone', () => {
+    const enable = vi.spyOn(component, 'enableRealtime');
+    fixture.nativeElement.querySelector('input[value="realtime"]').click();
+    fixture.detectChanges();
+    expect(component.inputMode()).toBe('realtime');
+    expect(component.realtimeEnabled()).toBe(false);
+    expect(enable).not.toHaveBeenCalled();
+    fixture.nativeElement.querySelector('[data-testid="start-vitals-realtime"]').click();
+    expect(enable).toHaveBeenCalledTimes(1);
+    expect(component.realtimeEnabled()).toBe(true);
+  });
+
+  it('keeps unavailable dictation disabled and manual fields available', () => {
+    expect(fixture.nativeElement.querySelector('input[value="dictation"]').disabled).toBe(true);
+    expect(fixture.nativeElement.textContent).toContain('vitals.entry.dictationUnavailable');
+    expect(fixture.nativeElement.querySelector('input[value="manual"]').disabled).toBe(false);
+  });
+
+  it('does not apply an earlier proposal while a new analysis is running', () => {
+    const emit = vi.fn();
+    component.proposed.subscribe(emit);
+    component.handleProposal({
+      transcript: 'Test',
+      vitals: { spo2: 98 },
+      assistantMessage: '',
+      needsConfirmation: false,
+      confirmationReason: '',
+    });
+    component.busy.set(true);
+    component.applyCurrentProposal();
+    expect(emit).not.toHaveBeenCalled();
+  });
+
+  it('returns to manual mode and stops continuous listening when reduced', () => {
+    component.enableRealtime();
+    component.toggleExpanded();
+    expect(component.inputMode()).toBe('manual');
+    expect(component.realtimeEnabled()).toBe(false);
+  });
+
+  it('reports capture and analysis activity without saving clinical values', () => {
+    const active = vi.fn();
+    component.activityChange.subscribe(active);
+    component.busy.set(true);
+    fixture.detectChanges();
+    expect(active).toHaveBeenLastCalledWith(true);
+    component.busy.set(false);
+    fixture.detectChanges();
+    expect(active).toHaveBeenLastCalledWith(false);
+  });
+
+  it.each(['destroy', 'collapse'] as const)(
+    'avoids duplicate microphone requests and releases a stream granted after %s',
+    async (action) => {
+      const mediaDescriptor = Object.getOwnPropertyDescriptor(navigator, 'mediaDevices');
+      let grant!: (stream: MediaStream) => void;
+      const getUserMedia = vi.fn().mockReturnValue(
+        new Promise<MediaStream>((resolve) => {
+          grant = resolve;
+        }),
+      );
+      Object.defineProperty(navigator, 'mediaDevices', {
+        configurable: true,
+        value: { getUserMedia },
+      });
+      Object.defineProperty(component, 'mediaRecorderSupported', { value: true });
+      const stop = vi.fn();
+      try {
+        component.selectMode('dictation');
+        component.toggleRecording();
+        component.toggleRecording();
+        expect(getUserMedia).toHaveBeenCalledTimes(1);
+        expect(component.recordingStarting()).toBe(true);
+        if (action === 'destroy') fixture.destroy();
+        else component.toggleExpanded();
+        grant({ getTracks: () => [{ stop }] } as unknown as MediaStream);
+        await Promise.resolve();
+        expect(stop).toHaveBeenCalledTimes(1);
+        expect(component.recording()).toBe(false);
+        expect(vitalsApi.analyzeAudio).not.toHaveBeenCalled();
+      } finally {
+        if (mediaDescriptor) Object.defineProperty(navigator, 'mediaDevices', mediaDescriptor);
+        else Reflect.deleteProperty(navigator, 'mediaDevices');
+      }
+    },
+  );
+
+  it('selects supported dictation without starting it until the explicit action', () => {
+    Object.defineProperty(component, 'mediaRecorderSupported', { value: true });
+    fixture.detectChanges();
+    const record = vi.spyOn(component, 'toggleRecording').mockImplementation(() => undefined);
+    fixture.nativeElement.querySelector('input[value="dictation"]').click();
+    fixture.detectChanges();
+    expect(component.inputMode()).toBe('dictation');
+    expect(record).not.toHaveBeenCalled();
+    fixture.nativeElement.querySelector('[data-testid="start-vitals-dictation"]').click();
+    expect(record).toHaveBeenCalledOnce();
   });
 });

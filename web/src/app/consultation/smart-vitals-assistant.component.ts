@@ -1,10 +1,11 @@
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, OnDestroy, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnDestroy, Output, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AiVitalField, AiVitalsApiService, AiVitalsProposal } from './ai-vitals-api.service';
 import { RealtimeVitalsControllerComponent } from './realtime-vitals-controller.component';
 import { VoiceListeningSurfaceComponent } from './voice-listening-surface.component';
+import { VitalsEntryMode, VitalsEntryModeComponent } from './vitals-entry-mode.component';
 
 @Component({
   selector: 'app-smart-vitals-assistant',
@@ -12,6 +13,7 @@ import { VoiceListeningSurfaceComponent } from './voice-listening-surface.compon
   imports: [
     CommonModule,
     FormsModule,
+    VitalsEntryModeComponent,
     RealtimeVitalsControllerComponent,
     VoiceListeningSurfaceComponent,
   ],
@@ -27,10 +29,13 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   @Input() patientName = '';
   @Input() embedded = false;
   @Output() readonly proposed = new EventEmitter<AiVitalsProposal>();
+  @Output() readonly activityChange = new EventEmitter<boolean>();
 
   readonly expanded = signal(this.initiallyExpanded());
   readonly busy = signal(false);
   readonly recording = signal(false);
+  readonly recordingStarting = signal(false);
+  readonly inputMode = signal<VitalsEntryMode>('manual');
   readonly realtimeEnabled = signal(false);
   readonly realtimeActive = signal(false);
   readonly audioLevel = signal(0);
@@ -55,8 +60,17 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   private audioContext: AudioContext | null = null;
   private analyser: AnalyserNode | null = null;
   private meterFrame: number | null = null;
+  private recordingRequest = 0;
+  private destroyed = false;
+
+  constructor() {
+    effect(() => this.activityChange.emit(
+      this.busy() || this.recording() || this.recordingStarting() || this.realtimeEnabled(),
+    ));
+  }
 
   ngOnDestroy(): void {
+    this.destroyed = true;
     this.disableRealtime();
     this.stopStream();
   }
@@ -66,18 +80,26 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       this.disableRealtime();
       this.stopStream();
       this.recording.set(false);
+      this.inputMode.set('manual');
       this.expanded.set(false);
       return;
     }
     this.expanded.set(true);
   }
 
+  selectMode(mode: VitalsEntryMode): void {
+    if (this.disabled || this.busy() || this.recording() || this.recordingStarting()) return;
+    this.disableRealtime();
+    this.inputMode.set(mode);
+  }
+
   enableRealtime(): void {
-    if (this.disabled) return;
+    if (this.disabled || this.busy() || this.recording() || this.recordingStarting()) return;
     this.stopStream();
     this.recording.set(false);
     this.errorMessage.set('');
     this.realtimeEnabled.set(true);
+    this.inputMode.set('realtime');
   }
 
   disableRealtime(): void {
@@ -96,7 +118,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   sendText(): void {
     const text = this.textInput.trim();
-    if (!text || !this.visitId || this.busy() || this.disabled) return;
+    if (!text || !this.visitId || this.busy() || this.disabled || this.recording() || this.recordingStarting() || this.realtimeEnabled()) return;
     this.busy.set(true);
     this.errorMessage.set('');
     this.api
@@ -120,7 +142,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   applyCurrentProposal(): void {
     const proposal = this.lastProposal();
-    if (!proposal || this.disabled || this.proposalApplied()) return;
+    if (!proposal || this.disabled || this.busy() || this.recording() || this.recordingStarting() || this.proposalApplied()) return;
     if (Object.keys(proposal.vitals).length === 0) return;
     this.proposed.emit(proposal);
     this.proposalApplied.set(true);
@@ -128,7 +150,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
 
   reanalyzeCorrection(): void {
     const corrected = this.correctionText.trim();
-    if (!corrected || !this.visitId || this.busy() || this.disabled) return;
+    if (!corrected || !this.visitId || this.busy() || this.disabled || this.recording() || this.recordingStarting() || this.realtimeEnabled()) return;
     this.busy.set(true);
     this.errorMessage.set('');
     this.api
@@ -160,6 +182,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   }
 
   handleProposal(proposal: AiVitalsProposal): void {
+    if (this.destroyed) return;
     this.busy.set(false);
     this.lastProposal.set(proposal);
     this.proposalApplied.set(false);
@@ -183,9 +206,12 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       this.realtimeEnabled()
       || !this.mediaRecorderSupported
       || this.busy()
+      || this.recordingStarting()
       || this.disabled
       || !this.visitId
     ) return;
+    const request = ++this.recordingRequest;
+    this.recordingStarting.set(true);
     this.errorMessage.set('');
     try {
       const stream = await navigator.mediaDevices.getUserMedia({
@@ -196,11 +222,15 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
           autoGainControl: true,
         },
       });
+      if (this.destroyed || request !== this.recordingRequest) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      this.stream = stream;
       const mimeType = this.preferredMimeType();
       const recorder = mimeType
         ? new MediaRecorder(stream, { mimeType, audioBitsPerSecond: 128000 })
         : new MediaRecorder(stream, { audioBitsPerSecond: 128000 });
-      this.stream = stream;
       this.recorder = recorder;
       this.chunks = [];
       recorder.ondataavailable = event => {
@@ -211,16 +241,21 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
       this.recording.set(true);
       this.startMeter(stream);
     } catch {
+      if (this.destroyed || request !== this.recordingRequest) return;
+      this.stopStream();
       this.errorMessage.set(
         this.i18n.t(
           'vitals.assistant.micError',
           'Impossible d’accéder au microphone. Vérifiez les autorisations du navigateur.',
         ),
       );
+    } finally {
+      if (request === this.recordingRequest) this.recordingStarting.set(false);
     }
   }
 
   private finishRecording(contentType: string): void {
+    if (this.destroyed) return;
     this.recording.set(false);
     this.stopMeter();
     this.stopStream();
@@ -240,6 +275,7 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   }
 
   private handleError(): void {
+    if (this.destroyed) return;
     this.busy.set(false);
     this.recording.set(false);
     this.stopMeter();
@@ -290,6 +326,10 @@ export class SmartVitalsAssistantComponent implements OnDestroy {
   }
 
   private stopStream(): void {
+    this.recordingRequest++;
+    this.recordingStarting.set(false);
+    if (this.recorder) this.recorder.onstop = null;
+    this.recording.set(false);
     this.stopMeter();
     this.stream?.getTracks().forEach(track => track.stop());
     this.stream = null;
