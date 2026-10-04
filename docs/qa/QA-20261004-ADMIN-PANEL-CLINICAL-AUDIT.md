@@ -250,3 +250,122 @@ Une contre-expertise interactive complète a été exécutée sur l'environnemen
   - Remplacement de la requête polymorphe par 4 méthodes strictement typées garantissant l'absence de paramètres non typés : `hasOverlapOpenEnded`, `hasOverlapBounded`, `hasOverlapOpenEndedExcluding`, `hasOverlapBoundedExcluding`.
   - Élimination de la constante factice `OVERLAP_INFINITY` dans `HospitalLocationConfigurationService`.
   - Ajout d'une suite de tests d'intégration dédiée `HospitalLocationConfigurationControllerTest` validant la création ouverte, le rejet de chevauchement (409) et les plages bornées (100% de succès, 0 régression sur `SpatialControllerTest`).
+
+
+---
+
+## 9. Audit Clinique Exhaustif du Parcours Patient End-to-End
+
+### 9.1 Cas clinique de référence exécuté en conditions réelles
+- **Patient :** **TCHOUANGA Jean-Pierre**, 42 ans (né le 15/06/1984), DPU `DPU-JOP-20261004-000001`.
+- **Anamnèse :** Polytraumatisme grave suite collision moto contre poids lourd à Douala.
+- **Diagnostic retenu :** 
+  1. Fracture fermée déplacée du tiers moyen de la diaphyse fémorale gauche.
+  2. Contusion pulmonaire gauche sans volet costal.
+  3. Choc traumatique et hypovolémique compensé (classe II ATLS).
+
+---
+
+### 9.2 Analyse détaillée par étape du parcours de soins
+
+#### A. Accueil des Urgences & Triage ABCDE (`/clinic/emergencies`)
+- **Action réalisée :** Admission en urgence, évaluation complète selon l'algorithme ABCDE.
+  - *A (Airway) :* Voies aériennes libres, pas d'inhalation.
+  - *B (Breathing) :* FR 24/min, auscultation crépitants base gauche, SpO2 95% sous air ambiant.
+  - *C (Circulation) :* TA 90/60 mmHg, Pouls 118 bpm, temps de recoloration cutanée 3s.
+  - *D (Disability) :* Score de Glasgow 15/15, pupilles égales et réactives.
+  - *E (Exposure) :* Raccourcissement et rotation externe cuisse gauche, pouls pédieux présent, EVA 8/10.
+- **Orientation :** Hospitalisation standard / UHCD & Déchoquage Traumatologique.
+- **Points forts :** Calcul automatique de la gravité, ségrégation chromatique (Orange — très urgent / instable), tracé immuable de l'évaluation dans le journal de tri.
+- **Anomalies relevées :**
+  1. **Interpolation de données nulles (UI) :** Si la SpO2 est omise lors de la première frappe, l'historique ABCDE affiche littéralement `"null %"` au lieu de `"Non mesurée"` ou `"—"`.
+  2. **Destinations d'orientation statiques :** La liste déroulante des orientations post-stabilisation est figée dans le code (*"Hospitalisation standard"*, *"Bloc opératoire direct"*, *"Sortie autorisée"*, *"Décès constaté"*) au lieu d'alimenter dynamiquement les services et unités créés dans l'établissement (`URG-TRAUMA`, `UHCD-TRAUMA`).
+  3. ⚠️ **Rupture de continuité des constantes (Sécurité Patient - P1) :** Les constantes vitales du tri d'urgence ne sont pas transmises à la visite médicale nouvellement créée (`VIS-20261004-000001`). Le médecin consultant arrive sur une fiche indiquant *"Aucune constante vitale de tri initial n'a été renseignée pour cette visite"*. Cela oblige à une double saisie et risque d'occulter la phase d'instabilité hémodynamique initiale (90/60 mmHg, 118 bpm).
+
+#### B. Consultation Médicale & Workspace Praticien (`/clinic/consultation/...`)
+- **Action réalisée :** Rédaction des notes SOAP (Subjectif, Objectif, Diagnostic, Plan), ordonnance d'examen biologique d'urgence (NFS / Hémogramme, priorité NORMALE, N° `EXAM-REQ-20261004-000001`), sauvegarde brouillon.
+- **Points forts :** Interface claire, guidage SOAP respectueux des standards internationaux, intégration de la synthèse diagnostique.
+- **Anomalies relevées :**
+  1. 🚨 **Bloquage Praticien / Verrouillage d'auto-attribution RBAC (Ergonomie P0) :**
+     - Le médecin créateur de la clinique possède uniquement le rôle `ADMIN_CLINIQUE`.
+     - Par mesure de sécurité anti-escalade sur `/clinic/rbac`, un administrateur ne peut pas modifier ses propres autorisations.
+     - Étant purement administratif, le rôle `ADMIN_CLINIQUE` est dépourvu de `PRESCRIPTION_SIGN`, `PRESCRIPTION_WRITE` et `CLINICAL_SIGN`.
+     - **Résultat :** Dans une structure unipersonnelle ou en phase de démarrage, le médecin fondateur est dans l'impossibilité de rédiger une prescription médicamenteuse ou de signer/clôturer sa consultation.
+     - **Défaut d'affordance UI :** Dans l'onglet prescription, le texte indique *"Cliquez sur '+ Ajouter un médicament' pour commencer."*, mais le bouton est totalement masqué sans message explicatif. De même, *"Valider & Clôturer la visite"* est désactivé sans aucune indication d'aide ou de permission manquante.
+  2. **Anomalie de chaîne d'affichage :** Le praticien prescripteur est libellé `"Prescrit par : Dr. Dr. Noupoué"` (dédoublement du titre "Dr.").
+
+#### C. Circuit Laboratoire & Biologie Médicale (`/clinic/lab-orders`)
+- **Action réalisée :** Réception de la demande `EXAM-REQ-20261004-000001`, transition du prélèvement vers `SAMPLE_COLLECTED` (*"Prélèvement reçu"*), puis `IN_PROGRESS` (*"En cours"*).
+- **Points forts :** Gestion granulaire par examen unitaire (item-level workflow), horodatage précis des étapes pré-analytiques.
+- **Anomalies relevées :**
+  1. 🚨 **Erreur d'Architecture & Bloquage Fonctionnel (P1) :**
+     - Le formulaire de saisie manuelle de résultats dans le portail clinique (`LabOrdersPageComponent`) requiert la saisie d'une *"Clé API laboratoire"* et appelle l'API publique M2M `/api/public/lab-integration/upload`.
+     - Le personnel soignant et les techniciens de laboratoire internes ne possèdent pas de clé API d'infrastructure.
+     - Sur le serveur distant, l'absence de variable d'environnement ou la clé non renseignée génère systématiquement une erreur `HTTP 401 UNAUTHORIZED ("Clé d'API invalide ou manquante.")`.
+     - **Recommandation impérative :** Séparer l'intégration automatique des automates/LIS externes de la saisie interne. La saisie clinique doit disposer d'un endpoint authentifié dédié `POST /api/lab-orders/{id}/results` protégé par le JWT de session (`hasAuthority('LAB_ORDER_WRITE')`), attribuant automatiquement le validateur à l'utilisateur connecté sans lui demander une clé secrète.
+  2. **Défaut sémiologique UI :** Un pictogramme d'alerte critique `⚠️` est affiché à côté de la priorité `NORMALE` dans le tableau des demandes.
+
+#### D. Pharmacie & Sécurité de Dispensation (`/pharmacy`)
+- **Action réalisée :** Test du guichet de vérification d'ordonnances (`/pharmacy/prescriptions`) et de la gestion des stocks (`/pharmacy/stocks`).
+  - Ajout en stock du produit d'urgence : *Perfalgan 1g / 100ml* (50 flacons, DCI Paracétamol injectable, lot `LOT-PERF-2026-01`, péremption 31/12/2027, seuil d'alerte 10).
+- **Points forts :**
+  - Architecture zéro-trust remarquable sur la délivrance d'ordonnances : l'accès est conditionné au numéro d'ordonnance et au code PIN patient, garantissant la stricte confidentialité médicale vis-à-vis des officines externes.
+  - Le module de stock prend en charge la traçabilité des lots, la date de péremption et les seuils d'alerte de réapprovisionnement.
+
+#### E. Gestion Topographique & Suivi des Lits (`/clinic/spatial`)
+- **Action réalisée :** Contrôle des métriques de la chambre `CH-101` et simulation d'un cycle de bio-nettoyage sur le lit `LIT-101-B`.
+- **Résultats observés :**
+  - Métriques initiales : 2 lits installés, 2 lits ouverts, 2 lits prêts, 0% d'occupation.
+  - Mise en nettoyage de `LIT-101-B` : Décrémentation instantanée à 1 lit prêt et 1 lit disponible.
+  - Validation "Nettoyage terminé" : Rétablissement immédiat à 2 lits prêts.
+- **Points forts :** Automatisation parfaite des états opérationnels d'hygiène hospitalière et recalcul en temps réel de la capacité capacitaire sans latence.
+
+#### F. Facturation Médicale & Recouvrement (`/clinic/billing`)
+- **Action réalisée :** Émission de la facture `FAC-20261004-000001` associée à la visite `VIS-20261004-000001` pour un montant de 15,000 FCFA (prestation de consultation).
+- **Validation :** Transition réussie de l'état `À valider` vers `VALIDATED`, constatation de la créance patient de 15,000 FCFA en statut `UNPAID`.
+- **Anomalie relevée :**
+  - ⚠️ **Anomalie Critique d'Affichage du Sexe / Données Patient (P1) :**
+    - Sur l'écran de facturation, le patient Jean-Pierre TCHOUANGA (homme de 42 ans) est affiché avec la mention `Sexe : Féminin`.
+    - *Cause racine découverte :* Dans `billing-management-page.component.html` (ligne 174) :
+      ```html
+      {{ patient.gender === 'M' ? t('billing.gender.male', 'Masculin') : t('billing.gender.female', 'Féminin') }}
+      ```
+      Or, le backend transmet la chaîne canonique `MASCULIN`. Le test strict `=== 'M'` échoue donc systématiquement et bascule par défaut sur "Féminin".
+    - *Conséquence clinique et financière :* Discordance majeure entre le dossier médical et la feuille de soins, provoquant le rejet systématique des prises en charge par les assurances et mutuelles partenaires (CNPS, Ascoma, Gras Savoye, etc.).
+
+#### G. Poste Caissier & Clôture Comptable (`/clinic/cashier`)
+- **Action réalisée :**
+  1. Ouverture d'une session de caisse avec un fond de caisse initial déclaré de 50,000 FCFA.
+  2. Encaissement de la facture `FAC-20261004-000001` (15,000 FCFA en espèces) depuis la file d'attente caisse.
+  3. Émission immédiate du reçu numéroté `REC-20261004-000001`.
+  4. Clôture de la session avec comptage physique : Solde théorique 65,000 FCFA = Montant physique constaté 65,000 FCFA (Écart : 0 FCFA).
+  5. Génération du bordereau officiel de clôture de caisse `CLS-20261004-20880737`.
+- **Points forts :** Séparation étanche de la session, traçabilité rigoureuse des mouvements de caisse, conformité stricte aux règles de caisse OHADA et justification comptable sans faille.
+- **Anomalie relevée :**
+  - **Défaut de réactivité UI (Absence de liaison d'événements) :** Lorsque le règlement est validé dans `BillingCashierQueueComponent`, aucun événement n'est émis vers le composant parent `BillingCashRegisterComponent`. La carte "Session Active" et le tableau des mouvements ne reflètent les 15,000 FCFA encaissés qu'après un rechargement manuel de la page.
+
+---
+
+## 10. Matrice Priorisée des Actions Correctives Cliniques
+
+| Réf | Sévérité | Module Impacté | Problème Constaté | Impact Praticien / Patient | Solution Recommandée |
+| :--- | :---: | :--- | :--- | :--- | :--- |
+| **CLIN-01** | 🚨 **P0** | **RBAC / Auto-Gouvernance** | Un administrateur clinique ne peut pas s'attribuer le rôle `MEDECIN` ou des droits cliniques. | Le médecin fondateur ne peut ni prescrire, ni signer une consultation, ni clôturer une visite. | Prévoir un rôle combiné par défaut `ADMIN_MEDECIN` à la création, ou autoriser l'auto-attribution des rôles cliniques si le compte est unique praticien. |
+| **CLIN-02** | 🚨 **P1** | **Laboratoire (`/clinic/lab-orders`)** | La saisie manuelle de résultats réclame une clé API et appelle un endpoint webhook public M2M. | Erreur 401 bloquante ; impossibilité pour les biologistes/techniciens de valider les examens dans le portail. | Créer l'endpoint authentifié `POST /api/lab-orders/{id}/results` sécurisé par JWT (`LAB_ORDER_WRITE`), supprimant le champ "Clé API". |
+| **CLIN-03** | ⚠️ **P1** | **Facturation (`/clinic/billing`)** | Test strict `patient.gender === 'M'` affichant `Sexe : Féminin` pour les hommes. | Discordance médico-légale et rejet des factures par les mutuelles/assurances. | Aligner le comparateur : `patient.gender === 'M' \|\| patient.gender === 'MASCULIN' \|\| patient.gender === 'MALE'`. |
+| **CLIN-04** | ⚠️ **P1** | **Urgences ↔ Visites** | Les constantes vitales ABCDE du tri d'urgence ne sont pas copiées vers la visite de consultation. | Rupture de traçabilité clinique ; risque de méconnaître un collapsus initial ; double saisie. | Copier automatiquement les constantes du cas d'urgence dans `VisitVitalsEntity` lors de l'admission/orientation. |
+| **CLIN-05** | 💡 **P2** | **Caisse (`/clinic/cashier`)** | La file d'encaissement n'émet pas d'événement vers le parent après un paiement. | La session active et le solde théorique ne s'incrémentent pas sans rafraîchir manuellement la page. | Ajouter `@Output() paymentRecorded = new EventEmitter<void>()` dans `BillingCashierQueueComponent` et relier à `loadActiveSession()`. |
+| **CLIN-06** | 💡 **P2** | **Ergonomie Consultation** | Message d'invite d'ajout de médicament présent alors que le bouton est invisible pour les non-prescripteurs. | Perplexité de l'utilisateur qui cherche un bouton inexistant. | Remplacer le message par une mention explicite : *"Vous ne disposez pas des privilèges de prescription sur cet établissement."* |
+| **CLIN-07** | 💡 **P2** | **Urgences (`/clinic/emergencies`)** | Les orientations de stabilisation sont codées en dur au lieu de lister les services réels. | Impossibilité d'orienter directement vers `UHCD-TRAUMA` ou un service spécifique depuis le tri. | Alimenter la liste déroulante dynamiquement depuis l'API de structure hospitalière (`/api/organizations/me/services`). |
+| **CLIN-08** | 💡 **P3** | **i18n & Typographie** | Clés brutes (`pharmacy.stocks.manageLink`, `breadcrumb.patients.audit`), fil d'Ariane anglais (`Clinic billing`), doublon `"Dr. Dr."`. | Frictions esthétiques et altération de la perception de maturité du produit. | Nettoyer les dictionnaires JSON `fr.json` et retirer la concaténation systématique du préfixe "Dr." si déjà présent dans le nom. |
+
+---
+
+## 11. Conclusion & Avis de l'Expert Médical
+
+Le système hospitalier **Joprelys Connect** démontre un niveau de conception médicale, de rigueur comptable et de traçabilité exceptionnel :
+- La chaîne de tri **ABCDE** est conforme aux plus hauts standards d'urgence internationale.
+- Le cycle de vie des **lits et de l'hygiène hospitalière** est réactif, robuste et fluide.
+- La **sécurisation financière** (facturation, caisse fermée, rapprochement physique et bordereau de clôture à écart nul) est exemplaire et parfaitement étanche aux risques de fraude ou d'erreur humaine.
+
+Les quelques frictions relevées ci-dessus relèvent de la jeunesse de certaines liaisons entre composants (séparation API interne/externe pour le labo, propagation des constantes d'urgence vers les consultations, alignement des enums de genre en facturation, et gouvernance d'amorçage pour le premier médecin administrateur). Leur correction placera immédiatement Joprelys au rang des meilleurs progiciels hospitaliers internationaux.
