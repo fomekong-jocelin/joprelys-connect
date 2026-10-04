@@ -50,3 +50,6 @@ Déconnexions répétées avec message « session expirée » alors que l'utilis
 
 ## Critère de sortie
 Une rotation normale, une course multi-onglet, une panne réseau transitoire ou un 5xx ne doivent jamais être présentés comme « session expirée ». La déconnexion automatique n'est autorisée que lorsque le serveur confirme réellement que la session n'est plus authentifiable (401/403 après tentative de récupération), ou lors d'un logout/révocation explicite.
+
+## Vérification complémentaire — 2026-10-04
+Revue `QA-20261004-AUTH-RBAC-SESSION-VERIFICATION` : tests existants Angular (633) et Maven ciblés (91) verts, rotation concurrente incluse. Les 12 validations de recette ci-dessus restent non démontrées et non cochées. Un P1 distinct est reproduit : roleGuard autorise une nouvelle route patients/dashboard sans session lorsque le refresh échoue en réseau/500/502/503. Préserver une session lors d'une panne ne doit pas autoriser une identité absente. Détails et limites : `docs/ai/validation/QA-20261004-AUTH-RBAC-SESSION-REPORT.md`. Aucun changement de production dans cette vérification ; recette NOT_READY.

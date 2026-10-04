@@ -62,7 +62,7 @@ import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
                   </div>
 
                   <div class="flex items-center gap-3">
-                    <span class="text-xs font-extrabold text-[var(--text-muted)] hidden sm:inline">Dr. {{ consult.doctorName }}</span>
+                    <span class="text-xs font-extrabold text-[var(--text-muted)] hidden sm:inline">{{ formatDoctorName(consult.doctorName) }}</span>
                     
                     <!-- Chevron de déploiement -->
                     <svg
@@ -399,6 +399,12 @@ export class PatientConsultationsTabComponent implements OnInit {
   revokeError = signal<string | null>(null);
   isRevokingSubmitting = signal(false);
   selectedConsultation = signal<Consultation | null>(null);
+
+  formatDoctorName(name?: string): string {
+    if (!name) return '';
+    const trimmed = name.trim();
+    return trimmed.toLowerCase().startsWith('dr') ? trimmed : `Dr. ${trimmed}`;
+  }
 
   ngOnInit(): void {
     this.loadHistory();

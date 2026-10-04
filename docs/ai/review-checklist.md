@@ -1,5 +1,18 @@
 # Production-Ready Review Checklist
 
+## Exécution — QA-20261004-AUTH-RBAC-SESSION-VERIFICATION
+
+- [x] Diagnostic documenté avant probes ; rapport avec références, priorités et limites.
+- [x] Vrai guard/service de récupération/routeur, HTTP simulé : sans session, activation 0/500/502/503 reproduite ; 401/403 login.
+- [x] 43 routes sensibles et exceptions publiques contrôlées ; permissions effectives et frontières patient/pro lues/testées.
+- [x] Suite Angular existante 633 tests, 16 probes de caractérisation et 91 Maven ciblés verts sans test ignoré en erreur.
+- [x] Backend testé sur H2 mémoire : portail/IDOR/scopes/pharmacie, rotation/logout et contrôleurs/workflow ciblés ; pas prétendu exhaustif.
+- [x] Aucun code de production/API/DB/i18n/thème/configuration modifié ; OWASP deny-by-default évalué, backend maître conservé ; aucun impact 12-Factor ou bump.
+- [x] `.gitignore` vérifié ; probes/configs/logs restent ignorés, aucun test permanent figeant le défaut ni données patient réelles.
+- [ ] AUTH-01 : corriger le fail-open et ajouter les assertions de non-activation permanentes.
+- [ ] AUTH-03/04 : aligner les droits stocks et traiter l'expiration patient au parcours de navigation.
+- [ ] Recette P0 longue, deux onglets, réseau/5xx, privé, Android/veille, RBAC réel et E2E déployés. Statut NOT_READY.
+
 ## Exécution — UX-20261004-CLINICAL-LAYOUT-SPACING
 
 - [x] Captures/code diagnostiqués ; ticket, spécification et conception écrits avant modification.

@@ -198,7 +198,7 @@ import { LabOrder, LabResult } from '../patient.models';
                     </div>
 
                     <div class="flex items-center gap-3">
-                      <span class="text-xs font-bold text-[var(--text-muted)]">Prescrit par : Dr. {{ order.requesterPractitionerName }}</span>
+                      <span class="text-xs font-bold text-[var(--text-muted)]">Prescrit par : {{ formatDoctorName(order.requesterPractitionerName) }}</span>
                       <!-- Chevron -->
                       <svg
                         class="w-4 h-4 text-[var(--text-muted)] transform transition-transform duration-200"
@@ -359,5 +359,11 @@ export class PatientLabOrdersTabComponent implements OnInit {
       default:
         return style.getPropertyValue('--chart-normal').trim() || '#009730';
     }
+  }
+
+  formatDoctorName(name?: string): string {
+    if (!name) return '';
+    const trimmed = name.trim();
+    return trimmed.toLowerCase().startsWith('dr') ? trimmed : `Dr. ${trimmed}`;
   }
 }

@@ -267,6 +267,22 @@ class StaffAssignmentControllerTest {
                 .andExpect(jsonPath("$[?(@.code == 'NURSE')]").exists());
     }
 
+    @Test
+    void givenAdminPractitioner_whenAssignSelf_thenSucceeds() throws Exception {
+        // Admin also has MEDECIN role
+        adminA.setRole("ADMIN_CLINIQUE,MEDECIN");
+        userAccountRepository.saveAndFlush(adminA);
+
+        Instant from = Instant.now().minusSeconds(60);
+        mockMvc.perform(post("/api/staff/" + adminA.getId() + "/assignments/units")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unitRequest(generalMedicineA.getId().toString(), "PRACTITIONER", true, from, null)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.organizationalUnitId").value(generalMedicineA.getId().toString()))
+                .andExpect(jsonPath("$.active").value(true));
+    }
+
     private void createSpecialty(Instant from, Instant to, String code, boolean primary) throws Exception {
         mockMvc.perform(post("/api/staff/" + doctorA.getId() + "/assignments/specialties")
                         .header("Authorization", "Bearer " + adminToken)

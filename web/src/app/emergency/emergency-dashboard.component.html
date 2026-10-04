@@ -352,6 +352,8 @@
         <select [value]="stabilizeOrientation()" (change)="stabilizeOrientation.set($any($event.target).value)" class="ui-input">
           <option value="ADMISSION">{{ t('emergency.orientation.admission') }}</option>
           <option value="OR_DIRECT">{{ t('emergency.orientation.or_direct') }}</option>
+          <option value="CONSULTATION">{{ t('emergency.orientation.consultation') }}</option>
+          <option value="TRANSFER">{{ t('emergency.orientation.transfer') }}</option>
           <option value="DISCHARGE">{{ t('emergency.orientation.discharge') }}</option>
           <option value="DEATH">{{ t('emergency.orientation.death') }}</option>
         </select>

@@ -111,17 +111,17 @@
 
             @if (user.currentUser) {
               <app-ui-alert tone="info">
-                {{ t('rbac.users.selfGuard', 'Pour votre sécurité, vous ne pouvez pas modifier vos propres privilèges.') }}
+                {{ t('rbac.users.selfGuard', 'Vous configurez votre propre compte. Le rôle Administrateur clinique reste obligatoirement maintenu.') }}
               </app-ui-alert>
             }
 
             <div class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
               @for (role of assignableRoles(); track role.id) {
-                <label class="rbac-role-choice" [class.checked]="userRoleChecked(role.id)" [class.disabled]="user.currentUser">
+                <label class="rbac-role-choice" [class.checked]="userRoleChecked(role.id)" [class.disabled]="isRoleDisabled(user, role)">
                   <input
                     type="checkbox"
                     [checked]="userRoleChecked(role.id)"
-                    [disabled]="user.currentUser || saving()"
+                    [disabled]="isRoleDisabled(user, role) || saving()"
                     (change)="toggleUserRole(role.id)"
                   />
                   <span class="min-w-0">
@@ -152,7 +152,7 @@
               <button
                 type="button"
                 class="ui-button ui-button-primary"
-                [disabled]="user.currentUser || saving() || selectedUserRoleIds().length === 0"
+                [disabled]="saving() || selectedUserRoleIds().length === 0"
                 (click)="saveUserRoles()"
               >
                 {{ saving() ? t('common.saving', 'Enregistrement…') : t('rbac.users.save', 'Enregistrer les rôles') }}

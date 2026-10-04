@@ -269,10 +269,6 @@ import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models'
 
                     <div class="grid gap-3 md:grid-cols-2">
                       <label class="block">
-                        <span class="ui-label">{{ t('lab.apiKey') }}</span>
-                        <input class="ui-input lab-input mt-1" type="password" formControlName="apiKey" />
-                      </label>
-                      <label class="block">
                         <span class="ui-label">{{ t('lab.validatorName') }}</span>
                         <input class="ui-input lab-input mt-1" formControlName="validatorName" />
                       </label>
@@ -460,7 +456,6 @@ export class LabOrdersPageComponent {
   ];
 
   readonly resultForm = this.fb.nonNullable.group({
-    apiKey: ['', Validators.required],
     validatorName: ['', Validators.required],
     status: ['VALIDATED', Validators.required],
     sampleCollectedAt: [''],
@@ -632,7 +627,7 @@ export class LabOrdersPageComponent {
         comment: result.comment?.trim() || undefined,
       })),
       pdfBase64: this.pdfBase64() || undefined,
-    }, raw.apiKey.trim()).subscribe({
+    }).subscribe({
       next: () => {
         this.submitSuccess.set(this.t('lab.submitSuccess'));
         this.isSubmitting.set(false);

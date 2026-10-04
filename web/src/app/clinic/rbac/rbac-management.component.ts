@@ -161,8 +161,16 @@ export class RbacManagementComponent implements OnInit {
     this.success.set(null);
   }
 
+  isRoleDisabled(user: RbacUserAccess, role: RbacRole): boolean {
+    return Boolean(user.currentUser && role.code === 'ADMIN_CLINIQUE');
+  }
+
   toggleUserRole(roleId: string): void {
-    if (this.selectedUser()?.currentUser) return;
+    const user = this.selectedUser();
+    if (user?.currentUser) {
+      const role = this.roles().find((r) => r.id === roleId);
+      if (role?.code === 'ADMIN_CLINIQUE') return;
+    }
     this.selectedUserRoleIds.update((current) =>
       current.includes(roleId) ? current.filter((id) => id !== roleId) : [...current, roleId],
     );
@@ -170,7 +178,14 @@ export class RbacManagementComponent implements OnInit {
 
   saveUserRoles(): void {
     const user = this.selectedUser();
-    if (!user || user.currentUser || this.selectedUserRoleIds().length === 0) return;
+    if (!user || this.selectedUserRoleIds().length === 0) return;
+    if (user.currentUser) {
+      const adminRole = this.roles().find((r) => r.code === 'ADMIN_CLINIQUE');
+      if (adminRole && !this.selectedUserRoleIds().includes(adminRole.id)) {
+        this.error.set(this.t('rbac.users.keepAdminRole', "Vous ne pouvez pas révoquer votre propre rôle d'administrateur."));
+        return;
+      }
+    }
     this.saving.set(true);
     this.error.set(null);
     this.success.set(null);

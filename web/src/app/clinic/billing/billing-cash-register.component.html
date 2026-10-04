@@ -19,7 +19,7 @@
 
   @if (activeSession(); as session) {
     @if (canReadQueue()) {
-      <app-billing-cashier-queue></app-billing-cashier-queue>
+      <app-billing-cashier-queue (paymentRecorded)="loadActiveSession()"></app-billing-cashier-queue>
     }
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">

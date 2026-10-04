@@ -171,7 +171,7 @@
                 <p class="text-[10px] text-[var(--text-muted)]">DPU: {{ patient.globalPatientNumber }}</p>
               </div>
               <div class="grid grid-cols-2 gap-2 text-[10px] text-[var(--text-secondary)]">
-                <div><strong>{{ t('patients.gender', 'Sexe') }} :</strong> {{ patient.gender === 'M' ? t('billing.gender.male', 'Masculin') : t('billing.gender.female', 'Féminin') }}</div>
+                <div><strong>{{ t('patients.gender', 'Sexe') }} :</strong> {{ (patient.gender === 'M' || patient.gender === 'MASCULIN' || patient.gender === 'MALE') ? t('billing.gender.male', 'Masculin') : t('billing.gender.female', 'Féminin') }}</div>
                 <div><strong>{{ t('patients.birthDate', 'Né(e) le') }} :</strong> {{ patient.birthDate }}</div>
                 <div><strong>{{ t('patients.phone', 'Tél') }} :</strong> {{ patient.phone || '-' }}</div>
                 <div><strong>{{ t('patients.city', 'Ville') }} :</strong> {{ patient.city || '-' }}</div>

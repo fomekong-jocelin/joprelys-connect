@@ -12,6 +12,11 @@ import com.joprelys.backend.visit.infrastructure.persistence.VisitCorrectionEnti
 import com.joprelys.backend.visit.infrastructure.persistence.VisitCorrectionRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
+import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyEntity;
+import com.joprelys.backend.emergency.infrastructure.persistence.EmergencyRepository;
+import com.joprelys.backend.emergency.triage.infrastructure.persistence.EmergencyTriageAssessmentEntity;
+import com.joprelys.backend.emergency.triage.infrastructure.persistence.EmergencyTriageAssessmentRepository;
+import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +38,8 @@ public class VisitService {
 	private final ObjectMapper objectMapper;
 	private final RealtimeClinicalIntakeService realtimeClinicalIntakeService;
     private final VisitClinicalClosureService clinicalClosure;
+	private final EmergencyRepository emergencyRepository;
+	private final EmergencyTriageAssessmentRepository triageAssessmentRepository;
 
 	@SuppressWarnings("checkstyle:ParameterNumber")
 	public VisitService(
@@ -44,7 +51,9 @@ public class VisitService {
 			AuditService auditService,
 			ObjectMapper objectMapper,
 			RealtimeClinicalIntakeService realtimeClinicalIntakeService,
-            VisitClinicalClosureService clinicalClosure) {
+            VisitClinicalClosureService clinicalClosure,
+			@org.springframework.beans.factory.annotation.Autowired(required = false) EmergencyRepository emergencyRepository,
+			@org.springframework.beans.factory.annotation.Autowired(required = false) EmergencyTriageAssessmentRepository triageAssessmentRepository) {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
@@ -54,6 +63,8 @@ public class VisitService {
 		this.objectMapper = objectMapper;
 		this.realtimeClinicalIntakeService = realtimeClinicalIntakeService;
         this.clinicalClosure = clinicalClosure;
+		this.emergencyRepository = emergencyRepository;
+		this.triageAssessmentRepository = triageAssessmentRepository;
 	}
 
 	@Transactional
@@ -75,6 +86,8 @@ public class VisitService {
 				request.service() != null ? request.service() : request.orientation(),
 				request.mainPractitionerId(),
 				arrivalAt);
+
+		propagateEmergencyVitalsIfApplicable(visit, patient);
 
 		return visitRepository.save(visit);
 	}
@@ -224,5 +237,60 @@ public class VisitService {
 	@Transactional(readOnly = true)
 	public List<VisitEntity> getPatientVisits(UUID patientId) {
 		return visitRepository.findByPatientIdWithPatientAndVitals(patientId);
+	}
+
+	private void propagateEmergencyVitalsIfApplicable(VisitEntity visit, PatientEntity patient) {
+		if (emergencyRepository == null) return;
+		List<EmergencyEntity> emergencies = emergencyRepository.findByPatientIdWithLogs(patient.getId());
+		if (emergencies.isEmpty()) return;
+
+		Instant threshold = Instant.now().minus(java.time.Duration.ofHours(24));
+		EmergencyEntity latest = emergencies.stream()
+				.filter(e -> e.getCreatedAt().isAfter(threshold) || e.getStabilizedAt() == null || e.getVisitId() == null)
+				.findFirst()
+				.orElse(null);
+
+		if (latest == null) return;
+
+		if (latest.getVisitId() == null) {
+			latest.setVisitId(visit.getId());
+			emergencyRepository.save(latest);
+		}
+
+		EmergencyTriageAssessmentEntity triage = null;
+		if (triageAssessmentRepository != null) {
+			List<EmergencyTriageAssessmentEntity> assessments =
+					triageAssessmentRepository.findByEmergency_IdOrderBySequenceNumberAsc(latest.getId());
+			if (!assessments.isEmpty()) {
+				triage = assessments.get(assessments.size() - 1);
+			}
+		}
+
+		Integer systolic = triage != null && triage.getBpSystolic() != null ? triage.getBpSystolic() : latest.getInitialBpSystolic();
+		Integer diastolic = triage != null && triage.getBpDiastolic() != null ? triage.getBpDiastolic() : latest.getInitialBpDiastolic();
+		Integer pulse = triage != null && triage.getHeartRate() != null ? triage.getHeartRate() : latest.getInitialHr();
+		java.math.BigDecimal temp = triage != null && triage.getTemperature() != null ? triage.getTemperature() : latest.getInitialTemp();
+		Integer spo2 = triage != null ? triage.getOxygenSaturation() : null;
+		Integer rr = triage != null ? triage.getRespiratoryRate() : null;
+		Integer pain = triage != null ? triage.getPainScore() : null;
+
+		boolean hasAnyVital = systolic != null || diastolic != null || pulse != null || temp != null || spo2 != null || rr != null || pain != null;
+		if (hasAnyVital) {
+			VitalsEntity vitals = new VitalsEntity(
+					visit,
+					temp,
+					null,
+					null,
+					pulse,
+					systolic,
+					diastolic,
+					spo2,
+					null,
+					rr,
+					pain,
+					null);
+			visit.setVitals(vitals);
+			visit.markVitalsRecorded();
+		}
 	}
 }

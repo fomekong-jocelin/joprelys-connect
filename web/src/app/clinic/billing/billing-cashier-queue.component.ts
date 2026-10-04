@@ -1,5 +1,5 @@
 import { CommonModule } from '@angular/common';
-import { Component, ElementRef, OnInit, ViewChild, computed, inject, signal } from '@angular/core';
+import { Component, ElementRef, OnInit, ViewChild, computed, inject, output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { catchError, finalize, of, switchMap } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -49,6 +49,7 @@ export class BillingCashierQueueComponent implements OnInit {
   readonly savingPayment = signal(false);
   readonly paymentError = signal<string | null>(null);
   readonly lastPayment = signal<LastPaymentSummary | null>(null);
+  readonly paymentRecorded = output<void>();
 
   readonly filteredItems = computed(() => {
     const query = this.normalize(this.searchQuery());
@@ -149,6 +150,7 @@ export class BillingCashierQueueComponent implements OnInit {
         this.lastPayment.set({ item, amount: form.amount, method: form.method, receipt });
         this.selectedItem.set(null);
         this.loadQueue();
+        this.paymentRecorded.emit();
         queueMicrotask(() => this.queueHeading?.nativeElement.focus());
       },
       error: (error) => {

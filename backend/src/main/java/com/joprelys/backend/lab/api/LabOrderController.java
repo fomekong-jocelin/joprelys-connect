@@ -148,6 +148,31 @@ public class LabOrderController {
                 .body(pdfBytes);
     }
 
+    @PostMapping("/results")
+    @ResponseStatus(HttpStatus.CREATED)
+    @PreAuthorize("hasAuthority('LAB_ORDER_WRITE')")
+    @Operation(summary = "Saisir les résultats d'un examen", description = "Permet à un biologiste ou utilisateur habilité de saisir et valider les résultats d'un examen.")
+    public void uploadResults(
+            @Valid @RequestBody LabResultUploadRequest request,
+            Authentication authentication) {
+        String validator = (request.validatorName() != null && !request.validatorName().isBlank())
+                ? request.validatorName()
+                : (authentication != null ? authentication.getName() : "Praticien");
+        LabResultUploadRequest finalRequest = new LabResultUploadRequest(
+                request.examRequestNumber(),
+                validator,
+                request.validatorUserId(),
+                request.status(),
+                request.sampleCollectedAt(),
+                request.resultAt(),
+                request.validatedAt(),
+                request.conclusion(),
+                request.results(),
+                request.pdfBase64(),
+                request.labOrderItemId());
+        labResultService.uploadResults(finalRequest);
+    }
+
     private com.joprelys.backend.patient.infrastructure.persistence.PatientEntity resolvePatient(UUID patientId) {
         return patientRepository.findByIdGlobally(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));

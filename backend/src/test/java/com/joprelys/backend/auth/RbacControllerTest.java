@@ -171,13 +171,26 @@ class RbacControllerTest {
     }
 
     @Test
-    void shouldRejectSelfPrivilegeChangeAndCrossTenantAssignment() throws Exception {
+    void shouldRejectSelfAdminRevocationAndAllowRoleExpansion() throws Exception {
+        // Reject revoking own admin role
         mockMvc.perform(put("/api/rbac/users/" + admin.getId() + "/roles")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "roleIds", List.of(roleId("ADMIN_CLINIQUE"))))))
-                .andExpect(status().isBadRequest());
+                                "roleIds", List.of(roleId("MEDECIN"))))))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.detail").value("Vous ne pouvez pas révoquer votre propre rôle d'administrateur."));
+
+        // Allow expanding own roles while preserving admin role
+        mockMvc.perform(put("/api/rbac/users/" + admin.getId() + "/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "roleIds", List.of(roleId("ADMIN_CLINIQUE"), roleId("MEDECIN"))))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.currentUser").value(true))
+                .andExpect(jsonPath("$.roles[?(@ == 'ADMIN_CLINIQUE')]").exists())
+                .andExpect(jsonPath("$.roles[?(@ == 'MEDECIN')]").exists());
 
         mockMvc.perform(put("/api/rbac/users/" + outsider.getId() + "/roles")
                         .header("Authorization", "Bearer " + adminToken)

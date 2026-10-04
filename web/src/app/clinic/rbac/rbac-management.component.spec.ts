@@ -148,17 +148,29 @@ describe('RbacManagementComponent', () => {
     expect(api.listUsers).toHaveBeenCalledWith(organization.id);
   });
 
-  it('should prevent changing the roles of the current user in the UI', () => {
+  it('should lock admin role for current user while allowing role expansion', () => {
+    api.replaceUserRoles.mockReturnValue(of({
+      ...users[0],
+      roles: ['ADMIN_CLINIQUE', 'CAISSIER'],
+    }));
+
     component.roles.set(roles);
     component.users.set(users);
     component.selectUser(users[0]);
     const before = component.selectedUserRoleIds();
 
-    component.toggleUserRole('role-cashier');
-    component.saveUserRoles();
-
+    // Admin role is disabled and cannot be removed
+    expect(component.isRoleDisabled(users[0], roles[0])).toBe(true);
+    expect(component.isRoleDisabled(users[0], roles[1])).toBe(false);
+    component.toggleUserRole('role-admin');
     expect(component.selectedUserRoleIds()).toEqual(before);
-    expect(api.replaceUserRoles).not.toHaveBeenCalled();
+
+    // Can add additional roles
+    component.toggleUserRole('role-cashier');
+    expect(component.selectedUserRoleIds()).toEqual(['role-admin', 'role-cashier']);
+
+    component.saveUserRoles();
+    expect(api.replaceUserRoles).toHaveBeenCalledWith('user-admin', ['role-admin', 'role-cashier'], undefined);
   });
 
   it('should prepare an editable custom copy of a system role', () => {

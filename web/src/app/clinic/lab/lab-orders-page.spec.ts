@@ -180,7 +180,6 @@ describe('LabOrdersPageComponent', () => {
   it('should submit legacy lab results for selected order', () => {
     const component = fixture.componentInstance;
     component.resultForm.patchValue({
-      apiKey: 'secret-key',
       validatorName: 'Dr Bio',
       validatedAt: '2026-07-03T12:30',
     });
@@ -198,14 +197,14 @@ describe('LabOrdersPageComponent', () => {
       examRequestNumber: 'EXAM-REQ-20260703-000042',
       validatorName: 'Dr Bio',
       results: [expect.objectContaining({ analyteName: 'Glycemie', value: '0.95' })],
-    }), 'secret-key');
+    }));
   });
 
   it('should submit structured results with selected item id', () => {
     const component = fixture.componentInstance;
     component.selectOrder(structuredLabOrder);
     component.selectItem(structuredLabOrder.items![1]);
-    component.resultForm.patchValue({ apiKey: 'secret-key', validatorName: 'Dr Bio' });
+    component.resultForm.patchValue({ validatorName: 'Dr Bio' });
     component.results.at(0).patchValue({ analyteName: 'CRP', value: '12' });
 
     component.submitResults(structuredLabOrder);
@@ -214,7 +213,7 @@ describe('LabOrdersPageComponent', () => {
       examRequestNumber: structuredLabOrder.examRequestNumber,
       labOrderItemId: 'item-crp',
       results: [expect.objectContaining({ analyteName: 'CRP', value: '12' })],
-    }), 'secret-key');
+    }));
   });
 
   it('should keep results scoped to selected exam', () => {
@@ -230,15 +229,15 @@ describe('LabOrdersPageComponent', () => {
   });
 
   it('should show backend upload errors', () => {
-    labApi.uploadResults.mockReturnValueOnce(throwError(() => ({ error: { detail: 'Clé API invalide' } })));
+    labApi.uploadResults.mockReturnValueOnce(throwError(() => ({ error: { detail: 'Erreur de validation' } })));
     const component = fixture.componentInstance;
-    component.resultForm.patchValue({ apiKey: 'bad-key', validatorName: 'Dr Bio' });
+    component.resultForm.patchValue({ validatorName: 'Dr Bio' });
     component.results.at(0).patchValue({ analyteName: 'CRP', value: '12' });
 
     component.submitResults(labOrder);
     fixture.detectChanges();
 
-    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Clé API invalide');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Erreur de validation');
   });
 
   it('should filter orders by search query and priority', () => {

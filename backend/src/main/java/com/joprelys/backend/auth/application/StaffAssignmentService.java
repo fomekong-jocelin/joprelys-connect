@@ -33,11 +33,20 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class StaffAssignmentService {
 
-    private static final Set<String> NON_ASSIGNABLE_ACCOUNT_ROLES = Set.of(
+    private static final Set<String> NON_ASSIGNABLE_BASE_ROLES = Set.of(
             "SUPER_ADMIN",
             "ADMIN_JOPRELYS",
-            "ADMIN_CLINIQUE",
             "PATIENT");
+
+    private static final Set<String> CLINICAL_PRACTITIONER_ROLES = Set.of(
+            "MEDECIN",
+            "INFIRMIER",
+            "SAGE_FEMME",
+            "PHARMACIEN",
+            "BIOLOGISTE",
+            "AIDE_SOIGNANT",
+            "KINESITHERAPEUTE",
+            "CHIRURGIEN");
 
     private final UserAccountRepository userAccountRepository;
     private final StaffSpecialtyAssignmentRepository specialtyAssignmentRepository;
@@ -211,12 +220,12 @@ public class StaffAssignmentService {
     }
 
     private UserAccountEntity managedStaff(UUID staffId, UserAccountEntity admin) {
-        if (admin.getId().equals(staffId)) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Un administrateur ne peut pas s'affecter lui-même ici.");
-        }
         UserAccountEntity staff = userAccountRepository.findByIdAndOrganizationId(staffId, admin.getOrganizationId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Collaborateur non trouvé."));
-        if (NON_ASSIGNABLE_ACCOUNT_ROLES.stream().anyMatch(staff::hasRole)) {
+        if (NON_ASSIGNABLE_BASE_ROLES.stream().anyMatch(staff::hasRole)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce compte ne peut pas recevoir d'affectation hospitalière.");
+        }
+        if (staff.hasRole("ADMIN_CLINIQUE") && CLINICAL_PRACTITIONER_ROLES.stream().noneMatch(staff::hasRole)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce compte ne peut pas recevoir d'affectation hospitalière.");
         }
         return staff;

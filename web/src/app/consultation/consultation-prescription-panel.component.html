@@ -60,7 +60,11 @@
           {{ i18n.t('consultation.prescription.noMedicaments') }}
         </p>
         <p class="mt-1 text-xs text-[var(--text-muted)]">
-          {{ i18n.t('consultation.prescription.startAdding') }}
+          @if (prescriptions.canWrite()) {
+            {{ i18n.t('consultation.prescription.startAdding') }}
+          } @else {
+            {{ i18n.t('consultation.prescription.noWritePermission', "Vous ne disposez pas des privilèges de prescription sur cet établissement.") }}
+          }
         </p>
       </div>
     } @else {

@@ -37,9 +37,12 @@ export class LabOrderApiService {
     return this.http.get<LabResult[]>(`/api/lab-orders/patient/${patientId}/results`);
   }
 
-  uploadResults(request: LabResultUploadRequest, apiKey: string): Observable<void> {
-    return this.http.post<void>('/api/public/lab-integration/upload', request, {
-      headers: { 'X-API-KEY': apiKey },
-    });
+  uploadResults(request: LabResultUploadRequest, apiKey?: string): Observable<void> {
+    if (apiKey) {
+      return this.http.post<void>('/api/public/lab-integration/upload', request, {
+        headers: { 'X-API-KEY': apiKey },
+      });
+    }
+    return this.http.post<void>('/api/lab-orders/results', request);
   }
 }
