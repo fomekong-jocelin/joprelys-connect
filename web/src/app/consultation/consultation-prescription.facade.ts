@@ -1,3 +1,4 @@
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { Injectable, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, Validators } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -8,6 +9,9 @@ import { Prescription } from './consultation.models';
 @Injectable()
 export class ConsultationPrescriptionFacade {
   private readonly formBuilder = inject(FormBuilder);
+  private readonly rbac = inject(RbacApiService);
+  canWrite(): boolean { return this.rbac.hasPermission('PRESCRIPTION_WRITE'); }
+  canSign(): boolean { return this.rbac.hasPermission('PRESCRIPTION_SIGN'); }
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly i18n = inject(I18nService);
   private readonly feedback = inject(ConsultationFeedbackStore);
@@ -23,7 +27,7 @@ export class ConsultationPrescriptionFacade {
         this.current.set(prescription);
         this.items.clear();
         prescription.items.forEach((item) => {
-          const isReadonly = prescription.status !== 'DRAFT';
+          const isReadonly = prescription.status !== 'DRAFT' || !this.canWrite();
           this.items.push(
             this.formBuilder.group({
               drugName: [{ value: item.drugName, disabled: isReadonly }, Validators.required],
@@ -59,6 +63,7 @@ export class ConsultationPrescriptionFacade {
   }
 
   addLine(): void {
+    if (!this.canWrite()) return;
     if (this.current()?.status !== undefined && this.current()?.status !== 'DRAFT') return;
     this.items.push(
       this.formBuilder.group({
@@ -77,11 +82,13 @@ export class ConsultationPrescriptionFacade {
   }
 
   removeLine(index: number): void {
+    if (!this.canWrite()) return;
     if (this.current()?.status !== undefined && this.current()?.status !== 'DRAFT') return;
     this.items.removeAt(index);
   }
 
   finalize(): void {
+    if (!this.canSign()) return;
     const prescription = this.current();
     if (!prescription) return;
     this.feedback.isLoading.set(true);
@@ -101,6 +108,7 @@ export class ConsultationPrescriptionFacade {
   }
 
   confirmAndCancel(): void {
+    if (!this.canSign()) return;
     const prescription = this.current();
     if (!prescription) return;
     if (!confirm(this.i18n.t('consultation.prescription.confirmCancel'))) return;

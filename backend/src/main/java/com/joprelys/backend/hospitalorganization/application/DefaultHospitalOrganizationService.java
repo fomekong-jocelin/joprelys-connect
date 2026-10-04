@@ -170,18 +170,15 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
 
     private ResolvedUnitIdentity resolveIdentity(SaveOrganizationalUnitRequest request) {
         if (request.unitType() == OrganizationalUnitType.SERVICE) {
-            if (request.name() != null && !request.name().isBlank()) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Le nom d'un service est défini par le catalogue et ne doit pas être saisi librement.");
-            }
             String catalogCode = normalizeCatalogCode(request.serviceCatalogCode());
             HospitalServiceCatalogEntity catalog = serviceCatalogRepository.findById(catalogCode)
                     .filter(HospitalServiceCatalogEntity::isActive)
                     .orElseThrow(() -> new ResponseStatusException(
                             HttpStatus.BAD_REQUEST,
                             "Type de service inconnu ou inactif."));
-            return new ResolvedUnitIdentity(catalog.getNameFr(), catalog.getCode());
+            return new ResolvedUnitIdentity(
+                    request.name() == null || request.name().isBlank() ? null : requireName(request.name()),
+                    catalog.getCode());
         }
 
         if (request.serviceCatalogCode() != null && !request.serviceCatalogCode().isBlank()) {

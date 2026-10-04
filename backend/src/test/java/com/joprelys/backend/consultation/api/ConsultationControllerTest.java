@@ -276,6 +276,37 @@ public class ConsultationControllerTest {
     }
 
     @Test
+    void closingVisitSealsConsultationAndRejectsEditsEvenIfVisitIsReopened() throws Exception {
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"symptoms\":\"Fièvre\",\"diagnosis\":\"Diagnostic initial\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/close")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VALIDEE"))
+                .andExpect(jsonPath("$.signedBy").value(userMedecinA.getId().toString()))
+                .andExpect(jsonPath("$.signedAt").isNotEmpty())
+                .andExpect(jsonPath("$.signedContentHash").value(org.hamcrest.Matchers.matchesPattern("[a-f0-9]{64}")));
+        String originalHash = jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM consultations WHERE visit_id = ?", String.class, visitA.getId());
+        jdbcTemplate.update("UPDATE visits SET status = 'EN_COURS' WHERE id = ?", visitA.getId());
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"symptoms\":\"Altération\",\"diagnosis\":\"Diagnostic modifié\"}"))
+                .andExpect(status().isConflict());
+        org.junit.jupiter.api.Assertions.assertEquals(originalHash, jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM consultations WHERE visit_id = ?", String.class, visitA.getId()));
+        org.junit.jupiter.api.Assertions.assertEquals("Diagnostic initial", jdbcTemplate.queryForObject(
+                "SELECT diagnosis FROM consultations WHERE visit_id = ?", String.class, visitA.getId()));
+    }
+
+    @Test
     void givenClosedVisit_whenSaveConsultation_thenBadRequest() throws Exception {
         TenantContext.setTenantId(orgA.getId());
         visitA.setStatus("TERMINEE");

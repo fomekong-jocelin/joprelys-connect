@@ -52,7 +52,9 @@ class PrescriptionDraftCompletenessTest {
                 mock(AuditService.class),
                 mock(UserAccountRepository.class),
                 mock(PatientRepository.class),
-                documentService);
+                documentService,
+                mock(com.joprelys.backend.consultation.application.MedicalSigningPolicy.class),
+                mock(com.joprelys.backend.visit.infrastructure.persistence.VisitRepository.class));
 
         ResponseStatusException error = assertThrows(
                 ResponseStatusException.class,

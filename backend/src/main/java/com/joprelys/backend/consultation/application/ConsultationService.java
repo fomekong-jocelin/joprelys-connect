@@ -76,6 +76,10 @@ public class ConsultationService {
 							request.advice(), request.followUp());
 				});
 
+        if (consultation.getSignedAt() != null || !"BROUILLON".equals(consultation.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une consultation signée ne peut plus être modifiée.");
+        }
+
 		if (request.expectedUpdatedAt() != null && consultation.getUpdatedAt() != null
 				&& !consultation.getUpdatedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS)
 						.equals(request.expectedUpdatedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS))) {

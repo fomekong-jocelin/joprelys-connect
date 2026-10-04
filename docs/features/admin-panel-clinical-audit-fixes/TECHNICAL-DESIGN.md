@@ -1,0 +1,15 @@
+# Approche technique
+
+Changements ciblés Angular/Spring Boot/PostgreSQL dans les modules existants profil, dashboard, organisation, spatial, RBAC, consultation et pharmacie. Les corrections sont découpées avant implémentation ; aucune refonte globale.
+Les catalogues et contraintes sont corrigés par une nouvelle migration Flyway, jamais par modification d'une migration appliquée. Nom SERVICE nullable pour compatibilité, code catalogue requis. La résolution des noms tient compte de l'intitulé local dans toutes les projections.
+La gouvernance réutilise les affectations staff datées plutôt qu'une duplication non historisée. Les actes de prescription et pharmacie utilisent des permissions explicites ; les rôles soignants ne reçoivent pas la signature. Revue des chemins alternatifs de création/signature et des rôles administratifs avant validation.
+Le journal cible le journal existant avec son contrôle d'accès réel, et non une route patient sans identifiant. Les données optionnelles du profil ne peuvent empêcher la réponse principale d'être affichée ; erreurs explicites et traduites.
+UI : composants partagés, tokens centralisés, FR/EN, light/dark, ARIA et feedback champ. Aucun changement de configuration Maven/YAML/proxy/Tailwind ni secret.
+Tests : erreurs profil indépendantes ; route/liens et autorisations ; identité service et migration ; catalogues inpatient ; permissions/actes et immutabilité ; validation formulaire ; suite Angular, build/i18n et Maven ciblé puis complet selon résultats.
+Version : MINOR pour données additives ; MAJOR candidat pour séparation des autorisations de prescription/signature. Aucune version, release ou tag préparé. Recette navigateur et PostgreSQL distinctes des tests H2.
+
+## Complément PNG
+
+OpenPDF (déjà installé) insère les images depuis FileStorageService ; ce générateur n'est pas refondu. SignatureImageNormalizer dédié à la normalisation ImageIO : lecture contrôlée PNG/JPEG, vérification des dimensions avant décodage, sortie ARGB/PNG réencodée sans métadonnées, 500 px maximum. Pas de fallback au fichier brut pour les signatures. Formats PNG/JPEG proposés dans le profil FR/EN, sans modifier les autres uploaders. FileController délègue les règles d'upload à FileUploadUseCase/implémentation dédiée ; FILE_UPLOAD conservé ; la gestion administrative des assets reste autorisée. L'association à son propre profil reste réservée au médecin actif par la règle existante ; la signature clinique conserve qualification et droit dédiés.
+Dimensions d'entrée : maximum 8192 px par côté et 16 millions de pixels, fichier maximum 10 Mo côté API (limite existante) ; UI conserve 2 Mo. Pas de nouvelle dépendance, stockage/configuration existants. Anciennes signatures non migrées silencieusement ; réupload normalisé. Tests unitaires stockage + API upload/profil/document, extraction des ressources image du PDF ; régression des anciennes photos et signatures historiques.
+Choix open source : OpenPDF (MPL/LGPL) et ImageIO du JDK pour les images ; DSS (LGPL 2.1) retenu pour une intégration cryptographique future, non installé ni configuré ici. Références officielles dans ADR.

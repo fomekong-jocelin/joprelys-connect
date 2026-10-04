@@ -1,3 +1,4 @@
+import { ActivatedRoute } from '@angular/router';
 import { CommonModule } from '@angular/common';
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { forkJoin, switchMap } from 'rxjs';
@@ -21,6 +22,7 @@ const RBAC_ORGANIZATION_SCOPE_KEY = 'joprelys.rbac.organizationScope';
 })
 export class RbacManagementComponent implements OnInit {
   private readonly api = inject(RbacApiService);
+  private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly organizationApi = inject(OrganizationApiService);
   private readonly i18n = inject(I18nService);
 
@@ -74,6 +76,7 @@ export class RbacManagementComponent implements OnInit {
   readonly isEditingSystemRole = computed(() => this.selectedRole()?.systemRole ?? false);
 
   ngOnInit(): void {
+    if (this.route?.snapshot.queryParamMap.get('tab') === 'audit') this.activeTab.set('audit');
     this.bootstrapWorkspace();
   }
 
@@ -123,6 +126,7 @@ export class RbacManagementComponent implements OnInit {
           this.selectRole(roles[0]);
         }
         this.loading.set(false);
+        if (this.activeTab() === 'audit') this.loadAudit();
       },
       error: (error) => {
         this.error.set(this.errorMessage(error, this.t('rbac.loadError', 'Impossible de charger les droits d’accès.')));

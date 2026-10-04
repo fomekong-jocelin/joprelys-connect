@@ -75,6 +75,12 @@ public final class RbacCatalog {
                 permission("PATIENT_EMERGENCY_ACCESS", "PATIENT", "Déclencher un accès d'urgence", "Ouvrir un accès exceptionnel et traçable au dossier patient."),
                 permission("CLINICAL_READ", "CLINIQUE", "Consulter le dossier clinique", "Consulter les données cliniques autorisées."),
                 permission("CLINICAL_WRITE", "CLINIQUE", "Renseigner le dossier clinique", "Créer et modifier les données cliniques autorisées."),
+                permission("PRESCRIPTION_WRITE", "CLINIQUE", "Rédiger une prescription", "Créer et modifier une ordonnance brouillon sans la signer."),
+                permission("PRESCRIPTION_SIGN", "CLINIQUE", "Signer une prescription", "Valider ou annuler une ordonnance en tant que médecin habilité."),
+                permission("CLINICAL_SIGN", "CLINIQUE", "Signer un acte clinique", "Valider et verrouiller un compte rendu médical avec auteur et horodatage serveur."),
+                permission("CONSULTATION_LOCK", "CLINIQUE", "Verrouiller une consultation", "Sceller la consultation lors de sa validation médicale."),
+                permission("PHARMACY_VALIDATE", "PHARMACIE", "Valider l'analyse pharmaceutique", "Tracer la revue pharmaceutique des interactions, doses et contre-indications."),
+                permission("PHARMACY_DISPENSE", "PHARMACIE", "Dispenser une prescription", "Tracer la délivrance effective d'une ordonnance validée par la pharmacie."),
                 permission("VISIT_READ", "CLINIQUE", "Consulter les visites", "Consulter les visites, leurs QR codes et leurs constantes."),
                 permission("VISIT_CREATE", "CLINIQUE", "Créer les visites", "Ouvrir une visite pour un patient."),
                 permission("VISIT_VITALS_WRITE", "CLINIQUE", "Saisir les constantes", "Enregistrer les constantes vitales d'une visite."),
@@ -155,6 +161,8 @@ public final class RbacCatalog {
                 all,
                 PERMISSION_ORGANIZATION_MANAGE,
                 "AUDIT_CROSS_TENANT_READ",
+                "PRESCRIPTION_WRITE", "PRESCRIPTION_SIGN", "CLINICAL_SIGN", "CONSULTATION_LOCK",
+                "PHARMACY_VALIDATE", "PHARMACY_DISPENSE",
                 PERMISSION_APPOINTMENT_READ_OWN,
                 PERMISSION_PATIENT_PORTAL_ACCESS,
                 PERMISSION_PATIENT_APPOINTMENT_MANAGE,
@@ -179,6 +187,7 @@ public final class RbacCatalog {
                 PERMISSION_APPOINTMENT_READ, PERMISSION_APPOINTMENT_WRITE));
         mappings.put("MEDECIN", set(
                 "USER_READ", "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
+                "PRESCRIPTION_WRITE", "PRESCRIPTION_SIGN", "CLINICAL_SIGN", "CONSULTATION_LOCK",
                 "EMERGENCY_READ", "EMERGENCY_WRITE", "EMERGENCY_STABILIZE",
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE,
@@ -208,7 +217,7 @@ public final class RbacCatalog {
                 "VISIT_READ", "VISIT_CREATE", "VISIT_VITALS_WRITE", "DOCUMENT_READ", "RECEPTION_READ"));
         mappings.put("BIOLOGISTE", set("PATIENT_READ", "LAB_ORDER_READ", "LAB_QUEUE_READ", "LAB_ORDER_WRITE"));
         mappings.put("PHARMACIEN", set(
-                "PHARMACY_PRESCRIPTION_READ", "PHARMACY_STOCK_MANAGE", "STOCK_READ", "STOCK_MANAGE",
+                "PHARMACY_PRESCRIPTION_READ", "PHARMACY_STOCK_MANAGE", "PHARMACY_VALIDATE", "PHARMACY_DISPENSE", "STOCK_READ", "STOCK_MANAGE",
                 "DOCUMENT_READ"));
         mappings.put("GESTIONNAIRE_STOCK", set("STOCK_READ", "STOCK_MANAGE"));
         mappings.put("RESPONSABLE_HOSPITALISATION", set(

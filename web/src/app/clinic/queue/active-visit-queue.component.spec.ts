@@ -12,6 +12,7 @@ describe('ActiveVisitQueueComponent', () => {
   let fixture: ComponentFixture<ActiveVisitQueueComponent>;
   let component: ActiveVisitQueueComponent;
   let mockVisitApi: Record<string, ReturnType<typeof vi.fn>>;
+  const grantedPermissions = signal<string[] | null>(null);
 
   const translations: Record<string, string> = {
     'queue.summary.v2.active': 'Actives',
@@ -23,6 +24,7 @@ describe('ActiveVisitQueueComponent', () => {
   };
 
   beforeEach(async () => {
+    grantedPermissions.set(null);
     mockVisitApi = {
       getActiveVisits: vi.fn().mockReturnValue(of([])),
       closeVisit: vi.fn().mockReturnValue(of({})),
@@ -46,7 +48,8 @@ describe('ActiveVisitQueueComponent', () => {
           provide: RbacApiService,
           useValue: {
             access: signal({ userId: 'doctor-1', roles: ['MEDECIN'], permissions: [] }),
-            hasPermission: () => true,
+            hasPermission: (permission: string) => grantedPermissions() === null
+              || grantedPermissions()!.includes(permission),
           },
         },
       ],
@@ -117,6 +120,18 @@ describe('ActiveVisitQueueComponent', () => {
 
     expect(component.actionError()).toBe('Patient déjà en consultation chez Dr Alpha.');
     expect(navigate).not.toHaveBeenCalled();
+  });
+
+  it('does not offer or execute clinical closure with VISIT_MANAGE alone', () => {
+    grantedPermissions.set(['VISIT_MANAGE']);
+    expect(component.canCloseVisit()).toBe(false);
+    component.openCloseConfirmModal('visit-3');
+    expect(component.visitIdToClose()).toBeNull();
+    component.visitIdToClose.set('visit-3');
+    component.confirmCloseVisit();
+    expect(mockVisitApi['closeVisit']).not.toHaveBeenCalled();
+    grantedPermissions.set(['VISIT_MANAGE', 'CLINICAL_SIGN', 'CONSULTATION_LOCK']);
+    expect(component.canCloseVisit()).toBe(true);
   });
 
   it('should reload the queue after saving vitals', () => {

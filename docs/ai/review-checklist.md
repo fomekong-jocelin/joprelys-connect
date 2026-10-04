@@ -482,3 +482,22 @@ Règles minimales :
 - [x] API/DB/Flutter/configuration/proxy/dépendances et permissions inchangés ; `.gitignore` préserve gouvernance et ignore preuves/logs/builds.
 - [x] Build de production final après ajustement des cibles tactiles et `git diff --check` réussis.
 - [ ] Recette visuelle mobile/desktop, light/dark, FR/EN, zoom/clavier et microphone réel ; accès navigateur précédemment refusé.
+
+## Exécution — FIX-20261004-ADMIN-PANEL-CLINICAL-AUDIT
+
+- [x] Audit intégral, diagnostic, EPIC → ADMIN-01 à 05, critères/reviewers et documentation initiale établis ; source et changements utilisateur préexistants préservés.
+- [x] FIX-01 à 08 et constats hors matrice couverts dans DIAG-20261004-ADMIN-PANEL-CLINICAL-AUDIT ; limites externes identifiées explicitement.
+- [x] Profil principal conservé malgré panne du contexte, alias audit racine et journal RBAC chargé une seule fois, interop distinct.
+- [x] Nom local SERVICE avec catalogue requis, responsabilité professionnelle historisée, toutes les disciplines et types d'espaces cités ; migrations nouvelles V113/V114 seulement.
+- [x] Permissions serveur dédiées, médecin actif à la signature, soignant sans prescription, administrateur sans nouveaux actes réservés ; consultation scellée non modifiable via API.
+- [x] Clôture et édition sous verrou de visite ; validation/délivrance/annulation sérialisées sur ordonnance ; identité/permission et revue préalable obligatoires pour dispenser.
+- [x] Controller prescription sans métier/repository ; façades et panneaux de présentation ; fichiers de production modifiés sous 500 lignes et sous-templates sous 300.
+- [x] Alertes >300 tracées : ConsultationComponent (476), ProfileComponent (373), OrganizationListComponent (464), RbacManagementComponent (409), PharmacyService (394), SpatialService (486), StaffAssignmentService (394), DefaultHospitalOrganizationService (366) et panneaux pharmacie existants. Aucune refonte générale engagée.
+- [x] Tailwind v4, tokens light/dark et rayons sobres ; erreurs champ accessibles ; 56 nouvelles clés FR/EN, breadcrumbs réactifs et uploader traduit.
+- [x] Maven/YAML/proxy/configuration et dépendances conservés ; `.gitignore` contrôlé, aucun secret/log/build suivi ; UTF-8 et `git diff --check` verts.
+- [x] Angular : 118 fichiers / 647 tests ; build production et i18n:check réussis. Maven complet : 922 tests, 0 échec/erreur, 9 ignorés ; complément final : 61 ciblés verts avec recouvrement.
+- [x] Rupture d'autorisation/pharmacie documentée dans API-CONTRACT, ADR et changelog ; MAJOR candidat sans bump/release ni déploiement.
+- [ ] PostgreSQL réel : neuf tests Testcontainers ignorés faute de Docker ; H2 ne remplace pas ce gate.
+- [ ] Recette navigateur/clinique multi-profils, FR/EN light/dark, mobile, review Tech Lead/médecin/pharmacien/bed manager.
+- [x] ADMIN-04-PNG : PNG/JPEG réellement normalisés en PNG, transparence/limites/rejets vérifiés ; upload administratif préservé, association profil contrôlée, image PDF prouvée ; 56 nouvelles clés FR/EN.
+- [ ] Fournisseur signature/horodatage qualifiés et vérification ordinale (ADMIN-04-EXT), coordination des rôles personnalisés/mobile/partenaires avant livraison.

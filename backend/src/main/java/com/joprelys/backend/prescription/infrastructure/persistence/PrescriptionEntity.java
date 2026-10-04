@@ -60,6 +60,22 @@ public class PrescriptionEntity {
 	@Column(name = "updated_at", nullable = false)
 	private Instant updatedAt;
 
+    @jakarta.persistence.Column(name = "signed_by")
+    private UUID signedBy;
+    @jakarta.persistence.Column(name = "signed_at")
+    private Instant signedAt;
+    @jakarta.persistence.Column(name = "signed_content_hash", length = 64)
+    private String signedContentHash;
+    public UUID getSignedBy() { return signedBy; }
+    public Instant getSignedAt() { return signedAt; }
+    public String getSignedContentHash() { return signedContentHash; }
+    public void seal(UUID actorId, Instant at, String hash) {
+        if (signedAt != null) throw new IllegalStateException("Acte déjà signé.");
+        signedBy = actorId;
+        signedAt = at;
+        signedContentHash = hash;
+    }
+
 	protected PrescriptionEntity() {}
 
 	public PrescriptionEntity(ConsultationEntity consultation) {

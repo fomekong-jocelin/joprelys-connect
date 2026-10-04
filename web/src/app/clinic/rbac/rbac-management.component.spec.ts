@@ -1,4 +1,5 @@
 import { TestBed } from '@angular/core/testing';
+import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { OrganizationApiService } from '../organizations/organization-api.service';
@@ -21,6 +22,7 @@ describe('RbacManagementComponent', () => {
     replaceRolePermissions: ReturnType<typeof vi.fn>;
   };
   let organizationApi: { list: ReturnType<typeof vi.fn> };
+  let route: { snapshot: { queryParamMap: ReturnType<typeof convertToParamMap> } };
 
   const permissions: RbacPermission[] = [
     { code: 'CASH_QUEUE_READ', domain: 'CAISSE', name: 'Consulter la file' },
@@ -96,11 +98,13 @@ describe('RbacManagementComponent', () => {
       replaceRolePermissions: vi.fn(),
     };
     organizationApi = { list: vi.fn(() => of([organization])) };
+    route = { snapshot: { queryParamMap: convertToParamMap({}) } };
 
     TestBed.configureTestingModule({
       imports: [RbacManagementComponent],
       providers: [
         { provide: RbacApiService, useValue: api },
+        { provide: ActivatedRoute, useValue: route },
         { provide: OrganizationApiService, useValue: organizationApi },
         { provide: I18nService, useValue: { t: (_key: string, fallback?: string) => fallback ?? _key } },
       ],
@@ -108,6 +112,14 @@ describe('RbacManagementComponent', () => {
     TestBed.overrideComponent(RbacManagementComponent, { set: { template: '' } });
 
     component = TestBed.createComponent(RbacManagementComponent).componentInstance;
+  });
+
+  it('should load the requested audit tab once after resolving the workspace', () => {
+    route.snapshot.queryParamMap = convertToParamMap({ tab: 'audit' });
+    component.ngOnInit();
+    expect(component.activeTab()).toBe('audit');
+    expect(api.listAudit).toHaveBeenCalledTimes(1);
+    expect(component.loading()).toBe(false);
   });
 
   it('should load roles, permissions and users with an initial selection', () => {

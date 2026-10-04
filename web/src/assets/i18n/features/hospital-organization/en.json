@@ -34,7 +34,7 @@
   "hospitalOrg.fields.name": "Name",
   "hospitalOrg.fields.serviceCatalog": "Service type",
   "hospitalOrg.fields.serviceCatalogPlaceholder": "Choose from the catalog",
-  "hospitalOrg.fields.serviceNameHint": "The service name is defined by the catalog to prevent inconsistent free-text variants.",
+  "hospitalOrg.fields.serviceNameHint": "The catalog identifies the discipline. An optional local name distinguishes departments of the same discipline.",
   "hospitalOrg.fields.careUnitParentHint": "A care unit must belong to an active service.",
   "hospitalOrg.catalogs.services.eyebrow": "Controlled reference data",
   "hospitalOrg.catalogs.services.title": "Service types",

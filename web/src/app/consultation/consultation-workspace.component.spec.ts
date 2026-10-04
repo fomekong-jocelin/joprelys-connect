@@ -13,6 +13,7 @@ import { AiConsultationApiService, AiSessionResponse } from './ai-consultation-a
 import { ClassicVoiceRecorderService } from './classic-voice-recorder.service';
 import { ConsultationApiService } from './consultation-api.service';
 import { ConsultationComponent } from './consultation.component';
+import { ConsultationVitalsPanelComponent } from './consultation-vitals-panel.component';
 import { Consultation } from './consultation.models';
 import { RealtimeClinicalIntakeApiService } from './realtime-clinical-intake-api.service';
 import { RealtimeVoiceControllerComponent } from './realtime-voice-controller.component';
@@ -59,7 +60,7 @@ describe('Consultation workspace visibility with the actual assistant', () => {
         },
         {
           provide: VisitApiService,
-          useValue: { getVitals: () => of(null), getById: () => of({}) },
+          useValue: { getVitals: () => of(null), getVitalsHistory: () => of([]), getById: () => of({}) },
         },
         { provide: LabOrderApiService, useValue: {} },
         {
@@ -83,8 +84,12 @@ describe('Consultation workspace visibility with the actual assistant', () => {
       ],
     })
       .overrideComponent(ConsultationComponent, {
-        remove: { imports: [AppShellComponent, VitalsHistoryComponent] },
-        add: { imports: [ShellStub, HistoryStub] },
+        remove: { imports: [AppShellComponent] },
+        add: { imports: [ShellStub] },
+      })
+      .overrideComponent(ConsultationVitalsPanelComponent, {
+        remove: { imports: [VitalsHistoryComponent] },
+        add: { imports: [HistoryStub] },
       })
       .overrideComponent(VoiceAssistantPanelComponent, {
         remove: { imports: [RealtimeVoiceControllerComponent] },

@@ -12,5 +12,6 @@ public record PharmacyVerifyResponse(
 		String doctorName,
 		Instant issuedAt,
 		Instant expiresAt,
-		List<PharmacyVerifyItem> items
+		boolean pharmaceuticalValidated,
+        List<PharmacyVerifyItem> items
 ) {}

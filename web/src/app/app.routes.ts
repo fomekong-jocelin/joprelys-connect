@@ -16,6 +16,12 @@ export const routes: Routes = [
     data: { allowAnyInternalRole: true },
   },
   {
+    path: 'interop',
+    loadComponent: () => import('./clinic/organizations/interop-page.component').then(m => m.InteropPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedPermissions: ['ORGANIZATION_MANAGE'], breadcrumb: 'breadcrumb.interop' },
+  },
+  {
     path: 'organizations',
     loadComponent: () => import('./clinic/organizations/organization-list.component').then((module) => module.OrganizationListComponent),
     canActivate: [roleGuard],
@@ -94,13 +100,14 @@ export const routes: Routes = [
     path: 'clinic/rbac',
     loadComponent: () => import('./clinic/rbac/rbac-management.component').then((module) => module.RbacManagementComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['RBAC_MANAGE'] },
+    data: { breadcrumb: 'breadcrumb.clinic.rbac', expectedPermissions: ['RBAC_MANAGE'] },
   },
+  { path: 'audit-trail', redirectTo: 'clinic/rbac?tab=audit', pathMatch: 'full' },
   {
     path: 'profile',
     loadComponent: () => import('./profile/profile.component').then((m) => m.ProfileComponent),
     canActivate: [roleGuard],
-    data: { expectedPermissions: ['STAFF_PROFILE_ACCESS'] },
+    data: { expectedPermissions: ['STAFF_PROFILE_ACCESS'], breadcrumb: 'breadcrumb.profile' },
   },
   {
     path: 'clinic/duplicates',

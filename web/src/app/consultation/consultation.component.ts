@@ -1,3 +1,7 @@
+import { ConsultationPrescriptionPanelComponent } from './consultation-prescription-panel.component';
+import { ConsultationVitalsPanelComponent } from './consultation-vitals-panel.component';
+import { ConsultationLabPanelComponent } from './consultation-lab-panel.component';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -10,8 +14,6 @@ import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patie
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Vitals } from '../visit/visit.models';
-import { VitalAlertsComponent } from '../visit/vital-alerts.component';
-import { VitalsHistoryComponent } from '../visit/vitals-history.component';
 import {
   AiConsultationDraft,
   AiPrescriptionLine,
@@ -40,9 +42,7 @@ interface CommonExam {
     AppShellComponent,
     VoiceAssistantPanelComponent,
     ClinicalNoteEditorComponent,
-    VitalAlertsComponent,
-    VitalsHistoryComponent,
-    ConsultationPatientBannerComponent,
+    ConsultationPatientBannerComponent, ConsultationPrescriptionPanelComponent, ConsultationVitalsPanelComponent, ConsultationLabPanelComponent,
   ],
   providers: [
     ConsultationFeedbackStore,
@@ -52,6 +52,10 @@ interface CommonExam {
   templateUrl: './consultation.component.html',
 })
 export class ConsultationComponent implements OnInit {
+  private readonly rbac = inject(RbacApiService);
+  canSignClinical(): boolean {
+    return this.rbac.hasPermission('CLINICAL_SIGN') && this.rbac.hasPermission('CONSULTATION_LOCK');
+  }
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
@@ -345,6 +349,7 @@ export class ConsultationComponent implements OnInit {
   }
 
   onSave(closeVisitAfter: boolean = false): void {
+    if (closeVisitAfter && !this.canSignClinical()) return;
     if (this.form.invalid || this.isSaving() || this.isClosing()) return;
 
     this.shouldCloseAfterSave = closeVisitAfter;
@@ -383,7 +388,7 @@ export class ConsultationComponent implements OnInit {
           }
 
           const presc = this.prescriptions.current();
-          if (prescriptionLines.length > 0 && (!presc || presc.status === 'DRAFT')) {
+          if (this.prescriptions.canWrite() && prescriptionLines.length > 0 && (!presc || presc.status === 'DRAFT')) {
             this.consultationApi
               .savePrescription(savedConsultation.id, {
                 items: prescriptionLines,

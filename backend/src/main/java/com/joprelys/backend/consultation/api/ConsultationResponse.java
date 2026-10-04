@@ -34,7 +34,10 @@ public record ConsultationResponse(
 		String prescriptionTransmissionStatus,
 		Instant prescriptionTransmittedAt,
 		UUID prescriptionDocumentId,
-		String pinCode
+		String pinCode,
+        UUID signedBy,
+        Instant signedAt,
+        String signedContentHash
 ) {
 	public static ConsultationResponse fromEntity(ConsultationEntity entity) {
 		return fromEntity(entity, null, null, List.of(), null);
@@ -84,7 +87,10 @@ public record ConsultationResponse(
 				prescription != null ? prescription.getTransmissionStatus() : null,
 				prescription != null ? prescription.getTransmittedAt() : null,
 				prescription != null ? prescription.getDocumentId() : null,
-				prescription != null ? prescription.getPinCode() : null
+				prescription != null ? prescription.getPinCode() : null,
+                entity.getSignedBy(),
+                entity.getSignedAt(),
+                entity.getSignedContentHash()
 		);
 	}
 }

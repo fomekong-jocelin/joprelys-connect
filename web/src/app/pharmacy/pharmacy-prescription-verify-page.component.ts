@@ -1,3 +1,4 @@
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -63,7 +64,7 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
                 </div>
               }
 
-              <app-ui-button type="submit" [disabled]="form.invalid || isLoading()" class="w-full">
+              <app-ui-button type="submit" [disabled]="form.invalid || isLoading() || validating()" class="w-full">
                 {{ isLoading() ? t('common.loading') : t('pharmacy.verifyButton') }}
               </app-ui-button>
             </form>
@@ -200,6 +201,15 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
                   </div>
                 </div>
 
+                @if (!currentPrescription.pharmaceuticalValidated && ['ACTIVE', 'PARTIALLY_DISPENSED'].includes(currentPrescription.status)) {
+                  <p class="text-sm text-[var(--text-secondary)]">{{ t('pharmacy.validationRequired') }}</p>
+                  @if (rbac.hasPermission('PHARMACY_VALIDATE')) {
+                    <label class="block"><span class="ui-label">{{ t('pharmacy.validationNotes') }}</span>
+                      <textarea class="ui-input" maxlength="2000" [value]="reviewNotes()" (input)="reviewNotes.set($any($event.target).value)"></textarea>
+                    </label>
+                    <button type="button" class="ui-button ui-button-primary" [disabled]="validating() || !reviewNotes().trim()" (click)="validatePharmaceuticalReview()">{{ t('pharmacy.validate') }}</button>
+                  }
+                }
                 <app-pharmacy-dispensation-panel
                   [prescription]="currentPrescription"
                   [pinCode]="verifiedPin()"
@@ -220,6 +230,9 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
 })
 export class PharmacyPrescriptionVerifyPageComponent {
   private readonly fb = inject(FormBuilder);
+  readonly rbac = inject(RbacApiService);
+  readonly reviewNotes = signal('');
+  readonly validating = signal(false);
   private readonly pharmacyApi = inject(PharmacyApiService);
   readonly i18n = inject(I18nService);
 
@@ -256,8 +269,23 @@ export class PharmacyPrescriptionVerifyPageComponent {
     };
   });
 
+  validatePharmaceuticalReview(): void {
+    const prescription = this.prescription();
+    if (!prescription || this.validating() || !this.reviewNotes().trim() || !this.rbac.hasPermission('PHARMACY_VALIDATE')
+      || !['ACTIVE', 'PARTIALLY_DISPENSED'].includes(prescription.status)) return;
+    this.validating.set(true);
+    this.pharmacyApi.validatePrescription({ prescriptionNumber: prescription.prescriptionNumber,
+      pinCode: this.verifiedPin(), reviewNotes: this.reviewNotes().trim() }).subscribe({
+      next: () => {
+        this.prescription.set({ ...prescription, pharmaceuticalValidated: true });
+        this.validating.set(false);
+      },
+      error: () => { this.errorMessage.set(this.t('pharmacy.validationError')); this.validating.set(false); },
+    });
+  }
+
   verify(): void {
-    if (this.form.invalid || this.isLoading()) {
+    if (this.form.invalid || this.isLoading() || this.validating()) {
       this.form.markAllAsTouched();
       return;
     }
@@ -265,6 +293,7 @@ export class PharmacyPrescriptionVerifyPageComponent {
     this.isLoading.set(true);
     this.errorMessage.set('');
     this.prescription.set(null);
+    this.reviewNotes.set('');
 
     const raw = this.form.getRawValue();
     this.pharmacyApi.verifyPrescription({

@@ -281,6 +281,12 @@ La page « Mes disponibilités » (`clinic/availability`) introduit la grille he
 
 ## Do's and Don'ts
 
+### Panel administrateur — correction du 2026-10-04
+
+Les champs requis du formulaire d'établissement utilisent `shared/ui/InputComponent` : label lié à un identifiant stable, bordure et message via `--brand-danger`/`--brand-danger-text`, `aria-invalid` et `aria-describedby`. La validation de saisie aide l'utilisateur ; la validation serveur reste maîtresse. Le type d'établissement possède une explication FR/EN indiquant que les autorisations déterminent l'accès aux modules.
+
+Les cartes dashboard/interop utilisent les rayons centraux `--radius-brand-md` et les surfaces/ombres existantes light/dark (maximum 8px). Téléversement, breadcrumbs et erreurs restent dans les dictionnaires FR/EN. Les sections prescription, constantes et analyses de la consultation sont des panneaux partagés de présentation ; le découpage conserve les tokens et la disposition existants.
+
 ### Do
 - Toujours utiliser les variables CSS centrales de `styles.css`.
 - Respecter les contrastes légaux en mode light et dark.
@@ -299,3 +305,5 @@ La page « Mes disponibilités » (`clinic/availability`) introduit la grille he
 Consentements et compte-rendu opératoire sont des panneaux Angular dédiés. Les cartes/formulaires de ce périmètre réutilisent `--radius-brand-sm` (4px à 6px), avec bordures et ombres existantes légères ; aucun arrondi supérieur à 8px. Les surfaces/textes/états réutilisent les tokens centraux light/dark. Les libellés et erreurs sont centralisés dans les catalogues `features/hospital-continuity/{fr,en}.json`.
 
 Chaque lecture clinique distingue chargement, erreur et absence de données. L'erreur offre une reprise. Les formulaires désactivent la soumission pendant la requête ; la validation CRO utilise ConfirmationDialogComponent. L'administration médicamenteuse propose une ligne de prescription validée au lieu d'un nom libre. La recette visuelle multi-thèmes/langues reste ouverte et ne se déduit pas des tests unitaires.
+
+Complément signature PNG (2026-10-04) : uploader partagé conservé sur profil et fiche médecin, PNG/JPEG uniquement et aide FR/EN centralisée invitant à enregistrer les modifications ; PNG transparent recommandé. Aucun style local ni changement de tokens/thèmes.

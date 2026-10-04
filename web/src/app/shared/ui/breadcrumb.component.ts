@@ -1,6 +1,6 @@
 import { Component, computed, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
-import { filter, map, startWith } from 'rxjs/operators';
+import { filter, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { I18nService } from '../../core/i18n/i18n.service';
 
@@ -18,7 +18,7 @@ interface BreadcrumbItem {
       <nav
         class="flex items-center space-x-2 px-4 md:px-6 py-3 border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] text-xs font-semibold select-none"
         style="color:var(--text-muted)"
-        aria-label="Fil d'Ariane"
+        [attr.aria-label]="i18n.t('breadcrumb.navigation')"
       >
         <a
           routerLink="/"
@@ -61,12 +61,11 @@ export class BreadcrumbComponent {
     startWith(null)
   );
 
-  readonly breadcrumbs = toSignal(
-    this.navigationEnd$.pipe(
-      map(() => this.buildBreadcrumbs())
-    ),
-    { initialValue: [] as BreadcrumbItem[] }
-  );
+  private readonly navigationEnd = toSignal(this.navigationEnd$, { initialValue: null });
+  readonly breadcrumbs = computed(() => {
+    this.navigationEnd();
+    return this.buildBreadcrumbs();
+  });
 
   private buildBreadcrumbs(): BreadcrumbItem[] {
     const breadcrumbs: BreadcrumbItem[] = [];

@@ -1,6 +1,7 @@
 import { CommonModule } from '@angular/common';
 import { HttpErrorResponse } from '@angular/common/http';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
@@ -36,7 +37,7 @@ interface UnitRow {
 @Component({
   selector: 'app-hospital-organization-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppShellComponent, IconComponent, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, AppShellComponent, IconComponent, PageHeaderComponent],
   templateUrl: './hospital-organization-page.component.html',
 })
 export class HospitalOrganizationPageComponent implements OnInit {
@@ -96,6 +97,8 @@ export class HospitalOrganizationPageComponent implements OnInit {
     this.loadUnits();
   }
 
+  rbacCanManageStaff(): boolean { return this.rbacApi.hasPermission('USER_MANAGE'); }
+
   canManageScope(): boolean {
     return !this.platformAdministrator() || this.selectedOrganizationId().length > 0;
   }
@@ -130,7 +133,8 @@ export class HospitalOrganizationPageComponent implements OnInit {
 
   canSubmit(state: EditorState): boolean {
     if (!state.code.trim()) return false;
-    if (state.unitType === 'SERVICE') return state.serviceCatalogCode.length > 0;
+    if (state.unitType === 'SERVICE') return state.serviceCatalogCode.length > 0
+      && (!state.name.trim() || state.name.trim().length >= 2);
     if (state.unitType === 'CARE_UNIT' && !state.parentId) return false;
     return state.name.trim().length >= 2;
   }
@@ -148,7 +152,7 @@ export class HospitalOrganizationPageComponent implements OnInit {
       code: state.code.trim(),
       unitType: state.unitType,
       parentId: state.parentId || null,
-      name: state.unitType === 'SERVICE' ? null : state.name.trim(),
+      name: state.name.trim() || null,
       serviceCatalogCode: state.unitType === 'SERVICE' ? state.serviceCatalogCode : null,
     };
     this.busy.set(true);
@@ -195,7 +199,8 @@ export class HospitalOrganizationPageComponent implements OnInit {
   }
 
   unitLabel(unit: OrganizationalUnit): string {
-    if (unit.unitType !== 'SERVICE') return unit.name ?? unit.code;
+    if (unit.name?.trim()) return unit.name;
+    if (unit.unitType !== 'SERVICE') return unit.code;
     const catalog = this.serviceCatalog().find((entry) => entry.code === unit.serviceCatalogCode);
     return catalog ? this.serviceLabel(catalog) : unit.serviceCatalogCode ?? unit.code;
   }

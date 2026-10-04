@@ -7,6 +7,13 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PrescriptionRepository extends JpaRepository<PrescriptionEntity, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM PrescriptionEntity p WHERE p.id = :id")
+    Optional<PrescriptionEntity> findByIdForUpdate(@Param("id") UUID id);
+
+    @Query("SELECT p.consultation.visit.id FROM PrescriptionEntity p WHERE p.id = :id")
+    Optional<UUID> findVisitIdByPrescriptionId(@Param("id") UUID id);
+
 
     @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
     @Query("""

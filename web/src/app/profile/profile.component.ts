@@ -1,8 +1,8 @@
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
+import { ProfileApiService } from './profile-api.service';
 import { Component, computed, inject, OnInit, signal, ViewChild } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { catchError, forkJoin, of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { StaffProfileActiveStructure } from '../clinic/staff/staff.models';
@@ -41,6 +41,9 @@ const EMPTY_ASSIGNMENTS: StaffProfileActiveStructure = { specialties: [], unitAs
         @if (error(); as err) {
           <app-ui-alert tone="error">{{ err }}</app-ui-alert>
         }
+        @if (assignmentsWarning(); as warning) {
+          <app-ui-alert tone="info">{{ warning }}</app-ui-alert>
+        }
         @if (success(); as msg) {
           <app-ui-alert tone="info">{{ msg }}</app-ui-alert>
         }
@@ -66,10 +69,12 @@ const EMPTY_ASSIGNMENTS: StaffProfileActiveStructure = { specialties: [], unitAs
                   <app-file-drag-drop
                     #sigUploader
                     [label]="t('profile.signatureLabel')"
+                    accept="image/png, image/jpeg"
                     [previewUrl]="signatureViewUrl()"
                     (fileSelected)="onFileSelected($event, 'signature', sigUploader)"
                     (fileRemoved)="onFileRemoved('signature')"
                   />
+                  <p class="text-xs text-[var(--text-muted)]">{{ t('profile.signaturePngHint') }}</p>
                   <app-file-drag-drop
                     #stampUploader
                     [label]="t('profile.stampLabel')"
@@ -226,7 +231,7 @@ const EMPTY_ASSIGNMENTS: StaffProfileActiveStructure = { specialties: [], unitAs
   `,
 })
 export class ProfileComponent implements OnInit {
-  private readonly http = inject(HttpClient);
+  private readonly api = inject(ProfileApiService);
   private readonly staffApi = inject(StaffApiService);
   private readonly i18n = inject(I18nService);
 
@@ -253,6 +258,7 @@ export class ProfileComponent implements OnInit {
   readonly loading = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
+  readonly assignmentsWarning = signal<string | null>(null);
   readonly roleCodes = computed(() => this.role().split(',').map((value) => value.trim()).filter(Boolean));
   readonly isDoctor = computed(() => this.roleCodes().includes('MEDECIN'));
 
@@ -275,9 +281,13 @@ export class ProfileComponent implements OnInit {
   loadProfile(): void {
     this.loading.set(true);
     this.error.set(null);
+    this.assignmentsWarning.set(null);
     forkJoin({
-      profile: this.http.get<any>('/api/profile'),
-      assignments: this.staffApi.getOwnActiveAssignments(),
+      profile: this.api.load(),
+      assignments: this.staffApi.getOwnActiveAssignments().pipe(catchError(() => {
+        this.assignmentsWarning.set(this.t('profile.assignmentsUnavailable'));
+        return of(EMPTY_ASSIGNMENTS);
+      })),
     }).subscribe({
       next: ({ profile, assignments }) => {
         this.displayName.set(profile.displayName || '');
@@ -305,7 +315,7 @@ export class ProfileComponent implements OnInit {
     formData.append('file', file);
     formData.append('type', type);
 
-    this.http.post<any>('/api/files/upload', formData).subscribe({
+    this.api.upload(formData).subscribe({
       next: (response) => {
         if (type === 'photo') this.photoPath.set(response.filePath);
         if (type === 'signature') this.signaturePath.set(response.filePath);
@@ -349,7 +359,7 @@ export class ProfileComponent implements OnInit {
       bio: this.bio().trim() || null,
     };
 
-    this.http.put<any>('/api/profile', body).subscribe({
+    this.api.save(body).subscribe({
       next: () => {
         this.success.set(this.t('profile.saveSuccess', 'Profil enregistré avec succès !'));
         this.loading.set(false);

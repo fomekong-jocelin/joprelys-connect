@@ -31,7 +31,7 @@ Une petite clinique peut omettre Pôle et Département :
 - RF-01 : chaque unité appartient à un seul tenant.
 - RF-02 : les niveaux sont `POLE`, `DEPARTMENT`, `SERVICE`, `CARE_UNIT`.
 - RF-03 : un `SERVICE` utilise obligatoirement un code issu du catalogue des services.
-- RF-04 : un `SERVICE` ne stocke aucun libellé localisé propre ; son nom visible est résolu depuis le catalogue FR/EN selon la langue active. L'UI ne demande donc jamais de nom de service libre.
+- RF-04 (audit 2026-10-04) : un `SERVICE` conserve un code de discipline obligatoire et accepte un intitulé local facultatif de 2 à 120 caractères. L'intitulé local prime ; sans nom, le libellé catalogue suit la langue FR/EN.
 - RF-05 : un `POLE`, `DEPARTMENT` ou `CARE_UNIT` peut avoir un libellé propre à l'établissement.
 - RF-06 : les parents autorisés sont : établissement→POLE/DEPARTMENT/SERVICE ; POLE→DEPARTMENT/SERVICE ; DEPARTMENT→SERVICE ; SERVICE→CARE_UNIT. Une CARE_UNIT n'a pas d'enfant dans ce lot.
 - RF-07 : un code d'unité est unique dans un tenant.
@@ -76,7 +76,7 @@ Ce catalogue est extensible par migration/application maîtrisée ; il n'est pas
 2. ouvrir Organisation hospitalière ;
 3. visualiser l'arbre existant ;
 4. créer un pôle/département facultatif ou créer directement un service ;
-5. pour un service, sélectionner un type dans le catalogue ;
+5. pour un service, sélectionner un type dans le catalogue et éventuellement saisir son intitulé local ;
 6. ajouter éventuellement une unité de soins ;
 7. désactiver/réactiver une unité selon les droits et contraintes ;
 8. voir les unités actives/inactives sans ambiguïté.
@@ -92,7 +92,7 @@ Ce catalogue est extensible par migration/application maîtrisée ; il n'est pas
 - ombres légères ;
 - thèmes light/dark ;
 - i18n FR/EN ;
-- service affiché dans la langue active sans dupliquer le libellé dans l'unité ;
+- service avec intitulé local affiché tel quel ; sinon libellé catalogue dans la langue active ;
 - focus visible ;
 - aucune chaîne visible hardcodée.
 
@@ -103,3 +103,5 @@ Ce catalogue est extensible par migration/application maîtrisée ; il n'est pas
 - suppression physique des anciens `wards` ;
 - ABAC final par unité ;
 - gestion libre des catalogues par les établissements.
+
+Mise à jour 2026-10-04 : voir docs/features/admin-panel-clinical-audit-fixes pour catalogues enrichis, gouvernance, migration V113 et preuves nouvelles.

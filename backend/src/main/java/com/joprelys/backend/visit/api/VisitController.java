@@ -115,7 +115,7 @@ public class VisitController {
 	}
 
 	@PostMapping("/{id}/close")
-	@PreAuthorize("hasAuthority('VISIT_MANAGE')")
+	@PreAuthorize("hasAuthority('VISIT_MANAGE') and hasAuthority('CLINICAL_SIGN') and hasAuthority('CONSULTATION_LOCK')")
 	@Operation(summary = "Clôturer une visite", description = "Clôture une visite en cours.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite clôturée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")

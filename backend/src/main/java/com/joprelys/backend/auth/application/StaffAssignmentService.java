@@ -149,6 +149,7 @@ public class StaffAssignmentService {
         validatePeriod(request.validFrom(), request.validTo());
         UUID unitId = requireActiveUnit(request.organizationalUnitId(), admin.getOrganizationId());
         String roleCode = requireActiveAssignmentRole(request.assignmentRoleCode());
+        validateResponsibility(staff, roleCode);
         validateUnitOverlap(
                 admin.getOrganizationId(), staff.getId(), unitId, request.primary(), request.validFrom(), request.validTo(), null);
 
@@ -176,6 +177,7 @@ public class StaffAssignmentService {
         validatePeriod(request.validFrom(), request.validTo());
         UUID unitId = requireActiveUnit(request.organizationalUnitId(), admin.getOrganizationId());
         String roleCode = requireActiveAssignmentRole(request.assignmentRoleCode());
+        validateResponsibility(staff, roleCode);
         validateUnitOverlap(
                 admin.getOrganizationId(), staff.getId(), unitId, request.primary(), request.validFrom(), request.validTo(), assignment.getId());
         assignment.update(unitId, roleCode, request.primary(), request.validFrom(), request.validTo());
@@ -257,6 +259,15 @@ public class StaffAssignmentService {
                 .filter(OrganizationalUnitEntity::isActive)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Unité organisationnelle inactive ou inconnue."));
         return unit.getId();
+    }
+
+    private void validateResponsibility(UserAccountEntity staff, String roleCode) {
+        java.util.Set<String> roles = java.util.Arrays.stream(staff.getRole().split(","))
+                .map(String::trim).collect(java.util.stream.Collectors.toSet());
+        if (("MEDICAL_HEAD".equals(roleCode) && !roles.contains("MEDECIN"))
+                || ("NURSE_MANAGER".equals(roleCode) && !roles.contains("INFIRMIER") && !roles.contains("SAGE_FEMME"))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le rôle professionnel ne permet pas cette responsabilité.");
+        }
     }
 
     private String requireActiveAssignmentRole(String rawCode) {

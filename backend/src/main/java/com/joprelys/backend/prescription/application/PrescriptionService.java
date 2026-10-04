@@ -33,6 +33,8 @@ public class PrescriptionService {
 	private final UserAccountRepository userAccountRepository;
 	private final PatientRepository patientRepository;
 	private final DocumentService documentService;
+    private final com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visits;
+	private final com.joprelys.backend.consultation.application.MedicalSigningPolicy signingPolicy;
 
 	public PrescriptionService(PrescriptionRepository prescriptionRepository,
 			ConsultationRepository consultationRepository,
@@ -41,7 +43,9 @@ public class PrescriptionService {
 			com.joprelys.backend.audit.application.AuditService auditService,
 			UserAccountRepository userAccountRepository,
 			PatientRepository patientRepository,
-			@Lazy DocumentService documentService) {
+			@Lazy DocumentService documentService,
+            com.joprelys.backend.consultation.application.MedicalSigningPolicy signingPolicy,
+            com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visits) {
 		this.prescriptionRepository = prescriptionRepository;
 		this.consultationRepository = consultationRepository;
 		this.prescriptionNumberGenerator = prescriptionNumberGenerator;
@@ -50,6 +54,8 @@ public class PrescriptionService {
 		this.userAccountRepository = userAccountRepository;
 		this.patientRepository = patientRepository;
 		this.documentService = documentService;
+        this.signingPolicy = signingPolicy;
+        this.visits = visits;
 	}
 
 	@Transactional
@@ -57,6 +63,7 @@ public class PrescriptionService {
 		var consultation = consultationRepository.findById(consultationId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable."));
 
+        visits.findByIdForUpdate(consultation.getVisit().getId());
 		PrescriptionEntity prescription = prescriptionRepository.findByConsultationId(consultationId)
 				.orElseGet(() -> {
 					PrescriptionEntity newPresc = new PrescriptionEntity(consultation);
@@ -67,8 +74,9 @@ public class PrescriptionService {
 					return newPresc;
 				});
 
-		// Si l'ordonnance existe déjà, interdire sa modification si elle n'est pas en DRAFT
-		if (prescription.getId() != null && !"DRAFT".equals(prescription.getStatus())) {
+		// Le scellement reste protecteur même si un statut a été réouvert par un autre traitement.
+		if (prescription.getSignedAt() != null
+                || (prescription.getId() != null && !"DRAFT".equals(prescription.getStatus()))) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Une ordonnance validée ou active ne peut plus être modifiée.");
 		}
 
@@ -98,6 +106,9 @@ public class PrescriptionService {
 
 	@Transactional
 	public PrescriptionEntity finalizePrescription(UUID prescriptionId, UUID actorUserId) {
+        signingPolicy.requirePhysician(actorUserId);
+        prescriptionRepository.findVisitIdByPrescriptionId(prescriptionId).ifPresent(visits::findByIdForUpdate);
+        prescriptionRepository.findByIdForUpdate(prescriptionId);
 		PrescriptionEntity prescription = prescriptionRepository.findByIdWithConsultationAndItems(prescriptionId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
 
@@ -108,8 +119,19 @@ public class PrescriptionService {
 		validateDraftCompleteness(prescription);
 		prescription.setStatus("ACTIVE");
 		prescription.setIssuedAt(Instant.now());
+        String content = prescription.getItems().stream().map(item ->
+                com.joprelys.backend.consultation.application.ClinicalContentHash.of(
+                        item.getDrugName(), item.getDosage(), item.getPosology(), item.getDuration(),
+                        item.getQuantity(), item.getInstructions(), item.getForm(), item.getRoute(),
+                        item.getFrequency(), String.valueOf(item.isSubstitutionAllowed())))
+                .collect(java.util.stream.Collectors.joining());
+        prescription.seal(actorUserId, prescription.getIssuedAt(),
+                com.joprelys.backend.consultation.application.ClinicalContentHash.of(content));
 		prescription = prescriptionRepository.save(prescription);
 
+        auditService.logSuccess(actorUserId, prescription.getOrganizationId(),
+                prescription.getConsultation().getVisit().getPatient().getId(),
+                "PRESCRIPTION", prescription.getId(), "PRESCRIPTION_SIGN", prescription.getSignedContentHash());
 		// Générer le document PDF associé
 		documentService.generatePrescriptionDocument(prescription.getId(), actorUserId);
 
@@ -118,6 +140,9 @@ public class PrescriptionService {
 
 	@Transactional
 	public PrescriptionEntity cancelPrescription(UUID prescriptionId, UUID actorUserId) {
+        signingPolicy.requirePhysician(actorUserId);
+        prescriptionRepository.findVisitIdByPrescriptionId(prescriptionId).ifPresent(visits::findByIdForUpdate);
+        prescriptionRepository.findByIdForUpdate(prescriptionId);
 		PrescriptionEntity prescription = prescriptionRepository.findByIdWithConsultationAndItems(prescriptionId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
 

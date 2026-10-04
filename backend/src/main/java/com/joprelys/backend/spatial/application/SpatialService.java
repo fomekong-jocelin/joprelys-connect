@@ -96,7 +96,7 @@ public class SpatialService {
         FacilitySpaceEntity space = spaceRepository.findById(spaceId)
                 .orElseThrow(() -> notFound("Espace introuvable."));
         List<BedEntity> beds = bedRepository.findBySpaceId(spaceId);
-        BedMetrics metrics = calculateMetrics(beds);
+        SpatialBedMetrics metrics = calculateMetrics(beds);
         return new SpaceOccupancyResponse(
                 space.getId(),
                 space.getCode(),
@@ -128,7 +128,7 @@ public class SpatialService {
         for (UUID spaceId : spaceIds) {
             bedRepository.findBySpaceId(spaceId).forEach(bed -> distinctBeds.putIfAbsent(bed.getId(), bed));
         }
-        BedMetrics metrics = calculateMetrics(new ArrayList<>(distinctBeds.values()));
+        SpatialBedMetrics metrics = calculateMetrics(new ArrayList<>(distinctBeds.values()));
         return new OrganizationalUnitOccupancyResponse(
                 unit.getId(),
                 unit.getCode(),
@@ -358,36 +358,14 @@ public class SpatialService {
         return BedAssignmentResponse.fromEntity(savedAssignment);
     }
 
-    private BedMetrics calculateMetrics(List<BedEntity> beds) {
-        Set<UUID> activeBedIds = beds.isEmpty()
-                ? Set.of()
-                : new LinkedHashSet<>(bedAssignmentRepository.findActiveBedIds(
-                        beds.stream().map(BedEntity::getId).toList()));
-        int open = 0;
-        int ready = 0;
-        int occupied = 0;
-        int available = 0;
-        List<BedResponse> responses = new ArrayList<>();
-        for (BedEntity bed : beds) {
-            boolean hasActiveAssignment = activeBedIds.contains(bed.getId());
-            if (bed.isOpen()) {
-                open++;
-            }
-            if (bed.isOpen() && bed.isReady()) {
-                ready++;
-            }
-            if (hasActiveAssignment) {
-                occupied++;
-            }
-            if (bed.isOperationallyAvailable(hasActiveAssignment)) {
-                available++;
-            }
-            responses.add(BedResponse.fromEntity(bed, hasActiveAssignment));
-        }
-        return new BedMetrics(beds.size(), occupied, available, open, ready, responses);
+    private SpatialBedMetrics calculateMetrics(List<BedEntity> beds) {
+        Set<UUID> activeBedIds = beds.isEmpty() ? Set.of() : new LinkedHashSet<>(
+                bedAssignmentRepository.findActiveBedIds(beds.stream().map(BedEntity::getId).toList()));
+        return SpatialBedMetrics.calculate(beds, activeBedIds);
     }
 
     private String resolveUnitLabel(OrganizationalUnitEntity unit) {
+        if (unit.getName() != null && !unit.getName().isBlank()) return unit.getName();
         if (unit.getUnitType() == OrganizationalUnitType.SERVICE) {
             return serviceCatalogRepository.findById(unit.getServiceCatalogCode())
                     .map(catalog -> catalog.getNameFr())
@@ -504,12 +482,4 @@ public class SpatialService {
         return new ResponseStatusException(HttpStatus.NOT_FOUND, message);
     }
 
-    private record BedMetrics(
-            int installedBeds,
-            int occupiedBeds,
-            int availableBeds,
-            int openBeds,
-            int readyBeds,
-            List<BedResponse> bedResponses) {
-    }
 }

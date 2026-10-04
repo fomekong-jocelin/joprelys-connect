@@ -10,6 +10,7 @@ import { OrganizationApiService } from './organization-api.service';
 import { OrganizationFormComponent, OrganizationFormLabels } from './organization-form.component';
 import { OrganizationTableComponent, OrganizationTableLabels } from './organization-table.component';
 import { CreateClinicAdminResponse, Organization, ApiKey } from './organizations.models';
+import { ActivatedRoute } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 
 @Component({
@@ -28,6 +29,7 @@ import { FormsModule } from '@angular/forms';
 })
 export class OrganizationListComponent implements OnInit {
   private readonly api = inject(OrganizationApiService);
+  private readonly route = inject(ActivatedRoute, { optional: true });
   readonly i18n = inject(I18nService);
   private readonly http = inject(HttpClient);
 
@@ -85,19 +87,19 @@ export class OrganizationListComponent implements OnInit {
     name: this.i18n.t('organizations.name'),
     namePlaceholder: this.i18n.t('organizations.namePlaceholder'),
     email: this.i18n.t('organizations.contactEmail'),
-    emailPlaceholder: 'Ex: contact@saintjean.local',
+    emailPlaceholder: this.i18n.t('organizations.emailPlaceholder'),
     phone: this.i18n.t('organizations.phone'),
     phonePlaceholder: this.i18n.t('organizations.phonePlaceholder'),
     city: this.i18n.t('organizations.city'),
     cityPlaceholder: this.i18n.t('organizations.cityPlaceholder'),
     address: this.i18n.t('organizations.address'),
     addressPlaceholder: this.i18n.t('organizations.addressPlaceholder'),
-    country: 'Pays',
-    countryPlaceholder: 'Ex: Cameroun',
-    type: 'Type d\'établissement',
-    responsibleName: 'Responsable légal',
-    responsibleNamePlaceholder: 'Nom du responsable',
-    apiEnabled: 'Accès API activé',
+    country: this.i18n.t('organizations.country'),
+    countryPlaceholder: this.i18n.t('organizations.countryPlaceholder'),
+    type: this.i18n.t('organizations.type'),
+    responsibleName: this.i18n.t('organizations.responsibleName'),
+    responsibleNamePlaceholder: this.i18n.t('organizations.responsibleNamePlaceholder'),
+    apiEnabled: this.i18n.t('organizations.apiEnabled'),
     cancel: this.i18n.t('common.cancel'),
     save: this.i18n.t('common.save'),
     saving: this.i18n.t('common.saving'),
@@ -130,6 +132,8 @@ export class OrganizationListComponent implements OnInit {
     this.api.list().subscribe({
       next: (res) => {
         this.list.set(res);
+        const selected = res.find(org => org.id === this.route?.snapshot.queryParamMap.get('organizationId'));
+        if (selected) this.selectOrg(selected);
         this.loading.set(false);
       },
       error: () => {
@@ -175,7 +179,7 @@ export class OrganizationListComponent implements OnInit {
 
   submit(): void {
     this.formError.set(null);
-    if (!this.name() || !this.email() || !this.city() || !this.country() || !this.responsibleName()) {
+    if (!this.name().trim() || !this.email().trim() || !this.city().trim() || !this.country().trim() || !this.responsibleName().trim()) {
       this.formError.set(this.i18n.t('organizations.requiredFields'));
       return;
     }

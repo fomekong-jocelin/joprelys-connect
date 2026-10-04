@@ -50,7 +50,8 @@ export class ActiveVisitQueueComponent implements OnInit {
 
   readonly canEnterVitals = computed(() => this.rbacApi.hasPermission('VISIT_VITALS_WRITE'));
   readonly canStartConsultation = computed(() => this.rbacApi.hasPermission('CLINICAL_WRITE'));
-  readonly canCloseVisit = computed(() => this.rbacApi.hasPermission('VISIT_MANAGE'));
+  readonly canCloseVisit = computed(() => this.rbacApi.hasPermission('VISIT_MANAGE')
+    && this.rbacApi.hasPermission('CLINICAL_SIGN') && this.rbacApi.hasPermission('CONSULTATION_LOCK'));
   readonly currentUserId = computed(() => this.rbacApi.access()?.userId ?? null);
 
   readonly stageCounts = computed(() => {

@@ -256,7 +256,27 @@ public class PrescriptionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"))
                 .andExpect(jsonPath("$.issuedAt").isNotEmpty())
-                .andExpect(jsonPath("$.documentId").isNotEmpty());
+                .andExpect(jsonPath("$.documentId").isNotEmpty())
+                .andExpect(jsonPath("$.signedBy").value(userMedecinA.getId().toString()))
+                .andExpect(jsonPath("$.signedAt").isNotEmpty())
+                .andExpect(jsonPath("$.signedContentHash").value(org.hamcrest.Matchers.matchesPattern("[a-f0-9]{64}")));
+        String originalHash = jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM prescriptions WHERE id = ?", String.class, prescription.getId());
+        mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"drugName\":\"Autre traitement\",\"dosage\":\"1 mg\"}]}"))
+                .andExpect(status().isBadRequest());
+        org.junit.jupiter.api.Assertions.assertEquals(originalHash, jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM prescriptions WHERE id = ?", String.class, prescription.getId()));
+        jdbcTemplate.update("UPDATE prescriptions SET status = 'DRAFT' WHERE id = ?", prescription.getId());
+        mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"drugName\":\"Traitement altéré\",\"dosage\":\"1 mg\"}]}"))
+                .andExpect(status().isBadRequest());
+        org.junit.jupiter.api.Assertions.assertEquals(originalHash, jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM prescriptions WHERE id = ?", String.class, prescription.getId()));
     }
 
     @Test
@@ -280,4 +300,18 @@ public class PrescriptionControllerTest {
             TenantContext.clear();
         }
     }
+    @Test
+    void nursingClinicalWriteDoesNotAuthorizePrescriptionWritingOrSigning() throws Exception {
+        UserAccountEntity nurse = new UserAccountEntity("nurse.prescription@joprelys.local", "Infirmier", "INFIRMIER", "hash");
+        nurse.setOrganizationId(orgA.getId());
+        String nurseToken = jwtService.createToken(userAccountRepository.save(nurse)).value();
+        mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
+                .header("Authorization", "Bearer " + nurseToken).contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"items":[{"drugName":"Paracétamol","dosage":"500 mg"}]}
+                    """)).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/prescriptions/" + UUID.randomUUID() + "/finalize")
+                .header("Authorization", "Bearer " + nurseToken)).andExpect(status().isForbidden());
+    }
+
 }

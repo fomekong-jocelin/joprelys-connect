@@ -15,9 +15,11 @@ import org.springframework.web.server.ResponseStatusException;
 public class FileController {
 
 	private final FileStorageService fileStorageService;
+	private final FileUploadUseCase fileUpload;
 
-	public FileController(FileStorageService fileStorageService) {
+	public FileController(FileStorageService fileStorageService, FileUploadUseCase fileUpload) {
 		this.fileStorageService = fileStorageService;
+		this.fileUpload = fileUpload;
 	}
 
 	@PostMapping("/api/files/upload")
@@ -25,14 +27,8 @@ public class FileController {
 	public ResponseEntity<UploadResponse> uploadFile(
 			@RequestParam("file") MultipartFile file,
 			@RequestParam(value = "type", defaultValue = "photo") String type) {
-		
-		if (!"logo".equalsIgnoreCase(type) && !"photo".equalsIgnoreCase(type) &&
-				!"signature".equalsIgnoreCase(type) && !"stamp".equalsIgnoreCase(type)) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Type de téléversement invalide.");
-		}
-
 		try {
-			String path = fileStorageService.storeFile(file, type.toLowerCase());
+			String path = fileUpload.upload(file, type);
 			String viewUrl = "/api/public/files/view?path=" + path;
 			return ResponseEntity.status(HttpStatus.CREATED).body(new UploadResponse(path, viewUrl));
 		} catch (IllegalArgumentException | SecurityException e) {

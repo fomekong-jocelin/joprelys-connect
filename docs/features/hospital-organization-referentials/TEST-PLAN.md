@@ -10,10 +10,10 @@
 - rejet code dupliqué dans le tenant ;
 - même code autorisé dans deux tenants distincts ;
 - SERVICE sans catalogue refusé ;
-- SERVICE avec `name` libre refusé ;
+- SERVICE avec `name` local valide accepté ; nom non vide trop court/long refusé ;
 - POLE/DEPARTMENT/CARE_UNIT avec catalogue refusé ;
 - catalogue service inconnu/inactif refusé ;
-- SERVICE persisté avec `name = null` et identité par code catalogue ;
+- SERVICE avec `name = null` conserve le fallback catalogue ; nom local optionnel persisté et affiché ;
 - désactivation avec enfant actif refusée ;
 - activation avec parent inactif refusée.
 
@@ -28,17 +28,16 @@
 - conflit code : 409 ;
 - liste explicitement tenant-isolée.
 
-## Migration V87
+## Migrations V87 → V113
 
 PostgreSQL 16 :
 
-- migration V1→V87 greenfield ;
-- migration V86→V87 ;
-- 14 entrées initiales service et 10 spécialités ;
+- migration greenfield jusqu'à V113 et mise à niveau de la contrainte V87 ;
+- 14 entrées initiales service et 10 spécialités, puis 23 services et 20 spécialités après V113 ;
 - contraintes FK composites ;
 - même code d'unité autorisé dans des tenants différents ;
 - SERVICE sans catalogue refusé ;
-- SERVICE avec nom localisé/free-text refusé au niveau DB ;
+- SERVICE avec nom local optionnel autorisé au niveau DB ; catalogue absent et nom trop court refusés ;
 - autre type avec catalogue refusé ;
 - aucune modification des anciennes colonnes `users.department`, `users.specialty` ou de `wards`.
 
@@ -46,9 +45,9 @@ PostgreSQL 16 :
 
 - chargement catalogues + unités ;
 - création SERVICE depuis select catalogue ;
-- absence de champ de nom libre pour SERVICE ;
-- payload SERVICE avec `name: null` ;
-- affichage du service en FR puis EN à partir du catalogue ;
+- champ de nom local optionnel pour SERVICE ;
+- payload SERVICE avec `name: null` ou nom local valide ;
+- affichage du nom local dans les deux langues, ou du catalogue localisé si le nom est absent ;
 - création POLE/DEPARTMENT/CARE_UNIT avec nom requis ;
 - CARE_UNIT sans parent service non soumissible ;
 - affichage hiérarchique ;
@@ -77,3 +76,5 @@ npm run build
 ```
 
 Aucun `-DskipTests` ni `-Dmaven.test.skip`.
+
+Mise à jour 2026-10-04 : voir docs/features/admin-panel-clinical-audit-fixes pour catalogues enrichis, gouvernance, migration V113 et preuves nouvelles.

@@ -115,4 +115,20 @@ class ProfileAssignmentsControllerTest {
                 .andExpect(jsonPath("$.unitAssignments[0].assignmentRoleNameFr").value("Praticien"))
                 .andExpect(jsonPath("$.unitAssignments[0].primary").value(true));
     }
+    @Test
+    void platformAdministratorWithoutOrganizationHasAnEmptyProfessionalContext() throws Exception {
+        UserAccountEntity admin = userAccountRepository.save(new UserAccountEntity(
+                "platform-profile-" + UUID.randomUUID() + "@joprelys.local", "Admin plateforme", "ADMIN_JOPRELYS", "hash"));
+        try {
+            String adminToken = jwtService.createToken(admin).value();
+            mockMvc.perform(get("/api/profile/assignments").header("Authorization", "Bearer " + adminToken))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.specialties.length()").value(0))
+                    .andExpect(jsonPath("$.unitAssignments.length()").value(0));
+        } finally {
+            jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", admin.getId());
+            userAccountRepository.deleteById(admin.getId());
+        }
+    }
+
 }

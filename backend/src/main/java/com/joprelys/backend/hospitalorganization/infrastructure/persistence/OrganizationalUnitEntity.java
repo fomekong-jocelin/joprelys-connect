@@ -136,6 +136,6 @@ public class OrganizationalUnitEntity {
     }
 
     private static String normalizedName(String value, OrganizationalUnitType type) {
-        return type == OrganizationalUnitType.SERVICE ? null : value;
+        return value;
     }
 }
