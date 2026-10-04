@@ -149,7 +149,7 @@ class HospitalOrganizationControllerTest {
     }
 
     @Test
-    void serviceShouldRejectFreeTextNameAndInvalidHierarchy() throws Exception {
+    void serviceShouldAcceptLocalNameAndRejectInvalidHierarchy() throws Exception {
         mockMvc.perform(post("/api/hospital-organization/units")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
@@ -161,7 +161,8 @@ class HospitalOrganizationControllerTest {
                                   "serviceCatalogCode":"GENERAL_MEDICINE"
                                 }
                                 """))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.name").value("Service tapé à la main"));
 
         mockMvc.perform(post("/api/hospital-organization/units")
                         .header("Authorization", "Bearer " + adminToken)
@@ -236,4 +237,20 @@ class HospitalOrganizationControllerTest {
                 .andReturn().getResponse().getContentAsString();
         return jsonMapper.readTree(response).get("id").asString();
     }
+    @Test
+    void cataloguesIncludeEveryDisciplineRaisedByTheClinicalAudit() throws Exception {
+        String services = mockMvc.perform(get("/api/hospital-organization/catalogs/services")
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        String specialties = mockMvc.perform(get("/api/hospital-organization/catalogs/specialties")
+                .header("Authorization", "Bearer " + adminToken)).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        for (String code : java.util.List.of("ORTHOPEDICS_TRAUMATOLOGY", "NEONATOLOGY", "INFECTIOUS_DISEASES",
+                "GASTROENTEROLOGY", "OPHTHALMOLOGY", "ENT", "STOMATOLOGY", "NEPHROLOGY", "HEMODIALYSIS")) {
+            org.assertj.core.api.Assertions.assertThat(services).contains("\"code\":\"" + code + "\"");
+            org.assertj.core.api.Assertions.assertThat(specialties).contains("\"code\":\"" + code + "\"");
+        }
+        org.assertj.core.api.Assertions.assertThat(specialties).contains("EMERGENCY_MEDICINE");
+    }
+
 }

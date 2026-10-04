@@ -338,4 +338,28 @@ describe('LoginComponent', () => {
     expect(component.showPassword()).toBe(false);
     expect(passwordInput?.type).toBe('password');
   });
+
+  it('valide le code OTP à la touche Entrée, même si le bouton est encore désactivé', () => {
+    const component = TestBed.createComponent(LoginComponent).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+    component.email.set('cashier@example.com');
+    const input = document.createElement('input');
+    input.value = '123456';
+    const event = new KeyboardEvent('keydown', { key: 'Enter' });
+    Object.defineProperty(event, 'target', { value: input });
+
+    component.submitOtpOnEnter(event, 'staff');
+
+    const otpRequest = httpTesting.expectOne('/api/auth/verify-otp');
+    expect(otpRequest.request.body).toEqual({ email: 'cashier@example.com', otpCode: '123456' });
+  });
+
+  it("n'envoie pas un code OTP incomplet", () => {
+    const component = TestBed.createComponent(LoginComponent).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+    component.staffOtpCode.set('123');
+    component.verifyStaffOtp();
+
+    httpTesting.expectNone('/api/auth/verify-otp');
+  });
 });

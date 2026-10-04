@@ -50,5 +50,10 @@
   "consultation.errors.savePrescription": "The consultation was saved, but the prescription could not be saved.",
   "consultation.errors.saveConsultation": "The consultation could not be saved.",
   "consultation.errors.saveLabOrder": "The consultation was saved, but the lab order could not be saved.",
-  "consultation.errors.closeVisit": "The consultation was saved, but the visit could not be closed."
+  "consultation.errors.closeVisit": "The consultation was saved, but the visit could not be closed.",
+  "consultation.errors.loadVisit": "Unable to load the visit: patient context may be incomplete. Please reload the page.",
+  "consultation.banner.label": "Patient in consultation",
+  "consultation.banner.years": "years",
+  "consultation.banner.reason": "Reason",
+  "consultation.banner.allergy": "Allergy:"
 }

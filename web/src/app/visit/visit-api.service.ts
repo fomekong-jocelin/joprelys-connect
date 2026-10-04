@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
-import { CreateVisitRequest, Visit, Vitals } from './visit.models';
+import { ActiveVisitScope, CreateVisitRequest, Visit, VisitAdmissionOptions, VitalMeasurement, Vitals } from './visit.models';
 
 @Injectable({
   providedIn: 'root',
@@ -13,8 +13,30 @@ export class VisitApiService {
     return this.http.post<Visit>('/api/visits', dto);
   }
 
-  getActiveVisits(): Observable<Visit[]> {
-    return this.http.get<Visit[]>('/api/visits/active');
+  getAdmissionOptions(): Observable<VisitAdmissionOptions> {
+    return this.http.get<VisitAdmissionOptions>('/api/visits/admission-options');
+  }
+
+  getById(id: string): Observable<Visit> {
+    return this.http.get<Visit>(`/api/visits/${id}`);
+  }
+
+  getActiveVisits(scope: ActiveVisitScope = 'ALL'): Observable<Visit[]> {
+    return this.http.get<Visit[]>('/api/visits/active', { params: { scope } });
+  }
+
+  /** Prend le patient en consultation ; `takeOver` reprend explicitement le patient d'un confrère. */
+  takeCharge(id: string, takeOver = false): Observable<Visit> {
+    return this.http.post<Visit>(`/api/visits/${id}/take-charge`, {}, { params: { takeOver } });
+  }
+
+  /** Remet le patient dans la file sans clôturer la visite. */
+  releaseCharge(id: string): Observable<Visit> {
+    return this.http.post<Visit>(`/api/visits/${id}/release`, {});
+  }
+
+  getVitalsHistory(id: string): Observable<VitalMeasurement[]> {
+    return this.http.get<VitalMeasurement[]>(`/api/visits/${id}/vitals/history`);
   }
 
   closeVisit(id: string): Observable<Visit> {

@@ -1,9 +1,10 @@
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideHttpClient } from '@angular/common/http';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
-import { of, throwError } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../testing/i18n-testing';
 import { PharmacyApiService } from './pharmacy-api.service';
 import { PharmacyDispensationPanelComponent } from './pharmacy-dispensation-panel.component';
@@ -37,6 +38,7 @@ describe('PharmacyApiService', () => {
       prescriptionId: 'prescription-1',
       prescriptionNumber: 'ORD-1',
       status: 'ACTIVE',
+        pharmaceuticalValidated: true,
       patientName: 'Jean Patient',
       doctorName: 'Dr Alpha',
       issuedAt: '2026-07-03T09:00:00Z',
@@ -88,6 +90,7 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
   let fixture: ComponentFixture<PharmacyPrescriptionVerifyPageComponent>;
   let pharmacyApi: {
     verifyPrescription: ReturnType<typeof vi.fn>;
+    validatePrescription: ReturnType<typeof vi.fn>;
     dispensePrescription: ReturnType<typeof vi.fn>;
     getDispensationHistory: ReturnType<typeof vi.fn>;
   };
@@ -98,6 +101,7 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
         prescriptionId: 'prescription-1',
         prescriptionNumber: 'ORD-20260703-000042',
         status: 'ACTIVE',
+        pharmaceuticalValidated: true,
         patientName: 'Jean Patient',
         doctorName: 'Dr Alpha',
         issuedAt: '2026-07-03T09:00:00Z',
@@ -116,12 +120,14 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
         ],
       })),
       dispensePrescription: vi.fn().mockReturnValue(of(null)),
+      validatePrescription: vi.fn().mockReturnValue(of(null)),
       getDispensationHistory: vi.fn().mockReturnValue(of([])),
     };
 
     await TestBed.configureTestingModule({
       imports: [PharmacyPrescriptionVerifyPageComponent],
       providers: [
+        { provide: RbacApiService, useValue: { hasPermission: () => true } },
         provideHttpClient(),
         provideHttpClientTesting(),
         provideRouter([]),
@@ -151,6 +157,29 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
     expect(element.textContent).toContain('Jean Patient');
     expect(element.textContent).toContain('Amoxicilline');
     expect(element.textContent).toContain('Disponibilité et quantités servies');
+  });
+
+  it('requires a completed pharmaceutical review before allowing dispensation', () => {
+    const component = fixture.componentInstance;
+    const pending = new Subject<void>();
+    pharmacyApi.validatePrescription.mockReturnValue(pending);
+    component.form.setValue({ prescriptionNumber: 'ORD-20260703-000042', pinCode: '1234' });
+    component.verify();
+    component.prescription.set({ ...component.prescription()!, pharmaceuticalValidated: false });
+    fixture.detectChanges();
+    const panel = fixture.debugElement.query(By.directive(PharmacyDispensationPanelComponent)).componentInstance;
+    expect(panel.canDispenseStatus()).toBe(false);
+    component.reviewNotes.set('Interactions et doses vérifiées');
+    component.validatePharmaceuticalReview();
+    component.verify();
+    expect(pharmacyApi.verifyPrescription).toHaveBeenCalledTimes(1);
+    expect(pharmacyApi.validatePrescription).toHaveBeenCalledWith({
+      prescriptionNumber: 'ORD-20260703-000042', pinCode: '1234', reviewNotes: 'Interactions et doses vérifiées',
+    });
+    expect(panel.canDispenseStatus()).toBe(false);
+    pending.next(); pending.complete(); fixture.detectChanges();
+    expect(panel.canDispenseStatus()).toBe(true);
+    expect(component.validating()).toBe(false);
   });
 
   it('should render initial empty state before verification', () => {

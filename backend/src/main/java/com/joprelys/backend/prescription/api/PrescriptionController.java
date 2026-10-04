@@ -1,12 +1,5 @@
 package com.joprelys.backend.prescription.api;
 
-import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
-import com.joprelys.backend.consultation.infrastructure.persistence.ConsultationRepository;
-import com.joprelys.backend.patient.application.PatientAccessPolicyService;
-import com.joprelys.backend.patient.application.PatientService;
-import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
-import com.joprelys.backend.prescription.application.PrescriptionService;
-import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
@@ -25,38 +18,20 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api")
 @Tag(name = "Prescriptions", description = "Gestion des ordonnances et prescriptions")
 public class PrescriptionController {
 
-    private final PrescriptionService prescriptionService;
-    private final PatientAccessPolicyService accessPolicy;
-    private final PatientRepository patientRepository;
-    private final ConsultationRepository consultationRepository;
-    private final PrescriptionRepository prescriptionRepository;
-    private final UserAccountRepository userAccountRepository;
-
-    public PrescriptionController(
-            PrescriptionService prescriptionService,
-            PatientAccessPolicyService accessPolicy,
-            PatientRepository patientRepository,
-            ConsultationRepository consultationRepository,
-            PrescriptionRepository prescriptionRepository,
-            UserAccountRepository userAccountRepository) {
-        this.prescriptionService = prescriptionService;
-        this.accessPolicy = accessPolicy;
-        this.patientRepository = patientRepository;
-        this.consultationRepository = consultationRepository;
-        this.prescriptionRepository = prescriptionRepository;
-        this.userAccountRepository = userAccountRepository;
+    private final com.joprelys.backend.prescription.application.PrescriptionUseCase prescriptions;
+    public PrescriptionController(com.joprelys.backend.prescription.application.PrescriptionUseCase prescriptions) {
+        this.prescriptions = prescriptions;
     }
 
     @PostMapping("/consultations/{id}/prescription")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    @PreAuthorize("hasAuthority('PRESCRIPTION_WRITE')")
     @Operation(summary = "Enregistrer une prescription", description = "Crée ou met à jour l'ordonnance associée à une consultation.", responses = {
             @ApiResponse(responseCode = "200", description = "Prescription enregistrée avec succès"),
             @ApiResponse(responseCode = "403", description = "Consentement ou périmètre prescriptions insuffisant"),
@@ -65,16 +40,7 @@ public class PrescriptionController {
     public PrescriptionResponse savePrescription(
             @Parameter(description = "Identifiant de la consultation") @PathVariable UUID id,
             @Valid @RequestBody SavePrescriptionRequest request) {
-        UUID patientId = resolveConsultationPatientId(id);
-        accessPolicy.validateAccess(patientId, "prescriptions");
-        var patient = resolvePatient(patientId);
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return PrescriptionResponse.fromEntity(prescriptionService.savePrescription(id, request));
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        return prescriptions.save(id, request);
     }
 
     @GetMapping("/consultations/{id}/prescription")
@@ -87,104 +53,37 @@ public class PrescriptionController {
     })
     public ResponseEntity<PrescriptionResponse> getPrescription(
             @Parameter(description = "Identifiant de la consultation") @PathVariable UUID id) {
-        UUID patientId = resolveConsultationPatientId(id);
-        accessPolicy.validateAccess(patientId, "prescriptions");
-        var patient = resolvePatient(patientId);
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return prescriptionService.getPrescription(id)
-                    .map(PrescriptionResponse::fromEntity)
-                    .map(ResponseEntity::ok)
-                    .orElseGet(() -> ResponseEntity.noContent().build());
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        return prescriptions.get(id).map(ResponseEntity::ok).orElseGet(() -> ResponseEntity.noContent().build());
     }
 
     @PostMapping("/prescriptions/{id}/transmit")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    @PreAuthorize("hasAuthority('PRESCRIPTION_WRITE')")
     @Operation(summary = "Transmettre une prescription", description = "Transmet une ordonnance au service concerné.")
     public PrescriptionResponse transmitPrescription(
             @Parameter(description = "Identifiant de la prescription") @PathVariable UUID id,
             Authentication authentication) {
-        UUID patientId = resolvePrescriptionPatientId(id);
-        accessPolicy.validateAccess(patientId, "prescriptions");
-        var patient = resolvePatient(patientId);
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return PrescriptionResponse.fromEntity(
-                    prescriptionService.transmitPrescriptionForStaff(id, authentication.getName()));
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        return prescriptions.transmit(id, authentication);
     }
 
     @PostMapping("/prescriptions/{id}/finalize")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    @PreAuthorize("hasAuthority('PRESCRIPTION_SIGN')")
     @Operation(summary = "Finaliser une prescription", description = "Valide et active une prescription au statut DRAFT, générant le PDF.")
     public PrescriptionResponse finalizePrescription(
             @Parameter(description = "Identifiant de la prescription") @PathVariable UUID id,
             Authentication authentication) {
-        UUID patientId = resolvePrescriptionPatientId(id);
-        accessPolicy.validateAccess(patientId, "prescriptions");
-        var patient = resolvePatient(patientId);
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return PrescriptionResponse.fromEntity(
-                    prescriptionService.finalizePrescription(id, resolveActorId(authentication)));
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        return prescriptions.finalizePrescription(id, authentication);
     }
 
     @PatchMapping("/prescriptions/{id}/cancel")
     @ResponseStatus(HttpStatus.OK)
-    @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
+    @PreAuthorize("hasAuthority('PRESCRIPTION_SIGN')")
     @Operation(summary = "Annuler une prescription", description = "Annule une ordonnance existante.")
     public PrescriptionResponse cancelPrescription(
             @Parameter(description = "Identifiant de la prescription") @PathVariable UUID id,
             Authentication authentication) {
-        UUID patientId = resolvePrescriptionPatientId(id);
-        accessPolicy.validateAccess(patientId, "prescriptions");
-        var patient = resolvePatient(patientId);
-        UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
-        try {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(patient.getOrganizationId());
-            return PrescriptionResponse.fromEntity(
-                    prescriptionService.cancelPrescription(id, resolveActorId(authentication)));
-        } finally {
-            com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
-        }
+        return prescriptions.cancel(id, authentication);
     }
 
-    private UUID resolveConsultationPatientId(UUID consultationId) {
-        return PatientService.convertToUuid(
-                consultationRepository.findPatientIdByConsultationId(consultationId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable.")));
-    }
-
-    private UUID resolvePrescriptionPatientId(UUID prescriptionId) {
-        return PatientService.convertToUuid(
-                prescriptionRepository.findPatientIdByPrescriptionId(prescriptionId)
-                        .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable.")));
-    }
-
-    private com.joprelys.backend.patient.infrastructure.persistence.PatientEntity resolvePatient(UUID patientId) {
-        return patientRepository.findByIdGlobally(patientId)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
-    }
-
-    private UUID resolveActorId(Authentication authentication) {
-        if (authentication == null || !authentication.isAuthenticated()) {
-            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non authentifié.");
-        }
-        var user = userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase())
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur introuvable."));
-        return user.getId();
-    }
 }

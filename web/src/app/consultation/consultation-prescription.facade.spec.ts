@@ -1,3 +1,4 @@
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { FormBuilder } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { EMPTY, of } from 'rxjs';
@@ -30,6 +31,7 @@ describe('ConsultationPrescriptionFacade', () => {
     TestBed.configureTestingModule({
       providers: [
         FormBuilder,
+        { provide: RbacApiService, useValue: { hasPermission: () => true } },
         ConsultationFeedbackStore,
         ConsultationPrescriptionFacade,
         { provide: ConsultationApiService, useValue: api },

@@ -125,5 +125,14 @@
   "admission.error.EMERGENCY_PROVISIONAL_PATIENT_REQUIRED": "The provisional patient information is missing.",
   "admission.error.EMERGENCY_TRIAGE_REQUIRED": "The triage information is missing.",
   "admission.error.EMERGENCY_THIRD_PARTY_REQUIRED": "Enter the name, phone number and relationship of the person who brought the patient.",
-  "admission.error.EMERGENCY_ADMISSION_FAILED": "The emergency admission could not be created. Try again without closing the window."
+  "admission.error.EMERGENCY_ADMISSION_FAILED": "The emergency admission could not be created. Try again without closing the window.",
+  "admission.mainPractitioner": "Main practitioner",
+  "admission.mainPractitionerPlaceholder": "-- Unassigned (shared queue) --",
+  "admission.arrivalAt": "Arrival date and time",
+  "admission.optionsLoadError": "Departments and practitioners unavailable: you can type the department under “Other” and leave the practitioner unassigned.",
+  "admission.summaryVisitChoices": "Orientation · Department · Main practitioner",
+  "admission.toast.visitCreated": "Visit opened for",
+  "admission.toast.nextStepVitals": "The patient is now in the queue, awaiting vital signs.",
+  "admission.toast.emergencyCreated": "Emergency registered for",
+  "admission.draftArrivalReset": "The draft arrival time was replaced by the current time: correct it if the patient arrived earlier."
 }

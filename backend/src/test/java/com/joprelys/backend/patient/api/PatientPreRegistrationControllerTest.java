@@ -240,6 +240,15 @@ public class PatientPreRegistrationControllerTest {
                 .andExpect(jsonPath("$.patientId").exists())
                 .andExpect(jsonPath("$.status").value("VALIDATED"));
 
+        // 7. La demande validée est listée sous son statut et référence le patient créé
+        mockMvc.perform(get("/api/pre-registrations")
+                .header("Authorization", "Bearer " + tokenAgentA)
+                .param("status", "VALIDATED"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content[0].id").value(preReg.id().toString()))
+                .andExpect(jsonPath("$.content[0].status").value("VALIDATED"))
+                .andExpect(jsonPath("$.content[0].validatedPatientId").isNotEmpty());
+
         // Verify patient is actually created in DPU
         mockMvc.perform(get("/api/patients")
                 .header("Authorization", "Bearer " + tokenAgentA)
@@ -273,5 +282,14 @@ public class PatientPreRegistrationControllerTest {
         var updated = preRegistrationRepository.findById(entity.getId()).orElseThrow();
         TenantContext.clear();
         org.junit.jupiter.api.Assertions.assertEquals(PreRegistrationStatus.REJECTED, updated.getStatus());
+    }
+
+    @Test
+    void testAdmissionQrCodeIsGeneratedServerSide() throws Exception {
+        mockMvc.perform(get("/api/pre-registrations/admission-qr-code")
+                .header("Authorization", "Bearer " + tokenAgentA))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .contentType(MediaType.IMAGE_PNG));
     }
 }

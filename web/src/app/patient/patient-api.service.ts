@@ -219,7 +219,21 @@ export class PatientApiService {
   }
 
   getPendingPreRegistrations(page: number, size: number): Observable<PreRegistrationPage> {
-    return this.http.get<PreRegistrationPage>(`/api/pre-registrations?page=${page}&size=${size}`);
+    return this.getPreRegistrations('AWAITING_VALIDATION', page, size);
+  }
+
+  getPreRegistrations(
+    status: PatientPreRegistrationResponse['status'],
+    page: number,
+    size: number,
+  ): Observable<PreRegistrationPage> {
+    return this.http.get<PreRegistrationPage>('/api/pre-registrations', {
+      params: { status, page, size },
+    });
+  }
+
+  getAdmissionQrCode(): Observable<Blob> {
+    return this.http.get('/api/pre-registrations/admission-qr-code', { responseType: 'blob' });
   }
 
   getPreRegistrationById(id: string): Observable<PatientPreRegistrationResponse> {

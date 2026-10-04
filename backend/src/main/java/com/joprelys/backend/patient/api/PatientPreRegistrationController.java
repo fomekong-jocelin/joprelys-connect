@@ -2,12 +2,16 @@ package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
 import com.joprelys.backend.common.api.PageResponse;
+import com.joprelys.backend.patient.application.GenerateAdmissionQrCodeUseCase;
 import com.joprelys.backend.patient.application.MedicalCaptchaService;
 import com.joprelys.backend.patient.application.PatientPreRegistrationService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientPreRegistrationEntity;
+import com.joprelys.backend.patient.infrastructure.persistence.PreRegistrationStatus;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -26,14 +30,17 @@ public class PatientPreRegistrationController {
     private final PatientPreRegistrationService preRegistrationService;
     private final MedicalCaptchaService captchaService;
     private final UserAccountRepository userAccountRepository;
+    private final GenerateAdmissionQrCodeUseCase generateAdmissionQrCode;
 
     public PatientPreRegistrationController(
             PatientPreRegistrationService preRegistrationService,
             MedicalCaptchaService captchaService,
-            UserAccountRepository userAccountRepository) {
+            UserAccountRepository userAccountRepository,
+            GenerateAdmissionQrCodeUseCase generateAdmissionQrCode) {
         this.preRegistrationService = preRegistrationService;
         this.captchaService = captchaService;
         this.userAccountRepository = userAccountRepository;
+        this.generateAdmissionQrCode = generateAdmissionQrCode;
     }
 
     // --- Endpoints Publics ---
@@ -60,8 +67,20 @@ public class PatientPreRegistrationController {
 
     @GetMapping("/api/pre-registrations")
     @PreAuthorize("hasAuthority('PATIENT_READ')")
-    public PageResponse<PatientPreRegistrationResponse> getPendingPreRegistrations(Pageable pageable) {
-        return PageResponse.fromPage(preRegistrationService.getPendingPreRegistrations(pageable));
+    public PageResponse<PatientPreRegistrationResponse> getPreRegistrations(
+            @RequestParam(name = "status", required = false) PreRegistrationStatus status,
+            Pageable pageable) {
+        return PageResponse.fromPage(preRegistrationService.getPreRegistrations(status, pageable));
+    }
+
+    @GetMapping(value = "/api/pre-registrations/admission-qr-code", produces = MediaType.IMAGE_PNG_VALUE)
+    @PreAuthorize("hasAuthority('PATIENT_WRITE')")
+    public ResponseEntity<byte[]> getAdmissionQrCode() {
+        byte[] qrCodeImage = generateAdmissionQrCode.generate();
+        return ResponseEntity.ok()
+                .contentType(MediaType.IMAGE_PNG)
+                .contentLength(qrCodeImage.length)
+                .body(qrCodeImage);
     }
 
     @GetMapping("/api/pre-registrations/{id}")
@@ -114,7 +133,8 @@ public class PatientPreRegistrationController {
                 entity.getCreatedAt(),
                 null,
                 null,
-                null
+                null,
+                entity.getValidatedPatientId()
         );
     }
 

@@ -7,6 +7,23 @@ import java.util.Optional;
 import java.util.UUID;
 
 public interface PrescriptionRepository extends JpaRepository<PrescriptionEntity, UUID> {
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT p FROM PrescriptionEntity p WHERE p.id = :id")
+    Optional<PrescriptionEntity> findByIdForUpdate(@Param("id") UUID id);
+
+    @Query("SELECT p.consultation.visit.id FROM PrescriptionEntity p WHERE p.id = :id")
+    Optional<UUID> findVisitIdByPrescriptionId(@Param("id") UUID id);
+
+
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+            SELECT p FROM PrescriptionEntity p
+            WHERE p.organizationId = :tenant AND p.consultation.visit.patient.id IN :patientIds
+            ORDER BY p.id
+            """)
+    java.util.List<PrescriptionEntity> lockMedicationPrescriptionsForPatients(
+            @Param("tenant") UUID tenant,
+            @Param("patientIds") java.util.Collection<UUID> patientIds);
 
 	@Query("SELECT p FROM PrescriptionEntity p LEFT JOIN FETCH p.items WHERE p.consultation.id = :consultationId")
 	Optional<PrescriptionEntity> findByConsultationId(@Param("consultationId") UUID consultationId);
@@ -36,4 +53,14 @@ public interface PrescriptionRepository extends JpaRepository<PrescriptionEntity
 
 	@Query("SELECT p FROM PrescriptionEntity p WHERE p.status = 'ACTIVE'")
 	java.util.List<PrescriptionEntity> findAllActivePrescriptions();
+    @org.springframework.data.jpa.repository.Query("""
+            SELECT i FROM PrescriptionItemEntity i
+            JOIN FETCH i.prescription p JOIN FETCH p.consultation c
+            JOIN FETCH c.visit v JOIN FETCH v.patient patient
+            WHERE p.organizationId = :tenant AND patient.id IN :patientIds
+            ORDER BY p.createdAt DESC, i.sortOrder ASC
+            """)
+    java.util.List<PrescriptionItemEntity> findMedicationItemsForPatients(
+            @org.springframework.data.repository.query.Param("tenant") java.util.UUID tenant,
+            @org.springframework.data.repository.query.Param("patientIds") java.util.Collection<java.util.UUID> patientIds);
 }

@@ -1,5 +1,8 @@
+import { ConsultationPrescriptionPanelComponent } from './consultation-prescription-panel.component';
+import { ConsultationVitalsPanelComponent } from './consultation-vitals-panel.component';
+import { ConsultationLabPanelComponent } from './consultation-lab-panel.component';
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { CommonModule } from '@angular/common';
-import { HttpClient } from '@angular/common/http';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
@@ -10,7 +13,7 @@ import { PatientApiService } from '../patient/patient-api.service';
 import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patient.models';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { VisitApiService } from '../visit/visit-api.service';
-import { Visit, Vitals } from '../visit/visit.models';
+import { Vitals } from '../visit/visit.models';
 import {
   AiConsultationDraft,
   AiPrescriptionLine,
@@ -18,6 +21,7 @@ import {
 } from './ai-consultation-api.service';
 import { ClinicalNoteEditorComponent } from './clinical-note-editor.component';
 import { ConsultationApiService } from './consultation-api.service';
+import { ConsultationPatientBannerComponent } from './consultation-patient-banner.component';
 import { ConsultationFeedbackStore } from './consultation-feedback.store';
 import { ConsultationPrescriptionFacade } from './consultation-prescription.facade';
 import { ConsultationUiLabelsService } from './consultation-ui-labels.service';
@@ -38,6 +42,7 @@ interface CommonExam {
     AppShellComponent,
     VoiceAssistantPanelComponent,
     ClinicalNoteEditorComponent,
+    ConsultationPatientBannerComponent, ConsultationPrescriptionPanelComponent, ConsultationVitalsPanelComponent, ConsultationLabPanelComponent,
   ],
   providers: [
     ConsultationFeedbackStore,
@@ -47,10 +52,13 @@ interface CommonExam {
   templateUrl: './consultation.component.html',
 })
 export class ConsultationComponent implements OnInit {
+  private readonly rbac = inject(RbacApiService);
+  canSignClinical(): boolean {
+    return this.rbac.hasPermission('CLINICAL_SIGN') && this.rbac.hasPermission('CONSULTATION_LOCK');
+  }
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
   private readonly fb = inject(FormBuilder);
-  private readonly http = inject(HttpClient);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
   private readonly patientApi = inject(PatientApiService);
@@ -68,6 +76,7 @@ export class ConsultationComponent implements OnInit {
   readonly vitals = signal<Vitals | null>(null);
   readonly pendingVitalsProposal = signal<Vitals | null>(null);
   readonly consultation = signal<Consultation | null>(null);
+  readonly formWorkspaceReady = signal(false);
   readonly visitNumber = signal('');
   readonly visitReason = signal('');
   readonly patient = signal<Patient | null>(null);
@@ -152,8 +161,10 @@ export class ConsultationComponent implements OnInit {
       return;
     }
 
-    this.form.markAsDirty();
     const fieldCount = Object.keys(acceptedDraft).length;
+    // Passage en saisie manuelle : rien n'a été proposé, aucun message « IA appliquée ».
+    if (fieldCount === 0 && !draft.prescription && !draft.labOrders && !draft.vitals) return;
+    this.form.markAsDirty();
     this.successMessage.set(
       this.i18n.t('consultation.ai.applySuccessReview') +
         (fieldCount > 0
@@ -257,17 +268,15 @@ export class ConsultationComponent implements OnInit {
     if (!this.visitId) return;
     this.isLoading.set(true);
 
-    this.http
-      .get<{ visitNumber?: string } & Vitals>(`/api/visits/${this.visitId}/vitals`)
-      .subscribe({
-        next: (data) => {
-          this.vitals.set(data);
-          this.isLoading.set(false);
-        },
-        error: () => this.isLoading.set(false),
-      });
+    this.visitApi.getVitals(this.visitId).subscribe({
+      next: (data) => {
+        this.vitals.set(data);
+        this.isLoading.set(false);
+      },
+      error: () => this.isLoading.set(false),
+    });
 
-    this.http.get<Visit>(`/api/visits/${this.visitId}`).subscribe({
+    this.visitApi.getById(this.visitId).subscribe({
       next: (visit) => {
         if (visit?.visitNumber) this.visitNumber.set(visit.visitNumber);
         this.visitReason.set(visit?.reason || '');
@@ -289,7 +298,7 @@ export class ConsultationComponent implements OnInit {
           });
         }
       },
-      error: () => undefined,
+      error: () => this.errorMessage.set(this.i18n.t('consultation.errors.loadVisit')),
     });
 
     this.consultationApi.getConsultation(this.visitId).subscribe({
@@ -304,6 +313,7 @@ export class ConsultationComponent implements OnInit {
           followUp: existing.followUp ?? '',
         });
         this.prescriptions.load(existing.id);
+        this.formWorkspaceReady.set(true);
       },
       error: () => undefined,
     });
@@ -339,6 +349,7 @@ export class ConsultationComponent implements OnInit {
   }
 
   onSave(closeVisitAfter: boolean = false): void {
+    if (closeVisitAfter && !this.canSignClinical()) return;
     if (this.form.invalid || this.isSaving() || this.isClosing()) return;
 
     this.shouldCloseAfterSave = closeVisitAfter;
@@ -358,6 +369,7 @@ export class ConsultationComponent implements OnInit {
         conclusion: conclusion || undefined,
         advice: advice || undefined,
         followUp: followUp || undefined,
+        expectedUpdatedAt: this.consultation()?.updatedAt,
       })
       .subscribe({
         next: (savedConsultation) => {
@@ -376,7 +388,7 @@ export class ConsultationComponent implements OnInit {
           }
 
           const presc = this.prescriptions.current();
-          if (prescriptionLines.length > 0 && (!presc || presc.status === 'DRAFT')) {
+          if (this.prescriptions.canWrite() && prescriptionLines.length > 0 && (!presc || presc.status === 'DRAFT')) {
             this.consultationApi
               .savePrescription(savedConsultation.id, {
                 items: prescriptionLines,

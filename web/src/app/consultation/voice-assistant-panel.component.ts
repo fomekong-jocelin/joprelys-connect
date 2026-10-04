@@ -10,6 +10,7 @@ import {
   signal,
 } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
+import { ConsultationEntryMode, ConsultationEntryModeComponent } from './consultation-entry-mode.component';
 import { AiAssistantInputComponent } from './ai-assistant-input.component';
 import {
   clinicalAiErrorMessage,
@@ -53,6 +54,7 @@ type AiWorkflowStage =
   standalone: true,
   imports: [
     CommonModule,
+    ConsultationEntryModeComponent,
     AiAssistantInputComponent,
     AiDraftPreviewComponent,
     ClinicalCaptureReviewComponent,
@@ -70,6 +72,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   @Input({ required: true }) visitId = '';
   @Input() currentDraft: Record<string, unknown> | null = null;
+  @Input() formReady = false;
   @Output() readonly applyDraft = new EventEmitter<AiConsultationDraft>();
   @Output() readonly formReadyChange = new EventEmitter<boolean>();
 
@@ -82,6 +85,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   readonly audioLevel = signal(0);
   readonly errorMessage = signal('');
   readonly vitalsWarning = signal('');
+  readonly reportAccepted = signal(false);
   readonly mediaRecorderSupported = this.voiceRecorder.supported;
 
   private sessionBaseDraft: AiConsultationDraft = {};
@@ -100,7 +104,6 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   startRealtime(): void {
     if (!this.visitId || this.busy()) return;
     this.errorMessage.set('');
-    this.formReadyChange.emit(false);
 
     // The current WebRTC controller still uses the session identity to open the
     // transport. The session is transport-only here: no per-phrase proposal,
@@ -112,6 +115,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
           this.session.set(response);
           this.busy.set(false);
           this.stage.set('CAPTURE_REALTIME');
+          this.formReadyChange.emit(false);
         },
         error: error => this.handleError(
           error,
@@ -121,6 +125,16 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
       return;
     }
     this.stage.set('CAPTURE_REALTIME');
+    this.formReadyChange.emit(false);
+  }
+
+  startEntryMode(mode: ConsultationEntryMode): void {
+    if (mode === 'manual') this.openManualForm();
+    else if (mode === 'conversation') this.startRealtime();
+    else {
+      this.startDictation();
+      if (this.stage() === 'CAPTURE_DICTATION') this.toggleRecording();
+    }
   }
 
   startDictation(): void {
@@ -133,6 +147,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
   openManualForm(): void {
     if (this.busy() || this.recording() || this.realtimeActive()) return;
     this.applyDraft.emit({});
+    this.reportAccepted.set(false);
     this.stage.set('FORM_READY');
     this.formReadyChange.emit(true);
   }
@@ -260,6 +275,7 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
     }
 
     this.applyDraft.emit(safeDraft);
+    this.reportAccepted.set(true);
     this.stage.set('FORM_READY');
     this.formReadyChange.emit(true);
   }
@@ -294,16 +310,23 @@ export class VoiceAssistantPanelComponent implements OnInit, OnDestroy {
 
   private async startRecording(): Promise<void> {
     if (this.busy() || this.recording() || this.stage() !== 'CAPTURE_DICTATION') return;
+    this.startBusy();
     try {
       this.errorMessage.set('');
       await this.voiceRecorder.start(
         capture => this.handleClassicCapture(capture),
         level => this.audioLevel.set(level),
       );
+      if (this.destroyed) {
+        this.voiceRecorder.dispose();
+        return;
+      }
       this.recording.set(true);
     } catch {
       this.errorMessage.set(this.i18n.t('consultation.ai.errorMicrophoneUnavailable'));
       this.voiceRecorder.dispose();
+    } finally {
+      this.busy.set(false);
     }
   }
 

@@ -9,6 +9,7 @@ import com.joprelys.backend.consultation.api.ConsultationResponse;
 import com.joprelys.backend.prescription.api.PrescriptionItemResponse;
 import com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionRepository;
 import com.joprelys.backend.visit.api.VitalsResponse;
+import com.joprelys.backend.visit.application.VisitCareFlowUseCase;
 import com.joprelys.backend.visit.infrastructure.persistence.MedicalDocumentRepository;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitEntity;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
@@ -31,23 +32,26 @@ public class ConsultationService {
 	private final UserAccountRepository userAccountRepository;
 	private final MedicalDocumentRepository medicalDocumentRepository;
 	private final PrescriptionRepository prescriptionRepository;
+	private final VisitCareFlowUseCase visitCareFlow;
 
 	public ConsultationService(
 			ConsultationRepository consultationRepository,
 			VisitRepository visitRepository,
 			UserAccountRepository userAccountRepository,
 			MedicalDocumentRepository medicalDocumentRepository,
-			PrescriptionRepository prescriptionRepository) {
+			PrescriptionRepository prescriptionRepository,
+			VisitCareFlowUseCase visitCareFlow) {
 		this.consultationRepository = consultationRepository;
 		this.visitRepository = visitRepository;
 		this.userAccountRepository = userAccountRepository;
 		this.medicalDocumentRepository = medicalDocumentRepository;
 		this.prescriptionRepository = prescriptionRepository;
+		this.visitCareFlow = visitCareFlow;
 	}
 
 	@Transactional
 	public ConsultationEntity saveConsultation(UUID visitId, String doctorEmail, SaveConsultationRequest request) {
-		VisitEntity visit = visitRepository.findById(visitId)
+		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"EN_COURS".equals(visit.getStatus())) {
@@ -57,6 +61,9 @@ public class ConsultationService {
 
 		UserAccountEntity doctor = userAccountRepository.findByEmail(doctorEmail)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Médecin introuvable."));
+
+		visitCareFlow.ensureConsultationOwnership(visit, doctor.getId(), doctor.getDisplayName());
+		visitRepository.save(visit);
 
 		String symptoms = textOrEmpty(request.symptoms());
 		String diagnosis = textOrEmpty(request.diagnosis());
@@ -69,13 +76,24 @@ public class ConsultationService {
 							request.advice(), request.followUp());
 				});
 
+        if (consultation.getSignedAt() != null || !"BROUILLON".equals(consultation.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une consultation signée ne peut plus être modifiée.");
+        }
+
+		if (request.expectedUpdatedAt() != null && consultation.getUpdatedAt() != null
+				&& !consultation.getUpdatedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS)
+						.equals(request.expectedUpdatedAt().truncatedTo(java.time.temporal.ChronoUnit.MILLIS))) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Cette consultation a été modifiée entre-temps par un autre poste. Rechargez-la avant d'enregistrer.");
+		}
+
+		// L'auteur de la consultation reste le praticien qui l'a créée.
 		consultation.setSymptoms(symptoms);
 		consultation.setClinicalExam(request.clinicalExam());
 		consultation.setDiagnosis(diagnosis);
 		consultation.setConclusion(request.conclusion());
 		consultation.setAdvice(request.advice());
 		consultation.setFollowUp(request.followUp());
-		consultation.setDoctor(doctor);
 
 		return consultationRepository.save(consultation);
 	}

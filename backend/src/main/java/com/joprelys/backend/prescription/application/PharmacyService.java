@@ -5,6 +5,7 @@ import com.joprelys.backend.prescription.api.PharmacyDispensationHistoryItemResp
 import com.joprelys.backend.prescription.api.PharmacyDispensationHistoryResponse;
 import com.joprelys.backend.prescription.api.PharmacyDispenseRequest;
 import com.joprelys.backend.prescription.api.PharmacyDispensedItem;
+import com.joprelys.backend.prescription.api.PharmacyValidationRequest;
 import com.joprelys.backend.prescription.api.PharmacyVerifyItem;
 import com.joprelys.backend.prescription.api.PharmacyVerifyResponse;
 import com.joprelys.backend.prescription.infrastructure.persistence.*;
@@ -122,6 +123,7 @@ public class PharmacyService {
 				doctorName,
 				prescription.getCreatedAt(),
 				prescription.getExpiresAt(),
+                jdbcTemplate.queryForObject("SELECT pharmacy_validated_at IS NOT NULL FROM prescriptions WHERE id = ?", Boolean.class, prescription.getId()),
 				items
 		);
 	}
@@ -140,6 +142,10 @@ public class PharmacyService {
 
 		failedAttempts.remove(request.prescriptionNumber());
 
+        lockPrescription(prescription.getId());
+        String persistedStatus = jdbcTemplate.queryForObject("SELECT status FROM prescriptions WHERE id = ?", String.class, prescription.getId());
+        prescription.setStatus(persistedStatus);
+
 		// Status verification
 		if ("FULLY_DISPENSED".equals(prescription.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette ordonnance a déjà été entièrement dispensée.");
@@ -150,7 +156,18 @@ public class PharmacyService {
 		if ("EXPIRED".equals(prescription.getStatus()) || (prescription.getExpiresAt() != null && prescription.getExpiresAt().isBefore(Instant.now()))) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette ordonnance a expiré.");
 		}
-
+        if (!java.util.Set.of("ACTIVE", "PARTIALLY_DISPENSED").contains(persistedStatus)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance active peut être délivrée.");
+        }
+        Boolean validated = jdbcTemplate.queryForObject(
+                "SELECT pharmacy_validated_at IS NOT NULL FROM prescriptions WHERE id = ?", Boolean.class, prescription.getId());
+        if (!Boolean.TRUE.equals(validated)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Une validation pharmaceutique est requise avant la délivrance.");
+        }
+        if (request.dispensedItems().stream().map(PharmacyDispensedItem::prescriptionItemId).distinct().count()
+                != request.dispensedItems().size()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Une ligne de prescription ne peut être délivrée deux fois dans la même demande.");
+        }
 		String pharmacyName = request.pharmacyName();
 		if (pharmacyName != null && pharmacyName.length() > 200) {
 			pharmacyName = pharmacyName.substring(0, 200);
@@ -242,7 +259,7 @@ public class PharmacyService {
 
 		// Audit log
 		auditService.logSuccess(
-				null,
+                currentActorId(),
 				prescription.getOrganizationId(),
 				patientId,
 				"PRESCRIPTION",
@@ -331,6 +348,35 @@ public class PharmacyService {
 			failedAttempts.put(prescriptionNumber, count);
 		}
 	}
+
+    @Transactional
+    public void validatePrescription(PharmacyValidationRequest request) {
+        PharmacyVerifyResponse verified = verifyPrescription(request.prescriptionNumber(), request.pinCode());
+        lockPrescription(verified.prescriptionId());
+        String status = jdbcTemplate.queryForObject("SELECT status FROM prescriptions WHERE id = ?", String.class, verified.prescriptionId());
+        if (!java.util.Set.of("ACTIVE", "PARTIALLY_DISPENSED").contains(status)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seule une ordonnance active peut être validée par la pharmacie.");
+        }
+        UUID actorId = currentActorId();
+        int updated = jdbcTemplate.update("UPDATE prescriptions SET pharmacy_validated_by = ?, pharmacy_validated_at = ?, pharmacy_validation_notes = ? WHERE id = ? AND pharmacy_validated_at IS NULL",
+                actorId, Timestamp.from(Instant.now()), request.reviewNotes().trim(), verified.prescriptionId());
+        if (updated == 0) throw new ResponseStatusException(HttpStatus.CONFLICT, "Cette ordonnance a déjà été validée par la pharmacie.");
+        PrescriptionEntity prescription = prescriptionRepository.findByPrescriptionNumberGlobally(request.prescriptionNumber()).orElseThrow();
+        auditService.logSuccess(actorId, prescription.getOrganizationId(), null, "PRESCRIPTION",
+                prescription.getId(), "PHARMACY_VALIDATED", null);
+    }
+
+    private void lockPrescription(UUID id) {
+        jdbcTemplate.queryForObject("SELECT id FROM prescriptions WHERE id = ? FOR UPDATE", UUID.class, id);
+    }
+
+    private UUID currentActorId() {
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || "anonymousUser".equals(auth.getName())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Authentification requise.");
+        }
+        return jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ? AND enabled = TRUE", UUID.class, auth.getName());
+    }
 
 	private int parseQuantity(String qtyStr) {
 		if (qtyStr == null) return 0;

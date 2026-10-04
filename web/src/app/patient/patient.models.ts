@@ -263,6 +263,7 @@ export interface PatientPreRegistrationResponse {
   similarityScore?: number;
   similarPatientId?: string;
   similarPatientName?: string;
+  validatedPatientId?: string;
 }
 
 export interface PreRegistrationValidationRequest {

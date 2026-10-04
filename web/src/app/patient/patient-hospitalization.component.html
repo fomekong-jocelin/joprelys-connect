@@ -1,9 +1,12 @@
     <div class="space-y-6">
-      @if (activeHospitalization()) {
+      @if (actionError()) { <p role="alert" class="text-[var(--brand-danger-text)]">{{ actionError() }}</p> }
+      @if (loading()) { <p role="status">{{ t('common.loading') }}</p> }
+      @else if (loadError()) { <div role="alert" class="text-[var(--brand-danger-text)]">{{ loadError() }} <button type="button" class="ui-button ui-button-secondary" (click)="loadHospitalizations()">{{ t('common.retry') }}</button></div> }
+      @else if (activeHospitalization()) {
         <div class="space-y-6">
           <app-hospitalization-stay-header
             [stay]="activeHospitalization()!"
-            [responsibleName]="staffMap().get(activeHospitalization()?.responsiblePractitionerId || '') || t('common.notSpecified', 'Non spécifié')"
+            [responsibleName]="staffMap().get(activeHospitalization()?.responsiblePractitionerId || '') || t('common.notSpecified', t('patients.hospitalization.workflow.unspecified'))"
             [canModify]="canModify()"
             (entryPdf)="downloadEntryPdf(activeHospitalization()!)"
             (transfer)="openTransferModal()"
@@ -11,13 +14,13 @@
           />
           <div class="space-y-4 pt-2">
             <!-- Système d'onglets premium -->
-            <div class="border-b border-[var(--app-border)]/80 flex gap-4 text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-5 overflow-x-auto pb-1 scrollbar-thin" role="tablist" [attr.aria-label]="t('patients.hospitalization.workspace', 'Dossier de séjour')">
-              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'notes'" (click)="activeTab = 'notes'" [class.text-brand-cyan]="activeTab === 'notes'" [class.border-b-2]="activeTab === 'notes'" [class.border-brand-cyan]="activeTab === 'notes'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.notes', 'Notes') }}</button>
-              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'consents'" (click)="activeTab = 'consents'" [class.text-brand-cyan]="activeTab === 'consents'" [class.border-b-2]="activeTab === 'consents'" [class.border-brand-cyan]="activeTab === 'consents'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.consents', 'Consentements') }}</button>
-              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'cares'" (click)="activeTab = 'cares'" [class.text-brand-cyan]="activeTab === 'cares'" [class.border-b-2]="activeTab === 'cares'" [class.border-brand-cyan]="activeTab === 'cares'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.cares', 'Soins') }}</button>
-              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'meds'" (click)="activeTab = 'meds'" [class.text-brand-cyan]="activeTab === 'meds'" [class.border-b-2]="activeTab === 'meds'" [class.border-brand-cyan]="activeTab === 'meds'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.medications', 'Médicaments') }}</button>
-              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'consumptions'" (click)="activeTab = 'consumptions'" [class.text-brand-cyan]="activeTab === 'consumptions'" [class.border-b-2]="activeTab === 'consumptions'" [class.border-brand-cyan]="activeTab === 'consumptions'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.consumptions', 'Consommables') }}</button>
-              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'cro'" (click)="activeTab = 'cro'" [class.text-brand-cyan]="activeTab === 'cro'" [class.border-b-2]="activeTab === 'cro'" [class.border-brand-cyan]="activeTab === 'cro'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.operatingRoom', 'Bloc & CRO') }}</button>
+            <div class="border-b border-[var(--app-border)]/80 flex gap-4 text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-5 overflow-x-auto pb-1 scrollbar-thin" role="tablist" [attr.aria-label]="t('patients.hospitalization.workspace')">
+              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'notes'" (click)="activeTab = 'notes'" [class.text-brand-cyan]="activeTab === 'notes'" [class.border-b-2]="activeTab === 'notes'" [class.border-brand-cyan]="activeTab === 'notes'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.notes') }}</button>
+              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'consents'" (click)="activeTab = 'consents'" [class.text-brand-cyan]="activeTab === 'consents'" [class.border-b-2]="activeTab === 'consents'" [class.border-brand-cyan]="activeTab === 'consents'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.consents') }}</button>
+              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'cares'" (click)="activeTab = 'cares'" [class.text-brand-cyan]="activeTab === 'cares'" [class.border-b-2]="activeTab === 'cares'" [class.border-brand-cyan]="activeTab === 'cares'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.cares') }}</button>
+              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'meds'" (click)="activeTab = 'meds'" [class.text-brand-cyan]="activeTab === 'meds'" [class.border-b-2]="activeTab === 'meds'" [class.border-brand-cyan]="activeTab === 'meds'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.medications') }}</button>
+              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'consumptions'" (click)="activeTab = 'consumptions'" [class.text-brand-cyan]="activeTab === 'consumptions'" [class.border-b-2]="activeTab === 'consumptions'" [class.border-brand-cyan]="activeTab === 'consumptions'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.consumptions') }}</button>
+              <button type="button" role="tab" [attr.aria-selected]="activeTab === 'cro'" (click)="activeTab = 'cro'" [class.text-brand-cyan]="activeTab === 'cro'" [class.border-b-2]="activeTab === 'cro'" [class.border-brand-cyan]="activeTab === 'cro'" class="pb-2 cursor-pointer transition-colors whitespace-nowrap flex items-center gap-1">{{ t('patients.hospitalization.tab.operatingRoom') }}</button>
             </div>
 
             <!-- Contenu des onglets -->
@@ -28,89 +31,7 @@
               />
             }
 
-            @if (activeTab === 'consents') {
-              <div class="space-y-4">
-                <div class="flex justify-between items-center">
-                  <h5 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-                    📝 Consentements Opératoires
-                  </h5>
-                  @if (canModify() && !showAddConsent()) {
-                    <button
-                      type="button"
-                      (click)="showAddConsent.set(true)"
-                      class="px-2 py-1 text-[10px] font-extrabold text-brand-cyan hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded border border-brand-cyan/20 cursor-pointer"
-                    >
-                      ➕ Ajouter
-                    </button>
-                  }
-                </div>
-
-                @if (showAddConsent()) {
-                  <form (submit)="saveConsent($event)" class="bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/20 p-4 rounded-lg border border-[var(--app-border)]/50 space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Type*</label>
-                        <select [(ngModel)]="consentType" name="cType" class="ui-select text-xs">
-                          <option value="ANESTHESIA">Anesthésie</option>
-                          <option value="SURGERY">Chirurgie / Opération</option>
-                        </select>
-                      </div>
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Nom du témoin (Optionnel)</label>
-                        <input type="text" [(ngModel)]="witnessName" name="wName" class="ui-input text-xs" />
-                      </div>
-                    </div>
-                    <div class="space-y-1">
-                      <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Document signé (PDF / Image, Optionnel)</label>
-                      <input type="file" (change)="onConsentFileChange($event)" class="text-xs text-[var(--text-secondary)] file:mr-4 file:py-1 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-slate-100 dark:file:bg-slate-800 file:text-[var(--text-secondary)] hover:file:bg-slate-200 dark:hover:file:bg-slate-700/80 cursor-pointer" />
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <input type="checkbox" id="patSig" [(ngModel)]="patientSignaturePresent" name="patSig" class="w-4 h-4 text-brand-cyan border-slate-300 rounded" />
-                      <label for="patSig" class="text-xs font-semibold text-[var(--text-secondary)]">Signature du patient présente</label>
-                    </div>
-                    <div class="flex justify-end gap-2 pt-1">
-                      <button type="button" (click)="showAddConsent.set(false)" class="px-3 py-1.5 border border-[var(--app-border)] rounded text-[11px] font-bold text-[var(--text-secondary)] hover:bg-slate-50 cursor-pointer">Annuler</button>
-                      <button type="submit" class="px-4 py-1.5 bg-brand-cyan hover:bg-[var(--brand-primary-hover)] text-white rounded text-[11px] font-bold cursor-pointer">Enregistrer</button>
-                    </div>
-                  </form>
-                }
-
-                @if (consents().length === 0) {
-                  <p class="text-xs text-[var(--text-muted)] italic">Aucun consentement opératoire enregistré pour ce séjour.</p>
-                } @else {
-                  <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-2">
-                    @for (c of consents(); track c.id) {
-                      <div class="p-3 bg-[var(--app-surface-muted)] dark:bg-slate-900/40 rounded-lg border border-[var(--app-border)]/40 flex justify-between items-center">
-                        <div>
-                          <p class="text-xs font-bold text-[var(--text-primary)]">
-                            Type : {{ c.consentType === 'ANESTHESIA' ? 'Anesthésie' : 'Chirurgie' }}
-                          </p>
-                          <p class="text-[11px] text-[var(--text-muted)] mt-0.5">
-                            Signature patient : {{ c.patientSignaturePresent ? '✅ Présente' : '❌ Absente' }}
-                          </p>
-                          @if (c.witnessName) {
-                            <p class="text-[11px] text-[var(--text-muted)] mt-0.5">
-                              Témoin : {{ c.witnessName }}
-                            </p>
-                          }
-                        </div>
-                        @if (c.documentId) {
-                          <button
-                            type="button"
-                            (click)="downloadConsentFile(c.documentId)"
-                            class="p-1.5 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan rounded-md border border-brand-cyan/10 cursor-pointer flex items-center gap-1"
-                            title="Télécharger le document"
-                          >
-                            📄 <span class="text-[10px] font-bold">PDF</span>
-                          </button>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
-
+            @if (activeTab === 'consents') { <app-hospitalization-consent-panel [hospitalizationId]="activeHospitalization()!.id" [canModify]="canModify()" /> }
             @if (activeTab === 'cares') {
               <app-hospitalization-daily-care-panel
                 [hospitalizationId]="activeHospitalization()!.id"
@@ -132,209 +53,11 @@
               />
             }
 
-            @if (activeTab === 'cro') {
-              <div class="space-y-4">
-                <div class="flex justify-between items-center">
-                  <h5 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
-                    ✂️ Bloc Opératoire & CRO
-                  </h5>
-                  @if (canModify() && !showAddReport()) {
-                    <button
-                      type="button"
-                      (click)="showAddReport.set(true)"
-                      class="px-2 py-1 text-[10px] font-extrabold text-brand-cyan hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded border border-brand-cyan/20 cursor-pointer"
-                    >
-                      ➕ Saisir CRO
-                    </button>
-                  }
-                </div>
-
-                @if (showAddReport()) {
-                  <form (submit)="saveOperatingReport($event)" class="bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/20 p-4 rounded-lg border border-[var(--app-border)]/50 space-y-3">
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Chirurgien</label>
-                        <select [(ngModel)]="surgeonId" name="surgId" class="ui-select text-xs">
-                          <option value="">Sélectionner le Praticien</option>
-                          @for (s of staffList(); track s.id) {
-                            @if (s.role === 'MEDECIN') {
-                              <option [value]="s.id">{{ s.displayName }}</option>
-                            }
-                          }
-                        </select>
-                      </div>
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Anesthésiste</label>
-                        <select [(ngModel)]="anesthetistId" name="anesId" class="ui-select text-xs">
-                          <option value="">Sélectionner le Praticien</option>
-                          @for (s of staffList(); track s.id) {
-                            @if (s.role === 'MEDECIN' || s.role === 'INFIRMIER') {
-                              <option [value]="s.id">{{ s.displayName }}</option>
-                            }
-                          }
-                        </select>
-                      </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Diagnostic Pré-opératoire</label>
-                        <input type="text" [(ngModel)]="preOperativeDiagnosis" name="preDiag" class="ui-input text-xs" />
-                      </div>
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Diagnostic Post-opératoire</label>
-                        <input type="text" [(ngModel)]="postOperativeDiagnosis" name="postDiag" class="ui-input text-xs" />
-                      </div>
-                    </div>
-
-                    <div class="space-y-1">
-                      <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Procédure Réalisée*</label>
-                      <input type="text" [(ngModel)]="procedureName" name="pName" required class="ui-input text-xs" placeholder="Ex: Appendicectomie" />
-                    </div>
-
-                    <div class="space-y-1">
-                      <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Description de l'intervention (Protocole opératoire)</label>
-                      <textarea [(ngModel)]="procedureDescription" name="pDesc" class="ui-textarea text-xs" rows="3"></textarea>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Type d'Anesthésie</label>
-                        <select [(ngModel)]="anesthesiaType" name="aType" class="ui-select text-xs">
-                          <option value="GÉNÉRALE">Générale</option>
-                          <option value="LOCORÉGIONALE">Locorégionale</option>
-                          <option value="LOCALE">Locale</option>
-                          <option value="SÉDATION">Sédation</option>
-                          <option value="AUTRE">Autre</option>
-                        </select>
-                      </div>
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Protocole Anesthésique</label>
-                        <input type="text" [(ngModel)]="anesthesiaDescription" name="aDesc" class="ui-input text-xs" />
-                      </div>
-                    </div>
-
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Actes K Chirurgien</label>
-                        <input type="number" [(ngModel)]="kSurgeonValue" name="kSurg" min="0" class="ui-input text-xs" />
-                      </div>
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Actes K Anesthésiste</label>
-                        <input type="number" [(ngModel)]="kAnesthesistValue" name="kAnes" min="0" class="ui-input text-xs" />
-                      </div>
-                      <div class="space-y-1">
-                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Actes K Bloc</label>
-                        <input type="number" [(ngModel)]="kBlocValue" name="kBloc" min="0" class="ui-input text-xs" />
-                      </div>
-                    </div>
-
-                    <!-- Gestion des implants / consommables du bloc -->
-                    <div class="pt-2 border-t border-[var(--app-border)]/40 space-y-2">
-                      <p class="text-[11px] font-black text-[var(--text-secondary)] uppercase tracking-wider">Implants & Matériels implantables</p>
-                      
-                      @if (implantsInForm().length > 0) {
-                        <div class="p-2.5 bg-slate-50 dark:bg-slate-900 border border-[var(--app-border)]/40 rounded-lg text-xs space-y-1">
-                          @for (impl of implantsInForm(); track $index) {
-                            <div class="flex justify-between items-center py-1">
-                              <span><strong>{{ impl.implantName }}</strong> (Lot: {{ impl.lotNumber || 'N/A' }}, Qté: {{ impl.quantity }}, Prix: {{ impl.unitPrice }} FCFA)</span>
-                              <button type="button" (click)="removeImplantFromList($index)" class="text-red-500 hover:text-red-600 font-extrabold cursor-pointer">🗑️</button>
-                            </div>
-                          }
-                        </div>
-                      }
-
-                      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                        <input type="text" [(ngModel)]="newImplantName" name="newImpName" class="ui-input text-xs" placeholder="Nom de l'implant / matériel" />
-                        <input type="text" [(ngModel)]="newImplantLot" name="newImpLot" class="ui-input text-xs" placeholder="N° de Lot" />
-                        <div class="flex gap-2">
-                          <input type="number" [(ngModel)]="newImplantQty" name="newImpQty" min="1" class="ui-input text-xs" placeholder="Qté" />
-                          <input type="number" [(ngModel)]="newImplantPrice" name="newImpPrice" class="ui-input text-xs" placeholder="Prix" />
-                          <button type="button" (click)="addImplantToList()" class="px-3 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan rounded text-xs font-bold cursor-pointer">➕</button>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div class="flex justify-end gap-2 pt-2 border-t border-[var(--app-border)]/40">
-                      <button type="button" (click)="showAddReport.set(false); implantsInForm.set([])" class="px-3 py-1.5 border border-[var(--app-border)] rounded text-[11px] font-bold text-[var(--text-secondary)] hover:bg-slate-50 cursor-pointer">Annuler</button>
-                      <button type="submit" class="px-4 py-1.5 bg-brand-cyan hover:bg-[var(--brand-primary-hover)] text-white rounded text-[11px] font-bold cursor-pointer">Enregistrer</button>
-                    </div>
-                  </form>
-                }
-
-                @if (operatingReports().length === 0) {
-                  <p class="text-xs text-[var(--text-muted)] italic">Aucun compte-rendu opératoire consigné.</p>
-                } @else {
-                  <div class="space-y-4 mt-2">
-                    @for (report of operatingReports(); track report.id) {
-                      <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-slate-900/40 rounded-lg border border-[var(--app-border)]/40 space-y-3 relative">
-                        <div class="flex justify-between items-start">
-                          <div>
-                            <h6 class="text-xs font-black text-brand-cyan uppercase tracking-wider">{{ report.procedureName }}</h6>
-                            <p class="text-[11px] text-[var(--text-muted)] mt-0.5">Intervention du {{ report.operationDate | date:'dd/MM/yyyy HH:mm' }}</p>
-                          </div>
-                          @if (report.validated) {
-                            <span class="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold rounded">✅ Validé par {{ report.validatedBy }}</span>
-                          } @else {
-                            <div class="flex gap-2 items-center">
-                              <span class="px-2 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold rounded">⚠️ Provisoire</span>
-                              @if (canModify()) {
-                                <button
-                                  type="button"
-                                  (click)="validateReport(report.id)"
-                                  class="px-2 py-0.5 bg-brand-cyan text-white hover:bg-[var(--brand-primary-hover)] text-[10px] font-extrabold rounded cursor-pointer"
-                                >
-                                  Valider et Facturer
-                                </button>
-                              }
-                            </div>
-                          }
-                        </div>
-
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-[var(--app-border)]/20 pt-2.5">
-                          <div>
-                            <p><strong>Diag Pré-op :</strong> {{ report.preOperativeDiagnosis || 'Non spécifié' }}</p>
-                            <p class="mt-1"><strong>Diag Post-op :</strong> {{ report.postOperativeDiagnosis || 'Non spécifié' }}</p>
-                          </div>
-                          <div>
-                            <p><strong>Anesthésie :</strong> {{ report.anesthesiaType }} ({{ report.anesthesiaDescription || 'Pas de protocole' }})</p>
-                          </div>
-                        </div>
-
-                        @if (report.procedureDescription) {
-                          <div class="text-xs bg-white dark:bg-slate-900/50 p-2.5 rounded border border-[var(--app-border)]/30">
-                            <strong>Protocole opératoire :</strong>
-                            <p class="mt-1 whitespace-pre-line text-[var(--text-secondary)] leading-relaxed">{{ report.procedureDescription }}</p>
-                          </div>
-                        }
-
-                        <div class="flex flex-wrap gap-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider pt-1">
-                          <span>K Chirurgien : {{ report.kSurgeonValue }}</span>
-                          <span>K Anesthésiste : {{ report.kAnesthesistValue }}</span>
-                          <span>K Bloc : {{ report.kBlocValue }}</span>
-                        </div>
-
-                        @if (report.implants && report.implants.length > 0) {
-                          <div class="border-t border-[var(--app-border)]/20 pt-2 space-y-1">
-                            <p class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">Implants tracés :</p>
-                            @for (impl of report.implants; track impl.id) {
-                              <div class="text-[11px] text-[var(--text-secondary)] flex justify-between">
-                                <span>🔩 {{ impl.implantName }} (Lot: {{ impl.lotNumber || 'N/A' }} - {{ impl.manufacturer || 'Fabricant inconnu' }})</span>
-                                <span>Qté : {{ impl.quantity }} x {{ impl.unitPrice }} FCFA</span>
-                              </div>
-                            }
-                          </div>
-                        }
-                      </div>
-                    }
-                  </div>
-                }
-              </div>
-            }
+            @if (activeTab === 'cro') { <app-hospitalization-operating-report-panel [hospitalizationId]="activeHospitalization()!.id" [canModify]="canModify()" [staffList]="staffList()" /> }
           </div>
         </div>
       } @else {
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-8 shadow-xs text-center transition-colors">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-8 shadow-xs text-center transition-colors">
           <p class="text-[var(--text-muted)] italic mb-4">{{ t('patients.hospitalization.empty') }}</p>
           @if (canModify()) {
             <button
@@ -347,9 +70,9 @@
         </div>
       }
       @if (pastHospitalizations().length > 0) {
-        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-xl p-5 shadow-xs transition-colors">
+        <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-5 shadow-xs transition-colors">
           <h4 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-4">
-            📜 Historique des Hospitalisations
+            {{ t('patients.hospitalization.workflow.history') }}
           </h4>
           <div class="divide-y divide-slate-100 dark:divide-slate-800/80">
             @for (hosp of pastHospitalizations(); track hosp.id) {
@@ -359,17 +82,17 @@
                     {{ hosp.serviceName }} — {{ t('patients.hospitalization.room') }} {{ hosp.roomNumber }} | {{ hosp.bedNumber }}
                   </h5>
                   <p class="text-[10px] text-[var(--text-muted)] font-mono">
-                    N° Séjour : {{ hosp.hospitalizationNumber }}
+                    {{ t('patients.hospitalization.workflow.stayNumber') }} {{ hosp.hospitalizationNumber }}
                   </p>
                   <p class="text-[11px] text-[var(--text-muted)]">
-                    Médecin responsable : {{ staffMap().get(hosp.responsiblePractitionerId || '') || 'Non spécifié' }}
+                    {{ t('patients.hospitalization.workflow.responsible') }} {{ staffMap().get(hosp.responsiblePractitionerId || '') || t('patients.hospitalization.workflow.unspecified') }}
                   </p>
                   <p class="text-[11px] text-[var(--text-muted)]">
-                    {{ hosp.admittedAt | date:'dd/MM/yyyy' }} @if (hosp.dischargedAt) { au {{ hosp.dischargedAt | date:'dd/MM/yyyy' }} }
+                    {{ hosp.admittedAt | date:'dd/MM/yyyy' }} @if (hosp.dischargedAt) { {{ t('patients.hospitalization.workflow.to') }} {{ hosp.dischargedAt | date:'dd/MM/yyyy' }} }
                   </p>
                   @if (hosp.dischargeDiagnosis) {
                     <p class="text-xs text-[var(--text-secondary)]">
-                      <strong>Diag :</strong> {{ hosp.dischargeDiagnosis }}
+                      <strong>{{ t('patients.hospitalization.workflow.diagnosis') }}</strong> {{ hosp.dischargeDiagnosis }}
                     </p>
                   }
                 </div>
@@ -378,7 +101,7 @@
                     (click)="downloadEntryPdf(hosp)"
                     class="px-2.5 py-1 text-[11px] bg-[var(--app-surface-muted)] hover:bg-slate-100 dark:bg-[var(--bg-input)] dark:hover:bg-slate-700/80 border border-[var(--app-border)] dark:border-slate-700 text-[var(--text-secondary)] font-semibold rounded-sm transition-colors flex items-center gap-1 cursor-pointer"
                   >
-                    📄 Billet d'entrée
+                    {{ t('patients.hospitalization.workflow.entry') }}
                   </button>
                   @if (hosp.pdfFilePath) {
                     <button
@@ -396,17 +119,20 @@
       }
       @if (showAdmitModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-[var(--radius-brand-sm)] w-full max-w-[420px] shadow-lg overflow-hidden">
             <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
               <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.admit') }}</h3>
-              <button (click)="showAdmitModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
+              <button (click)="showAdmitModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-[var(--radius-brand-sm)] cursor-pointer">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </header>
             <form (submit)="saveAdmission($event)" class="p-5 space-y-4">
+              @if (visitsLoading()) { <p role="status">{{ t('common.loading') }}</p> }
+              @if (visitsError()) { <p role="alert" class="text-[var(--brand-danger-text)]">{{ visitsError() }} <button type="button" class="ui-button ui-button-secondary" (click)="loadVisits()">{{ t('common.retry') }}</button></p> }
+              @if (placementLoading() || bedsLoading()) { <p role="status">{{ t('common.loading') }}</p> }
               @if (admitError()) {
-                <div class="p-2.5 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-lg text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
-                  {{ admitError() }}
+                <div class="p-2.5 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-[var(--radius-brand-sm)] text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
+                  {{ admitError() }} <button type="button" class="ui-button ui-button-secondary" (click)="retryPlacement()">{{ t('common.retry') }}</button>
                 </div>
               }
               <div class="space-y-1">
@@ -415,17 +141,6 @@
                   <option value="">-- {{ t('patients.hospitalization.selectVisit') }} --</option>
                   @for (v of patientVisits(); track v.id) {
                     <option [value]="v.id">{{ v.visitNumber }} ({{ v.reason }} - {{ v.createdAt | date:'dd/MM/yyyy' }})</option>
-                  }
-                </select>
-              </div>
-              <div class="space-y-1">
-                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
-                <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select">
-                  <option value="">-- {{ t('patients.hospitalization.selectPractitioner') }} --</option>
-                  @for (p of staffList(); track p.id) {
-                    @if (hasRole(p.role, ['MEDECIN', 'ADMIN_CLINIQUE'])) {
-                      <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
-                    }
                   }
                 </select>
               </div>
@@ -439,6 +154,18 @@
                 </select>
               </div>
               <div class="space-y-1">
+                <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.responsiblePractitioner') }}*</label>
+                <select [(ngModel)]="responsiblePractitionerId" name="practitioner" required class="ui-select" [disabled]="!selectedWardId()">
+                  <option value="">{{ selectedWardId() ? t('patients.hospitalization.selectPractitioner') : t('patients.hospitalization.selectServiceFirst') }}</option>
+                  @for (p of eligiblePractitioners(); track p.id) {
+                    <option [value]="p.id">{{ p.displayName }} ({{ p.role }})</option>
+                  }
+                </select>
+                @if (selectedWardId() && eligiblePractitioners().length === 0) {
+                  <p class="text-[10px] text-amber-600 font-semibold mt-1">{{ t('patients.hospitalization.noPractitionerForService') }}</p>
+                }
+              </div>
+              <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.selectBed') }}*</label>
                 <select [(ngModel)]="selectedBedId" (change)="onAdmissionBedChange()" name="bed" class="ui-select" required [disabled]="!selectedWardId()">
                   <option value="">-- {{ t('patients.hospitalization.selectBed') }} --</option>
@@ -446,8 +173,8 @@
                     <option [value]="fb.id">{{ fb.roomNumber }} - {{ fb.bedNumber }}</option>
                   }
                 </select>
-                @if (selectedWardId() && freeBeds().length === 0) {
-                  <p class="text-[10px] text-amber-600 font-semibold mt-1">⚠️ Aucun lit libre dans ce service.</p>
+                @if (selectedWardId() && !bedsLoading() && !admitError() && !transferError() && freeBeds().length === 0) {
+                  <p class="text-[10px] text-amber-600 font-semibold mt-1">{{ t('patients.hospitalization.workflow.noBed') }}</p>
                 }
               </div>
               <div class="space-y-1">
@@ -456,7 +183,7 @@
               </div>
               <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
                 <button type="button" (click)="showAdmitModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer" [disabled]="!selectedBedId()">{{ t('common.save') }}</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer" [disabled]="admissionSubmitting() || placementLoading() || bedsLoading() || !selectedBedId()">{{ t('common.save') }}</button>
               </footer>
             </form>
           </div>
@@ -464,14 +191,15 @@
       }
       @if (showDischargeModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-[var(--radius-brand-sm)] w-full max-w-[420px] shadow-lg overflow-hidden">
             <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
               <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.discharge') }}</h3>
-              <button (click)="showDischargeModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
+              <button (click)="showDischargeModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-[var(--radius-brand-sm)] cursor-pointer">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </header>
             <form (submit)="saveDischarge($event)" class="p-5 space-y-4">
+              @if (dischargeError()) { <p role="alert" class="text-[var(--brand-danger-text)]">{{ dischargeError() }}</p> }
               <div class="space-y-1">
                 <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.dischargeDiagnosis') }}*</label>
                 <input type="text" [(ngModel)]="dischargeDiagnosis" name="diag" required class="ui-input" />
@@ -482,7 +210,7 @@
               </div>
               <div class="flex items-center gap-2 py-1">
                 <input type="checkbox" id="againstMedicalAdvice" [(ngModel)]="againstMedicalAdvice" name="againstMedicalAdvice" class="w-4 h-4 text-rose-600 border-slate-300 rounded focus:ring-rose-500" />
-                <label for="againstMedicalAdvice" class="text-xs font-semibold text-rose-600 cursor-pointer">⚠️ Sortie contre avis médical</label>
+                <label for="againstMedicalAdvice" class="text-xs font-semibold text-rose-600 cursor-pointer">{{ t('patients.hospitalization.workflow.againstAdvice') }}</label>
               </div>
               <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
                 <button type="button" (click)="showDischargeModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
@@ -494,21 +222,22 @@
       }
       @if (showTransferModal()) {
         <div class="fixed inset-0 bg-slate-950/40 backdrop-blur-xs flex items-center justify-center p-4 z-50">
-          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl w-full max-w-[420px] shadow-lg overflow-hidden">
+          <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-[var(--radius-brand-sm)] w-full max-w-[420px] shadow-lg overflow-hidden">
             <header class="px-5 py-4 border-b border-[var(--app-border)] flex items-center justify-between">
               <h3 class="font-display font-bold text-[var(--text-primary)]">{{ t('patients.hospitalization.transferTitle') }}</h3>
-              <button (click)="showTransferModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-lg cursor-pointer">
+              <button (click)="showTransferModal.set(false)" class="p-1 text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] rounded-[var(--radius-brand-sm)] cursor-pointer">
                 <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
               </button>
             </header>
             <form (submit)="saveTransfer($event)" class="p-5 space-y-4">
+              @if (placementLoading() || bedsLoading()) { <p role="status">{{ t('common.loading') }}</p> }
               @if (transferError()) {
-                <div class="p-2.5 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-lg text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
-                  {{ transferError() }}
+                <div class="p-2.5 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-[var(--radius-brand-sm)] text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
+                  {{ transferError() }} <button type="button" class="ui-button ui-button-secondary" (click)="retryPlacement()">{{ t('common.retry') }}</button>
                 </div>
               }
               @if (transferSuccessMsg()) {
-                <div class="p-2.5 bg-emerald-50 border border-emerald-100 rounded-lg text-xs text-emerald-700 font-semibold leading-relaxed">
+                <div class="p-2.5 bg-emerald-50 border border-emerald-100 rounded-[var(--radius-brand-sm)] text-xs text-emerald-700 font-semibold leading-relaxed">
                   {{ transferSuccessMsg() }}
                 </div>
               }
@@ -529,13 +258,13 @@
                     <option [value]="fb.id">{{ fb.roomNumber }} - {{ fb.bedNumber }}</option>
                   }
                 </select>
-                @if (selectedWardId() && freeBeds().length === 0) {
-                  <p class="text-[10px] text-amber-600 font-semibold mt-1">⚠️ Aucun lit libre dans ce service.</p>
+                @if (selectedWardId() && !bedsLoading() && !admitError() && !transferError() && freeBeds().length === 0) {
+                  <p class="text-[10px] text-amber-600 font-semibold mt-1">{{ t('patients.hospitalization.workflow.noBed') }}</p>
                 }
               </div>
               <footer class="pt-4 border-t border-[var(--app-border)]/80 flex justify-end gap-2">
                 <button type="button" (click)="showTransferModal.set(false)" class="px-4 py-2 border border-[var(--app-border)] rounded-[var(--radius-brand-sm)] text-xs font-semibold text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/40 cursor-pointer">{{ t('common.cancel') }}</button>
-                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer" [disabled]="!selectedBedId()">{{ t('common.save') }}</button>
+                <button type="submit" class="px-5 py-2 rounded-[var(--radius-brand-sm)] text-xs font-semibold text-white bg-brand-cyan hover:bg-[var(--brand-primary-hover)] cursor-pointer" [disabled]="transferSubmitting() || placementLoading() || bedsLoading() || !selectedBedId()">{{ t('common.save') }}</button>
               </footer>
             </form>
           </div>

@@ -18,7 +18,11 @@ public record VisitResponse(
 		Instant arrivalAt,
 		Instant createdAt,
 		Instant closedAt,
-		VitalsResponse vitals
+		VitalsResponse vitals,
+		String careStage,
+		UUID consultingPractitionerId,
+		String consultingPractitionerName,
+		Instant consultationStartedAt
 ) {
 	public static VisitResponse fromEntity(VisitEntity entity) {
 		return new VisitResponse(
@@ -35,7 +39,11 @@ public record VisitResponse(
 				entity.getArrivalAt(),
 				entity.getCreatedAt(),
 				entity.getClosedAt(),
-				VitalsResponse.fromEntity(entity.getVitals())
+				VitalsResponse.fromEntity(entity.getVitals()),
+				entity.getCareStage() != null ? entity.getCareStage().name() : null,
+				entity.getConsultingPractitionerId(),
+				entity.getConsultingPractitionerName(),
+				entity.getConsultationStartedAt()
 		);
 	}
 }

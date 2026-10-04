@@ -1,3 +1,4 @@
+import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -170,6 +171,7 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
   @Output() prescriptionRefreshed = new EventEmitter<PharmacyVerifyResponse>();
 
   private readonly fb = inject(FormBuilder);
+  private readonly rbac = inject(RbacApiService);
   private readonly pharmacyApi = inject(PharmacyApiService);
   readonly i18n = inject(I18nService);
 
@@ -238,7 +240,8 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
   }
 
   canDispenseStatus(): boolean {
-    return ['ACTIVE', 'PARTIALLY_DISPENSED'].includes(this.prescription?.status);
+    return this.rbac.hasPermission('PHARMACY_DISPENSE') && this.prescription?.pharmaceuticalValidated === true
+      && ['ACTIVE', 'PARTIALLY_DISPENSED'].includes(this.prescription?.status);
   }
 
   isQuantityFlexible(item: PharmacyVerifyItem): boolean {

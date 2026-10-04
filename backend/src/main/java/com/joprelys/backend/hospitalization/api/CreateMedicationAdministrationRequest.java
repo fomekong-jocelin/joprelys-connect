@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 public record CreateMedicationAdministrationRequest(
+    @jakarta.validation.constraints.NotNull(message = "Une prescription validée est obligatoire")
     UUID prescriptionItemId,
     @NotBlank(message = "Le nom du médicament est obligatoire")
     String medicationName,

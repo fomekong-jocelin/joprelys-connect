@@ -1,16 +1,8 @@
-@let existingClinicalDraft = !!(
-  currentDraft?.['symptoms']
-  || currentDraft?.['clinicalExam']
-  || currentDraft?.['diagnosis']
-  || currentDraft?.['conclusion']
-  || currentDraft?.['advice']
-  || currentDraft?.['followUp']
-);
-@let effectiveStage = stage() === 'PREPARE' && existingClinicalDraft ? 'FORM_READY' : stage();
+@let effectiveStage = stage() === 'PREPARE' && formReady ? 'FORM_READY' : stage();
 
 <div class="space-y-4" [attr.data-ai-workflow-stage]="effectiveStage">
   <section class="space-y-4">
-    @if (effectiveStage !== 'FORM_READY') {
+    @if (effectiveStage !== 'FORM_READY' && effectiveStage !== 'PREPARE') {
       <header class="flex items-start justify-between gap-3 px-1">
         <div class="flex min-w-0 items-center gap-2.5">
           <span class="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-[var(--radius-brand-sm)] bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]">
@@ -47,52 +39,12 @@
 
     @switch (effectiveStage) {
       @case ('PREPARE') {
-        <div class="mx-auto w-full max-w-3xl py-4 sm:py-8">
-          <div class="text-center">
-            <div class="mx-auto inline-flex h-16 w-16 items-center justify-center rounded-full bg-[var(--brand-primary-subtle)] text-[var(--brand-primary)]">
-              <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 18.75a6 6 0 006-6v-1.5m-12 0v1.5a6 6 0 006 6m0 0v3m-3 0h6M12 15.75a3 3 0 003-3V6a3 3 0 10-6 0v6.75a3 3 0 003 3z"/>
-              </svg>
-            </div>
-            <p class="mt-4 text-[10px] font-bold uppercase tracking-[0.14em] text-[var(--brand-primary)]">
-              {{ i18n.t('consultation.ai.captureStepEyebrow', 'Étape 1 · Enregistrement') }}
-            </p>
-            <h3 class="mt-1 text-xl font-extrabold text-[var(--text-primary)]">
-              {{ i18n.t('consultation.ai.captureStepTitle', 'Commencer la consultation') }}
-            </h3>
-            <p class="mx-auto mt-2 max-w-xl text-xs leading-5 text-[var(--text-muted)]">
-              {{ i18n.t('consultation.ai.captureStepHelp', 'Pendant l’échange, Joprelys conserve la transcription au fil de l’eau. Le formulaire clinique apparaîtra seulement après votre validation du compte rendu.') }}
-            </p>
-          </div>
-
-          <div class="mt-6 grid gap-3 sm:grid-cols-2">
-            <button
-              type="button"
-              (click)="startRealtime()"
-              [disabled]="busy() || !visitId"
-              class="rounded-[var(--radius-brand-md)] border border-[var(--brand-primary-border)] bg-[var(--brand-primary-subtle)] px-5 py-5 text-left transition hover:border-[var(--brand-primary)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.realtimeMode') }}</span>
-              <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.realtimeSimpleHelp') }}</span>
-            </button>
-
-            <button
-              type="button"
-              (click)="startDictation()"
-              [disabled]="busy() || !visitId || !mediaRecorderSupported"
-              class="rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] px-5 py-5 text-left transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--app-surface-muted)] disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <span class="block text-sm font-extrabold text-[var(--text-primary)]">{{ i18n.t('consultation.ai.dictationMode') }}</span>
-              <span class="mt-1 block text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('consultation.ai.dictationSimpleHelp') }}</span>
-            </button>
-          </div>
-
-          <div class="mt-5 text-center">
-            <button type="button" (click)="openManualForm()" [disabled]="busy()" class="text-xs font-bold text-[var(--text-muted)] hover:text-[var(--brand-primary)] hover:underline">
-              {{ i18n.t('consultation.ai.manualEntry', 'Saisir la consultation manuellement') }}
-            </button>
-          </div>
-        </div>
+        <app-consultation-entry-mode
+          [busy]="busy()"
+          [visitAvailable]="!!visitId"
+          [dictationSupported]="mediaRecorderSupported"
+          (start)="startEntryMode($event)"
+        />
       }
 
       @case ('CAPTURE_REALTIME') {
@@ -257,8 +209,8 @@
       @case ('FORM_READY') {
         <div class="flex flex-col gap-3 border-l-2 border-[var(--brand-success-muted)] py-2 pl-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="min-w-0 text-xs leading-5 text-[var(--brand-success-text)]">
-            <p class="font-bold">{{ i18n.t('consultation.ai.formReadyTitle', 'Compte rendu validé') }}</p>
-            <p class="text-[var(--text-secondary)]">{{ i18n.t('consultation.ai.formReadyHelp', 'Le formulaire clinique est disponible pour votre dernière vérification avant sauvegarde.') }}</p>
+            <p class="font-bold">{{ i18n.t(reportAccepted() ? 'consultation.ai.formReadyTitle' : 'consultation.entry.formOpenTitle') }}</p>
+            <p class="text-[var(--text-secondary)]">{{ i18n.t(reportAccepted() ? 'consultation.ai.formReadyHelp' : 'consultation.entry.formOpenHelp') }}</p>
           </div>
           <button
             type="button"
@@ -272,6 +224,12 @@
       }
     }
   </section>
+
+  @if (effectiveStage !== 'PREPARE' && effectiveStage !== 'FORM_READY') {
+    <button type="button" (click)="openManualForm()" [disabled]="busy() || recording() || realtimeActive()" class="ui-button ui-button-secondary">
+      {{ i18n.t('consultation.entry.switchToManual') }}
+    </button>
+  }
 
   @if (effectiveStage === 'TRANSCRIPT_REVIEW' || effectiveStage === 'REPORT_REVIEW') {
     <details class="border-t border-[var(--app-border)] pt-1">

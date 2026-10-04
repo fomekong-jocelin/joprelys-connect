@@ -73,6 +73,9 @@ public class PatientPreRegistrationEntity {
     @Column(name = "validated_by")
     private UUID validatedBy;
 
+    @Column(name = "validated_patient_id")
+    private UUID validatedPatientId;
+
     protected PatientPreRegistrationEntity() {
     }
 
@@ -247,5 +250,13 @@ public class PatientPreRegistrationEntity {
 
     public void setValidatedBy(UUID validatedBy) {
         this.validatedBy = validatedBy;
+    }
+
+    public UUID getValidatedPatientId() {
+        return validatedPatientId;
+    }
+
+    public void setValidatedPatientId(UUID validatedPatientId) {
+        this.validatedPatientId = validatedPatientId;
     }
 }

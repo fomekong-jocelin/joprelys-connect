@@ -125,5 +125,14 @@
   "admission.error.EMERGENCY_PROVISIONAL_PATIENT_REQUIRED": "Les informations du patient provisoire sont manquantes.",
   "admission.error.EMERGENCY_TRIAGE_REQUIRED": "Les informations de triage sont manquantes.",
   "admission.error.EMERGENCY_THIRD_PARTY_REQUIRED": "Renseignez le nom, le téléphone et le lien de la personne ayant amené le patient.",
-  "admission.error.EMERGENCY_ADMISSION_FAILED": "L’admission d’urgence n’a pas pu être créée. Réessayez sans fermer la fenêtre."
+  "admission.error.EMERGENCY_ADMISSION_FAILED": "L’admission d’urgence n’a pas pu être créée. Réessayez sans fermer la fenêtre.",
+  "admission.mainPractitioner": "Praticien principal",
+  "admission.mainPractitionerPlaceholder": "-- Non attribué (file commune) --",
+  "admission.arrivalAt": "Date et heure d’arrivée",
+  "admission.optionsLoadError": "Services et praticiens indisponibles : vous pouvez saisir le service dans « Autre » et laisser le praticien non attribué.",
+  "admission.summaryVisitChoices": "Orientation · Service · Praticien principal",
+  "admission.toast.visitCreated": "Visite ouverte pour",
+  "admission.toast.nextStepVitals": "Le patient apparaît dans la file, en attente des constantes.",
+  "admission.toast.emergencyCreated": "Urgence enregistrée pour",
+  "admission.draftArrivalReset": "L’heure d’arrivée du brouillon a été remplacée par l’heure actuelle : corrigez-la si le patient est arrivé plus tôt."
 }

@@ -1,5 +1,6 @@
 package com.joprelys.backend.visit.api;
 
+import com.joprelys.backend.visit.application.ActiveVisitQueueUseCase;
 import com.joprelys.backend.visit.application.GenerateVisitConsultationQrCodeUseCase;
 import com.joprelys.backend.visit.application.VisitService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -17,6 +18,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 import java.util.UUID;
@@ -28,11 +30,14 @@ public class VisitController {
 
 	private final VisitService visitService;
 	private final GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode;
+	private final ActiveVisitQueueUseCase activeVisitQueue;
 
 	public VisitController(VisitService visitService,
-						   GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode) {
+						   GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode,
+						   ActiveVisitQueueUseCase activeVisitQueue) {
 		this.visitService = visitService;
 		this.generateVisitConsultationQrCode = generateVisitConsultationQrCode;
+		this.activeVisitQueue = activeVisitQueue;
 	}
 
 	@GetMapping(value = "/{id}/qrcode", produces = MediaType.IMAGE_PNG_VALUE)
@@ -90,8 +95,11 @@ public class VisitController {
 			@ApiResponse(responseCode = "200", description = "Liste des visites actives retournée"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
 	})
-	public List<VisitResponse> getActiveVisits() {
-		return visitService.getActiveVisits().stream()
+	public List<VisitResponse> getActiveVisits(
+			@Parameter(description = "ALL (défaut), MINE (mes patients) ou SERVICE (mes unités)")
+			@RequestParam(name = "scope", defaultValue = "ALL") ActiveVisitQueueUseCase.Scope scope,
+			Authentication authentication) {
+		return activeVisitQueue.getActiveVisits(scope, authentication).stream()
 				.map(VisitResponse::fromEntity)
 				.toList();
 	}
@@ -107,7 +115,7 @@ public class VisitController {
 	}
 
 	@PostMapping("/{id}/close")
-	@PreAuthorize("hasAuthority('VISIT_MANAGE')")
+	@PreAuthorize("hasAuthority('VISIT_MANAGE') and hasAuthority('CLINICAL_SIGN') and hasAuthority('CONSULTATION_LOCK')")
 	@Operation(summary = "Clôturer une visite", description = "Clôture une visite en cours.", responses = {
 			@ApiResponse(responseCode = "200", description = "Visite clôturée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
@@ -126,29 +134,6 @@ public class VisitController {
 	public VisitResponse cancel(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
 		var visit = visitService.cancelVisit(id);
 		return VisitResponse.fromEntity(visit);
-	}
-
-	@PostMapping("/{id}/vitals")
-	@PreAuthorize("hasAuthority('VISIT_VITALS_WRITE')")
-	@Operation(summary = "Enregistrer les constantes vitales", description = "Sauvegarde les constantes vitales associées à une visite.", responses = {
-			@ApiResponse(responseCode = "200", description = "Constantes vitales enregistrées"),
-			@ApiResponse(responseCode = "404", description = "Introuvable")
-	})
-	public VitalsResponse saveVitals(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id, @Valid @RequestBody SaveVitalsRequest request) {
-		var vitals = visitService.saveVitals(id, request);
-		return VitalsResponse.fromEntity(vitals);
-	}
-
-	@GetMapping("/{id}/vitals")
-	@PreAuthorize("hasAuthority('VISIT_READ')")
-	@Operation(summary = "Récupérer les constantes vitales", description = "Retourne les constantes vitales d'une visite.", responses = {
-			@ApiResponse(responseCode = "200", description = "Constantes vitales retournées"),
-			@ApiResponse(responseCode = "404", description = "Introuvable")
-	})
-	public VitalsResponse getVitals(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
-		return visitService.getVitals(id)
-				.map(VitalsResponse::fromEntity)
-				.orElse(null);
 	}
 
 	@GetMapping("/patient/{patientId}")

@@ -1,5 +1,16 @@
 # Production-Ready Review Checklist
 
+## Exécution — UX-20261004-CLINICAL-LAYOUT-SPACING
+
+- [x] Captures/code diagnostiqués ; ticket, spécification et conception écrits avant modification.
+- [x] Actions du drawer en pleine largeur avec fermeture secondaire séparée ; header/footer non rétrécissables et corps défilable.
+- [x] Gap explicite entre hôtes de consultation, progression avec padding et grille responsive ; Tailwind v4 et tokens existants.
+- [x] Conditions/handlers, API, backend maître, alertes, FR/EN, light/dark, OWASP et configuration 12-Factor inchangés.
+- [x] Suite Angular 115 fichiers / 633 tests verts, build production, i18n et diff verts ; utilitaires présents dans CSS compilé.
+- [x] `.gitignore` contrôlé : captures patient, logs et builds non versionnés ; pas de lint script, pas de test miroir des classes.
+- [ ] Conformité taille : template consultation existant 800 lignes (inchangé) > limite HTML 300 ; extraction ou ADR acceptée nécessaire avant approbation. Drawer 297 (alerte >200), entrée 136.
+- [ ] Recette visuelle desktop/mobile FR/EN light/dark et zoom/clavier ; accès navigateur précédemment refusé.
+
 > Checklist obligatoire pour chaque Pull Request, Merge Request ou intervention IA.
 > Tout élément doit être marqué ✅, ❌ ou ➖ avec justification.
 > Cette checklist s’applique à Spring Boot, Angular, Flutter, CI/CD, sécurité, tests, observabilité et documentation.
@@ -446,6 +457,47 @@ Règles minimales :
 - [x] Analyse Dart de `lib` et `test` sans erreur.
 - [x] Suite Flutter complète : 53 tests réussis.
 - [x] Build web Flutter réussi.
-- [x] Goldens login/accueil sombre `393 × 852` et comparaison visuelle validées (`design-qa.md` : `passed`).
+- [x] Goldens login/accueil sombre `393 × 852` et comparaison visuelle validées (rapport archivé dans `docs/ai/validation/DESIGN-QA-20260730-MOBILE-AUTH.md` : `passed`).
 - [ ] Build APK debug sur CI ou poste autorisé à utiliser/télécharger Gradle 8.14.
 - [ ] Recette Android réelle FR/EN, light/dark, texte agrandi, clavier et biométrie.
+
+## Exécution — UX-20261004-CONSULTATION-ENTRY-MOCKUP
+
+- [x] Maquette acceptée avant implémentation ; spécification, conception, diagnostic, plan de test et guide mis à jour.
+- [x] Composant de sélection dédié, radios natives et CTA explicite ; aucun microphone activé par simple sélection.
+- [x] Visibilité parent/enfant explicite et testée : manuel pristine, consultation chargée, rapport accepté, reprise/erreurs.
+- [x] Tailwind v4, icônes partagées, thèmes/tokens et FR/EN conservés ; 37 nouvelles clés et 12 tokens vérifiés.
+- [x] API, RBAC, validations serveur, configuration/proxy, dépendances et stockage inchangés ; aucune sauvegarde clinique automatique.
+- [x] Suite Angular complète : 115 fichiers, 619 tests ; build production et i18n réussis.
+- [x] `.gitignore` contrôlé ; aucun secret, image patient, log ni artefact de build versionné ; tailles sous 500 lignes (alerte existante >300 tracée).
+- [ ] Comparaison visuelle maquette/rendu, desktop/mobile, light/dark FR/EN, focus clavier et microphone réel : accès navigateur précédemment refusé, `design-qa.md` bloqué.
+
+## Exécution — UX-20261004-VITALS-ENTRY-CLARITY
+
+- [x] Capture/code diagnostiqués ; documentation fonctionnelle, technique, tests et ticket présents au démarrage.
+- [x] Manuel / dictée / écoute continue : sélection sans capture, démarrage explicite ; texte optionnel séparé et report distinct de sauvegarde.
+- [x] Champs conservés au changement de mode ; radio, labels associés, focus confiné/restauré et Échap testés.
+- [x] Protection du double démarrage et de la permission tardive ; aucune sauvegarde pendant activité assistant, aucun report automatique.
+- [x] 14 nouveaux cas ; suite complète 115 fichiers / 633 tests réussis, shell i18n et constantes FR/EN/tokens contrôlés.
+- [x] API/DB/Flutter/configuration/proxy/dépendances et permissions inchangés ; `.gitignore` préserve gouvernance et ignore preuves/logs/builds.
+- [x] Build de production final après ajustement des cibles tactiles et `git diff --check` réussis.
+- [ ] Recette visuelle mobile/desktop, light/dark, FR/EN, zoom/clavier et microphone réel ; accès navigateur précédemment refusé.
+
+## Exécution — FIX-20261004-ADMIN-PANEL-CLINICAL-AUDIT
+
+- [x] Audit intégral, diagnostic, EPIC → ADMIN-01 à 05, critères/reviewers et documentation initiale établis ; source et changements utilisateur préexistants préservés.
+- [x] FIX-01 à 08 et constats hors matrice couverts dans DIAG-20261004-ADMIN-PANEL-CLINICAL-AUDIT ; limites externes identifiées explicitement.
+- [x] Profil principal conservé malgré panne du contexte, alias audit racine et journal RBAC chargé une seule fois, interop distinct.
+- [x] Nom local SERVICE avec catalogue requis, responsabilité professionnelle historisée, toutes les disciplines et types d'espaces cités ; migrations nouvelles V113/V114 seulement.
+- [x] Permissions serveur dédiées, médecin actif à la signature, soignant sans prescription, administrateur sans nouveaux actes réservés ; consultation scellée non modifiable via API.
+- [x] Clôture et édition sous verrou de visite ; validation/délivrance/annulation sérialisées sur ordonnance ; identité/permission et revue préalable obligatoires pour dispenser.
+- [x] Controller prescription sans métier/repository ; façades et panneaux de présentation ; fichiers de production modifiés sous 500 lignes et sous-templates sous 300.
+- [x] Alertes >300 tracées : ConsultationComponent (476), ProfileComponent (373), OrganizationListComponent (464), RbacManagementComponent (409), PharmacyService (394), SpatialService (486), StaffAssignmentService (394), DefaultHospitalOrganizationService (366) et panneaux pharmacie existants. Aucune refonte générale engagée.
+- [x] Tailwind v4, tokens light/dark et rayons sobres ; erreurs champ accessibles ; 56 nouvelles clés FR/EN, breadcrumbs réactifs et uploader traduit.
+- [x] Maven/YAML/proxy/configuration et dépendances conservés ; `.gitignore` contrôlé, aucun secret/log/build suivi ; UTF-8 et `git diff --check` verts.
+- [x] Angular : 118 fichiers / 647 tests ; build production et i18n:check réussis. Maven complet : 922 tests, 0 échec/erreur, 9 ignorés ; complément final : 61 ciblés verts avec recouvrement.
+- [x] Rupture d'autorisation/pharmacie documentée dans API-CONTRACT, ADR et changelog ; MAJOR candidat sans bump/release ni déploiement.
+- [ ] PostgreSQL réel : neuf tests Testcontainers ignorés faute de Docker ; H2 ne remplace pas ce gate.
+- [ ] Recette navigateur/clinique multi-profils, FR/EN light/dark, mobile, review Tech Lead/médecin/pharmacien/bed manager.
+- [x] ADMIN-04-PNG : PNG/JPEG réellement normalisés en PNG, transparence/limites/rejets vérifiés ; upload administratif préservé, association profil contrôlée, image PDF prouvée ; 56 nouvelles clés FR/EN.
+- [ ] Fournisseur signature/horodatage qualifiés et vérification ordinale (ADMIN-04-EXT), coordination des rôles personnalisés/mobile/partenaires avant livraison.

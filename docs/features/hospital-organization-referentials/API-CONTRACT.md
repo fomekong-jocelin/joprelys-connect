@@ -15,8 +15,7 @@ Retourne les entrées actives du catalogue service :
   {
     "code": "GENERAL_MEDICINE",
     "nameFr": "Médecine générale",
-    "nameEn": "General medicine",
-    "serviceType": "OUTPATIENT"
+    "nameEn": "General medicine"
   }
 ]
 ```
@@ -41,7 +40,7 @@ Retourne les spécialités actives :
 
 Retourne les unités du tenant courant, triées de manière stable. La réponse contient `parentId` afin que le frontend construise l'arbre sans dupliquer les règles métier.
 
-Pour une unité `SERVICE`, `name` vaut volontairement `null` : le libellé visible est résolu depuis `serviceCatalogCode` et le catalogue FR/EN selon la locale active. Cela évite de figer une langue dans la donnée métier.
+Depuis V113, une unité `SERVICE` peut porter un nom local optionnel de 2 à 120 caractères après trim. Le libellé visible utilise ce nom s'il existe ; sinon il est résolu depuis `serviceCatalogCode` et le catalogue FR/EN selon la locale active. Les anciens `name: null` restent acceptés.
 
 ```json
 [
@@ -71,7 +70,7 @@ Pour `POLE`, `DEPARTMENT` et `CARE_UNIT`, `name` contient le nom propre choisi p
 }
 ```
 
-Pour `SERVICE`, tout `name` non vide est refusé. Le backend conserve uniquement le code du catalogue. Pour `POLE`, `DEPARTMENT`, `CARE_UNIT`, `name` est obligatoire et `serviceCatalogCode` doit être null.
+Pour `SERVICE`, `serviceCatalogCode` reste obligatoire et `name` est optionnel ; un nom vide devient null et un nom local non vide est validé/persisté. Pour `POLE`, `DEPARTMENT`, `CARE_UNIT`, `name` est obligatoire et `serviceCatalogCode` doit être null.
 
 Réponses : `201`, `400`, `403`, `409`.
 

@@ -8,6 +8,8 @@ Audit fonctionnel et métier + Engineering + Project Manager + Architecture prop
 
 DONE — audit documentaire et technique terminé ; validation pluridisciplinaire et implémentation hors périmètre.
 
+Addendum praticien du 2026-08-09 : le diagnostic ciblé du chemin urgence/admission jusqu’au lit est consigné dans [DIAG-20260809-PRACTITIONER-HOSPITAL-PATH-BED-ASSIGNMENT](DIAG-20260809-PRACTITIONER-HOSPITAL-PATH-BED-ASSIGNMENT.md) et [PRACTITIONER-PATIENT-FLOW-ADDENDUM](../../features/hospital-organization-capacity-audit/PRACTITIONER-PATIENT-FLOW-ADDENDUM.md). Les gaps P0 confirment que HOS-ADM, HOS-MOV et HOS-PATH restent à cadrer avant implémentation.
+
 ## Objectif
 
 Évaluer sans présupposé la manière dont Joprelys modélise et opère les structures de santé, les services, les espaces, les lits, les hospitalisations, les affectations de personnel et le parcours patient, puis proposer un modèle cible adaptable aux petites structures comme aux réseaux multi-établissements.

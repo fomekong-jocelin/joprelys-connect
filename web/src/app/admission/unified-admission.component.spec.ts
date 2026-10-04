@@ -3,6 +3,7 @@ import { of } from 'rxjs';
 import { I18nService } from '../core/i18n/i18n.service';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { PatientApiService } from '../patient/patient-api.service';
+import { Patient } from '../patient/patient.models';
 import { VisitApiService } from '../visit/visit-api.service';
 import { UnifiedAdmissionComponent } from './unified-admission.component';
 
@@ -34,7 +35,19 @@ describe('UnifiedAdmissionComponent', () => {
     'admission.requiredThirdParty': 'Renseignez le nom, le téléphone et le lien de la personne ayant amené le patient.',
   };
 
+  let visitApi: { create: ReturnType<typeof vi.fn>; getAdmissionOptions: ReturnType<typeof vi.fn> };
+
   beforeEach(async () => {
+    visitApi = {
+      create: vi.fn().mockReturnValue(of({ id: 'visit-1' })),
+      getAdmissionOptions: vi.fn().mockReturnValue(of({
+        services: ['Médecine générale', 'Pédiatrie'],
+        practitioners: [
+          { id: 'doctor-1', displayName: 'Dr Péd', role: 'MEDECIN', unitNames: ['Pédiatrie'] },
+          { id: 'doctor-2', displayName: 'Dr MG', role: 'MEDECIN', unitNames: ['Médecine générale'] },
+        ],
+      })),
+    };
     emergencyApi = {
       create: vi.fn().mockReturnValue(of({ id: 'emergency-1' })),
       createProvisionalAdmission: vi.fn().mockReturnValue(of({
@@ -62,7 +75,7 @@ describe('UnifiedAdmissionComponent', () => {
           },
         },
         { provide: EmergencyApiService, useValue: emergencyApi },
-        { provide: VisitApiService, useValue: { create: vi.fn().mockReturnValue(of({ id: 'visit-1' })) } },
+        { provide: VisitApiService, useValue: visitApi },
       ],
     }).compileComponents();
 
@@ -133,5 +146,75 @@ describe('UnifiedAdmissionComponent', () => {
       emergency: expect.objectContaining({ chiefComplaint: 'Patient inconscient' }),
     }));
     expect(emergencyApi.create).not.toHaveBeenCalled();
+  });
+
+  it('opens a normal visit with the shared orientation codes for the searched patient', () => {
+    component.setCarePath('NORMAL');
+    component.onPatientSelected(patient as unknown as Patient);
+    component.nextStep();
+    fixture.detectChanges();
+    component.form.patchValue({
+      reason: 'Fièvre depuis 3 jours',
+      orientation: 'CONSULTATION',
+      service: 'Pédiatrie',
+      mainPractitionerId: 'doctor-1',
+    });
+    component.nextStep();
+
+    component.submit();
+
+    expect(fixture.nativeElement.querySelector('app-visit-details-fields')).toBeTruthy();
+    expect(visitApi.create).toHaveBeenCalledWith(expect.objectContaining({
+      patientId: 'patient-1',
+      reason: 'Fièvre depuis 3 jours',
+      orientation: 'CONSULTATION',
+      service: 'Pédiatrie',
+      mainPractitionerId: 'doctor-1',
+    }));
+  });
+
+  it('does not offer emergency orientation in the normal path', () => {
+    component.setCarePath('NORMAL');
+    component.onPatientSelected(patient as unknown as Patient);
+    component.nextStep();
+    fixture.detectChanges();
+
+    const options = Array.from(fixture.nativeElement.querySelectorAll('#visit-orientation option'))
+      .map((option) => (option as HTMLOptionElement).value);
+    expect(options).not.toContain('EMERGENCY');
+    expect(options).toContain('CONSULTATION');
+  });
+
+  it('lists services and filters practitioners by the selected service from admission options', () => {
+    component.setCarePath('NORMAL');
+    component.onPatientSelected(patient as unknown as Patient);
+    component.nextStep();
+    fixture.detectChanges();
+    component.form.patchValue({ service: 'Pédiatrie' });
+    fixture.detectChanges();
+
+    const options = (id: string) => Array.from(fixture.nativeElement.querySelectorAll(`#${id} option`))
+      .map((option) => (option as HTMLOptionElement).textContent?.trim());
+    expect(options('visit-service')).toEqual(expect.arrayContaining(['Médecine générale', 'Pédiatrie']));
+    expect(options('visit-practitioner')).toContain('Dr Péd');
+    expect(options('visit-practitioner')).not.toContain('Dr MG');
+  });
+
+  it("remplace l'heure d'arrivée périmée d'un brouillon restauré", () => {
+    const stale = new Date(Date.now() - 2 * 60 * 60_000);
+    const staleLocal = new Date(stale.getTime() - stale.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+    sessionStorage.setItem('joprelys_admission_draft', JSON.stringify({
+      currentStep: 2,
+      carePath: 'NORMAL',
+      patientMode: 'EXISTING',
+      formValue: { ...component.form.getRawValue(), carePath: 'NORMAL', arrivalAt: staleLocal },
+    }));
+
+    const restored = TestBed.createComponent(UnifiedAdmissionComponent);
+    restored.detectChanges();
+
+    expect(restored.componentInstance.form.get('arrivalAt')?.value).not.toBe(staleLocal);
+    expect(restored.componentInstance.draftArrivalReset()).toBe(true);
+    sessionStorage.removeItem('joprelys_admission_draft');
   });
 });

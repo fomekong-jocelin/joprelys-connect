@@ -61,6 +61,18 @@ public class LabOrderService {
 				.orElseThrow(() -> new IllegalArgumentException("Praticien introuvable"));
 		UUID organizationId = practitioner.getOrganizationId();
 
+		// Une seule demande active par visite et type d'examen : un nouvel enregistrement
+		// de la consultation complète la demande existante au lieu d'en créer une seconde.
+		if (visit != null) {
+			var existingOrder = labOrderRepository.findFirstByVisitIdAndExamTypeAndStatusNotOrderByCreatedAtDesc(
+					visit.getId(), request.examType(), LabOrderStatus.CANCELLED);
+			if (existingOrder.isPresent()) {
+				LabOrderEntity order = existingOrder.get();
+				mergeMissingExams(order, request.exams());
+				return mapToResponse(labOrderRepository.save(order));
+			}
+		}
+
 		String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
 		String prefix = "EXAM-REQ-" + dateStr + "-";
 		long countToday = labOrderRepository.countByExamRequestNumberStartingWithGlobally(prefix);
@@ -152,6 +164,28 @@ public class LabOrderService {
 			return mapToResponse(saved);
 		} finally {
 			com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+		}
+	}
+
+	void mergeMissingExams(LabOrderEntity order, List<String> exams) {
+		if (exams == null) {
+			return;
+		}
+		boolean added = false;
+		for (String exam : exams) {
+			if (exam == null || exam.isBlank()) {
+				continue;
+			}
+			String examName = exam.trim();
+			boolean alreadyRequested = order.getItems().stream()
+					.anyMatch(item -> item.getExamName().equalsIgnoreCase(examName));
+			if (!alreadyRequested) {
+				order.getItems().add(new LabOrderItemEntity(order, examName));
+				added = true;
+			}
+		}
+		if (added) {
+			recalculateOrderStatus(order);
 		}
 	}
 

@@ -138,7 +138,10 @@
               <div class="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <app-file-drag-drop #photoUploader [label]="t('profile.photoLabel')" [previewUrl]="photoViewUrl()" (fileSelected)="onFileSelected($event, 'photo', photoUploader)" (fileRemoved)="photoPath.set(null)" />
                 @if (isDoctorSelected()) {
-                  <app-file-drag-drop #sigUploader [label]="t('profile.signatureLabel')" [previewUrl]="signatureViewUrl()" (fileSelected)="onFileSelected($event, 'signature', sigUploader)" (fileRemoved)="signaturePath.set(null)" />
+                  <div class="space-y-2">
+                    <app-file-drag-drop #sigUploader [label]="t('profile.signatureLabel')" accept="image/png, image/jpeg" [previewUrl]="signatureViewUrl()" (fileSelected)="onFileSelected($event, 'signature', sigUploader)" (fileRemoved)="signaturePath.set(null)" />
+                    <p class="text-xs text-[var(--text-muted)]">{{ t('profile.signaturePngHint') }}</p>
+                  </div>
                   <app-file-drag-drop #stampUploader [label]="t('profile.stampLabel')" [previewUrl]="stampViewUrl()" (fileSelected)="onFileSelected($event, 'stamp', stampUploader)" (fileRemoved)="stampPath.set(null)" />
                 }
               </div>

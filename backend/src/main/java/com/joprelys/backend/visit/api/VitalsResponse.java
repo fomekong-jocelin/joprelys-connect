@@ -1,7 +1,10 @@
 package com.joprelys.backend.visit.api;
 
+import com.joprelys.backend.visit.domain.VitalSignAlertPolicy;
 import com.joprelys.backend.visit.infrastructure.persistence.VitalsEntity;
 import java.math.BigDecimal;
+import java.time.Instant;
+import java.util.List;
 
 public record VitalsResponse(
 		BigDecimal temperature,
@@ -14,7 +17,9 @@ public record VitalsResponse(
 		BigDecimal glycemia,
 		Integer respiratoryRate,
 		Integer painScale,
-		BigDecimal bmi
+		BigDecimal bmi,
+		Instant recordedAt,
+		List<VitalSignAlertPolicy.VitalAlert> alerts
 ) {
 	public static VitalsResponse fromEntity(VitalsEntity entity) {
 		if (entity == null) return null;
@@ -29,7 +34,17 @@ public record VitalsResponse(
 				entity.getGlycemia(),
 				entity.getRespiratoryRate(),
 				entity.getPainScale(),
-				entity.getBmi()
+				entity.getBmi(),
+				entity.getUpdatedAt() != null ? entity.getUpdatedAt() : entity.getCreatedAt(),
+				VitalSignAlertPolicy.evaluate(
+						entity.getTemperature(),
+						entity.getPulse(),
+						entity.getSystolic(),
+						entity.getDiastolic(),
+						entity.getSpo2(),
+						entity.getGlycemia(),
+						entity.getRespiratoryRate(),
+						entity.getPainScale())
 		);
 	}
 }

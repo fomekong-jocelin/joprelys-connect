@@ -10,7 +10,14 @@
       <app-ui-alert tone="error" class="mb-6">{{ error() }}</app-ui-alert>
     }
     @if (successMessage()) {
-      <app-ui-alert tone="info" class="mb-6">{{ successMessage() }}</app-ui-alert>
+      <app-ui-alert tone="info" class="mb-6">
+        <span>{{ successMessage() }}</span>
+        @if (validatedPatientId(); as patientId) {
+          <a [routerLink]="['/patients', patientId]" class="ui-link ml-2 font-bold">
+            {{ t('preRegistrations.openPatientRecord') }}
+          </a>
+        }
+      </app-ui-alert>
     }
 
     <!-- Barre d'outils et filtres -->
@@ -30,7 +37,7 @@
             <rect x="14" y="14" width="7" height="7" />
             <rect x="3" y="14" width="7" height="7" />
           </svg>
-          QR Code d'Admission
+          {{ t('preRegistrations.qrButton') }}
         </app-ui-button>
 
         <span class="text-slate-300 dark:text-[var(--text-secondary)] hidden sm:inline">|</span>
@@ -140,7 +147,7 @@
       <!-- Pagination -->
       <div class="mt-4 flex items-center justify-between">
         <div class="text-xs text-[var(--text-muted)]">
-          Total : <b>{{ totalElements() }}</b> demandes
+          {{ t('preRegistrations.total') }} <b>{{ totalElements() }}</b>
         </div>
         <div class="flex gap-2">
           <button 
@@ -148,14 +155,14 @@
             (click)="prevPage()"
             class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-[var(--app-border)] disabled:opacity-40 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition"
           >
-            Précédent
+            {{ t('preRegistrations.previous') }}
           </button>
           <button 
             [disabled]="(page() + 1) >= totalPages() || actionLoading()"
             (click)="nextPage()"
             class="px-3 py-1.5 text-xs font-bold rounded-[4px] border border-[var(--app-border)] disabled:opacity-40 hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-900 transition"
           >
-            Suivant
+            {{ t('preRegistrations.next') }}
           </button>
         </div>
       </div>
@@ -177,7 +184,7 @@
             {{ t('preRegistrations.drawerTitle') }}
           </h2>
           <p class="text-xxs text-[var(--text-muted)]">
-            Soumis le {{ preReg.createdAt | date:'dd/MM/yyyy à HH:mm' }}
+            {{ t('preRegistrations.submittedOn') }} {{ preReg.createdAt | date:'dd/MM/yyyy HH:mm' }}
           </p>
         </div>
         <button 
@@ -209,7 +216,7 @@
             <div class="grid grid-cols-2 gap-4">
               <!-- Demande soumise -->
               <div class="p-3 bg-[var(--app-surface)] border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
-                <div class="text-[9px] font-black uppercase text-[var(--text-muted)]">Demande En ligne</div>
+                <div class="text-[9px] font-black uppercase text-[var(--text-muted)]">{{ t('preRegistrations.onlineRequest') }}</div>
                 <div class="font-bold text-[var(--text-primary)] truncate">{{ preReg.lastName }} {{ preReg.firstName }}</div>
                 <div class="text-xxs">🎂 {{ preReg.birthDate | date:'dd/MM/yyyy' }}</div>
                 <div class="text-xxs">📞 {{ preReg.phone || '-' }}</div>
@@ -219,7 +226,7 @@
               <!-- Patient similaire existant -->
               <div class="p-3 bg-[var(--app-surface)] border rounded-[4px] space-y-1.5" style="border-color: var(--border-color)">
                 <div class="flex items-center justify-between">
-                  <span class="text-[9px] font-black uppercase text-amber-600 dark:text-amber-400">Dossier Existant</span>
+                  <span class="text-[9px] font-black uppercase text-amber-600 dark:text-amber-400">{{ t('preRegistrations.existingRecord') }}</span>
                   <span class="text-[9px] font-black bg-amber-100 dark:bg-amber-950/40 text-[var(--brand-warning-text)] px-1 rounded-xs">
                     {{ preReg.similarityScore | number:'1.0-0' }}%
                   </span>
@@ -227,7 +234,7 @@
                 <div class="font-bold text-[var(--text-primary)] truncate">{{ preReg.similarPatientName }}</div>
                 <div class="text-xxs">🎂 {{ preReg.birthDate | date:'dd/MM/yyyy' }}</div>
                 <!-- Coordonnées existantes, le backend utilisera similarPatientId pour charger ou fusionner -->
-                <div class="text-xxs text-[var(--text-muted)] italic">Identifiant unique :</div>
+                <div class="text-xxs text-[var(--text-muted)] italic">{{ t('preRegistrations.uniqueId') }}</div>
                 <div class="text-[10px] font-mono text-[var(--text-muted)] truncate">{{ preReg.similarPatientId }}</div>
               </div>
             </div>
@@ -271,23 +278,23 @@
           </h3>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Nom de famille</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.lastName') }}</span>
               <span class="font-semibold">{{ preReg.lastName }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Prénom</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.firstName') }}</span>
               <span class="font-semibold">{{ preReg.firstName }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Genre</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.gender') }}</span>
               <span class="font-semibold">{{ preReg.gender === 'MASCULIN' ? t('selfRegistration.genderMale') : t('selfRegistration.genderFemale') }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Date de naissance</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.birthDate') }}</span>
               <span class="font-semibold">{{ preReg.birthDate | date:'dd/MM/yyyy' }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Groupe sanguin</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.bloodGroup') }}</span>
               <span class="font-semibold">{{ preReg.bloodGroup || '-' }}</span>
             </div>
           </div>
@@ -300,15 +307,15 @@
           </h3>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Téléphone</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.phone') }}</span>
               <span class="font-semibold">{{ preReg.phone || '-' }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Adresse e-mail</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.email') }}</span>
               <span class="font-semibold">{{ preReg.email || '-' }}</span>
             </div>
             <div class="col-span-2">
-              <span class="text-[var(--text-muted)] block mb-0.5">Adresse de résidence</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.address') }}</span>
               <span class="font-semibold">{{ preReg.address || '-' }}</span>
             </div>
           </div>
@@ -321,15 +328,15 @@
           </h3>
           <div class="grid grid-cols-2 gap-4 text-xs">
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Nom complet</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.emergencyName') }}</span>
               <span class="font-semibold">{{ preReg.emergencyContactName || '-' }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Téléphone</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.emergencyPhone') }}</span>
               <span class="font-semibold">{{ preReg.emergencyContactPhone || '-' }}</span>
             </div>
             <div>
-              <span class="text-[var(--text-muted)] block mb-0.5">Lien de parenté</span>
+              <span class="text-[var(--text-muted)] block mb-0.5">{{ t('selfRegistration.emergencyRelation') }}</span>
               <span class="font-semibold">
                 @if (preReg.emergencyContactRelation) {
                   @switch (preReg.emergencyContactRelation) {
@@ -353,10 +360,15 @@
         <div>
           @if (preReg.status !== 'AWAITING_VALIDATION') {
             <!-- Si déjà validé, offrir le bouton d'impression direct -->
-            @if (preReg.status === 'VALIDATED') {
-              <app-ui-button (pressed)="downloadSummaryPdf(validatedPatientId() || preReg.similarPatientId || '')">
-                {{ t('preRegistrations.downloadCard') }}
-              </app-ui-button>
+            @if (preReg.status === 'VALIDATED' && linkedPatientId(preReg); as patientId) {
+              <div class="flex flex-wrap gap-2">
+                <app-ui-button (pressed)="downloadSummaryPdf(patientId)">
+                  {{ t('preRegistrations.downloadCard') }}
+                </app-ui-button>
+                <a [routerLink]="['/patients', patientId]" class="ui-button ui-button-secondary inline-flex items-center justify-center">
+                  {{ t('preRegistrations.openPatientRecord') }}
+                </a>
+              </div>
             }
           }
         </div>
@@ -390,28 +402,30 @@
 
       <div class="text-center space-y-4">
         <h3 class="text-base font-bold text-[var(--text-primary)]">
-          QR Code d'Admission Clinique
+          {{ t('preRegistrations.qrTitle') }}
         </h3>
         <p class="text-xs text-[var(--text-muted)]">
-          Affichez ce QR Code à l'accueil de votre clinique. Les patients pourront le scanner pour remplir directement leur fiche d'admission sur leur smartphone.
+          {{ t('preRegistrations.qrHelp') }}
         </p>
 
-        @if (getQrCodeUrl()) {
+        @if (qrCodeUrl(); as qrUrl) {
           <div class="flex flex-col items-center justify-center p-4 bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] border rounded-[6px]" style="border-color: var(--border-color)">
-            <img [src]="getQrCodeUrl()" width="220" height="220" alt="QR Code d'Admission" class="bg-white p-2 rounded border" />
+            <img [src]="qrUrl" width="220" height="220" [alt]="t('preRegistrations.qrTitle')" class="bg-white p-2 rounded border" />
+          </div>
+        } @else if (qrCodeError()) {
+          <div class="p-4 text-xs text-amber-600">
+            {{ t('preRegistrations.qrOrgError') }}
           </div>
         } @else {
-          <div class="p-4 text-xs text-amber-600">
-            Erreur : Impossible de résoudre l'identifiant de la clinique. Veuillez vous reconnecter.
-          </div>
+          <div class="p-4 text-xs text-[var(--text-muted)]">{{ t('common.loading') }}</div>
         }
 
         <div class="pt-4 flex gap-3">
           <app-ui-button (pressed)="closeQrModal()" variant="secondary" class="flex-1">
-            Fermer
+            {{ t('preRegistrations.close') }}
           </app-ui-button>
-          <app-ui-button (pressed)="printQrCode()" variant="primary" class="flex-1" [disabled]="!getQrCodeUrl()">
-            Imprimer
+          <app-ui-button (pressed)="printQrCode()" variant="primary" class="flex-1" [disabled]="!qrCodeUrl()">
+            {{ t('preRegistrations.print') }}
           </app-ui-button>
         </div>
       </div>

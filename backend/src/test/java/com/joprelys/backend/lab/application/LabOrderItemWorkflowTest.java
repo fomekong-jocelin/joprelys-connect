@@ -113,6 +113,20 @@ class LabOrderItemWorkflowTest {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    @Test
+    void resavingConsultationOnlyAddsMissingExamsToTheExistingRequest() {
+        LabOrderEntity order = orderWith("NFS", "CRP");
+        order.getItems().get(0).applyStatus(LabOrderStatus.SAMPLE_COLLECTED, Instant.parse("2026-08-08T10:00:00Z"));
+        service.recalculateOrderStatus(order);
+
+        service.mergeMissingExams(order, List.of("nfs", " CRP ", "Créatinine", ""));
+
+        assertThat(order.getItems()).extracting(LabOrderItemEntity::getExamName)
+                .containsExactly("NFS", "CRP", "Créatinine");
+        assertThat(order.getItems().get(0).getStatus()).isEqualTo(LabOrderStatus.SAMPLE_COLLECTED);
+        assertThat(order.getStatus()).isEqualTo(LabOrderStatus.SAMPLE_COLLECTED);
+    }
+
     private LabOrderEntity orderWith(String... exams) {
         return new LabOrderEntity(
                 "EXAM-REQ-20260808-000001",

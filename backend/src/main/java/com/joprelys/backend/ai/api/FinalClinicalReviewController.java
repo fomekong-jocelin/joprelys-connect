@@ -26,6 +26,7 @@ import org.springframework.web.server.ResponseStatusException;
 
 @RestController
 @RequestMapping("/api/ai/consultations")
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 @ConditionalOnProperty(
         name = "joprelys.ai.openai.final-review-enabled",
         havingValue = "true")

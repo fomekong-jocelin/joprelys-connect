@@ -22,6 +22,10 @@ export class PharmacyApiService {
     return this.http.post<PharmacyVerifyResponse>(`${this.baseUrl}/verify`, request);
   }
 
+  validatePrescription(request: PharmacyVerifyRequest & { reviewNotes: string }): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/validate`, request);
+  }
+
   dispensePrescription(request: PharmacyDispenseRequest): Observable<void> {
     return this.http.post<void>(`${this.baseUrl}/dispense`, request);
   }

@@ -1,0 +1,328 @@
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b pb-4 mb-6"
+               style="border-color: var(--border-color)">
+            <div class="w-full">
+              <div class="flex items-center justify-between sm:justify-start gap-4">
+                <h2
+                  class="font-display font-bold text-base sm:text-xl text-[var(--text-primary)]">{{ t('dashboard.queue.title') }}</h2>
+                <button
+                  type="button"
+                  (click)="loadQueue()"
+                  class="p-2 sm:hidden rounded-lg text-[var(--text-muted)] hover:text-[var(--text-secondary)] hover:bg-slate-100 dark:text-[var(--text-muted)] dark:hover:text-[var(--text-primary)] dark:hover:bg-slate-800 transition-colors cursor-pointer"
+                  [title]="t('common.refresh')"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5"
+                       stroke="currentColor" class="w-5 h-5">
+                    <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+                  </svg>
+                </button>
+              </div>
+              <p class="text-xs text-[var(--text-muted)] mt-1.5 pr-0 sm:pr-8">
+                {{ activeVisits().length > 0 ? queueSummaryLabel() : t('dashboard.queue.desc') }}
+              </p>
+            </div>
+            <app-ui-button variant="secondary" (pressed)="loadQueue()" class="hidden sm:inline-block">
+              {{ t('common.refresh') }}
+            </app-ui-button>
+          </div>
+
+          @if (canStartConsultation()) {
+          <div class="mb-4 flex flex-wrap items-center gap-2" role="group" [attr.aria-label]="t('queue.scope.label')">
+            @for (option of scopes; track option) {
+              <button
+                type="button"
+                (click)="setScope(option)"
+                [attr.aria-pressed]="scope() === option"
+                class="rounded-[4px] border px-3 py-1.5 text-xs font-semibold transition-colors cursor-pointer"
+                [class]="scope() === option
+                  ? 'border-[var(--brand-primary)] bg-[var(--brand-primary)] text-[var(--text-inverse)]'
+                  : 'border-[var(--app-border)] text-[var(--text-secondary)] hover:bg-[var(--app-surface-muted)]'"
+              >
+                {{ t('queue.scope.' + option) }}
+              </button>
+            }
+          </div>
+          }
+
+          @if (actionError()) {
+            <div class="mb-4 rounded-[6px] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">
+              {{ actionError() }}
+            </div>
+          }
+
+          @if (isLoadingQueue()) {
+            <div class="py-10 text-center text-sm font-semibold" style="color: var(--text-muted)">
+              {{ t('dashboard.queue.loading') }}
+            </div>
+          } @else if (queueError()) {
+            <div
+              class="p-4 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold leading-relaxed">
+              {{ queueError() }}
+            </div>
+          } @else if (activeVisits().length === 0) {
+            <app-empty-state [message]="scope() === 'ALL' ? t('dashboard.queue.empty') : t('queue.empty.' + scope())"></app-empty-state>
+          } @else {
+            <!-- Desktop Table View -->
+            <div class="hidden md:block overflow-x-auto">
+              <table class="w-full text-left border-collapse">
+                <thead>
+                <tr class="border-b" style="border-color: var(--border-color)">
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.visitNumber') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.patient') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider whitespace-nowrap"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.arrival') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.orientation') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider"
+                      style="color: var(--text-muted)">{{ t('queue.stage.label') }}
+                  </th>
+                  <th class="py-3 px-4 text-xs font-extrabold uppercase tracking-wider text-right"
+                      style="color: var(--text-muted)">{{ t('dashboard.queue.table.actions') }}
+                  </th>
+                </tr>
+                </thead>
+                <tbody class="divide-y" style="border-color: var(--border-color)">
+                  @for (visit of activeVisits(); track visit.id) {
+                    <tr class="hover:bg-[var(--app-surface-muted)] dark:hover:bg-slate-800/30 transition-colors"
+                        [class.border-l-4]="isCritical(visit)" [class.border-l-[var(--brand-danger)]]="isCritical(visit)">
+                      <td
+                        class="py-4 px-4 text-sm font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}
+                      </td>
+                      <td class="py-4 px-4">
+                        <span class="font-bold text-sm block"
+                              style="color: var(--text-primary)">{{ visit.patientName }}</span>
+                        <span class="text-xs font-medium block"
+                              style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
+                        <app-vital-alerts class="mt-1 block" [alerts]="visit.vitals?.alerts ?? []" />
+                      </td>
+                      <td class="py-4 px-4 text-sm font-semibold whitespace-nowrap" style="color: var(--text-primary)">
+                        {{ arrivalOf(visit) | date:'HH:mm' }}
+                      </td>
+                      <td class="py-4 px-4">
+                        <span
+                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
+                          {{ orientation(visit) }}
+                        </span>
+                      </td>
+                      <td class="py-4 px-4">
+                        <span class="inline-flex items-center rounded-[4px] px-2 py-0.5 text-xs font-semibold whitespace-nowrap"
+                              [class]="stageClass(visit)">
+                          {{ t('queue.stage.' + stageOf(visit)) }}
+                        </span>
+                        @if (stageOf(visit) === 'EN_CONSULTATION' && visit.consultingPractitionerName) {
+                          <span class="mt-0.5 block text-[11px] font-semibold text-[var(--text-muted)]">
+                            {{ t('queue.stage.with') }} {{ visit.consultingPractitionerName }}
+                          </span>
+                        }
+                      </td>
+                      <td class="py-4 px-4 text-right whitespace-nowrap">
+                        <div class="inline-flex items-center gap-1">
+                          <!-- Bouton Détails -->
+                          <button
+                            (click)="openVisitDrawer(visit)"
+                            [title]="t('patient.list.viewRecord')"
+                            class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                            </svg>
+                          </button>
+                          <!-- Bouton Clôturer -->
+                          @if (canCloseVisit()) {
+                            <button
+                              (click)="openCloseConfirmModal(visit.id)"
+                              [title]="t('dashboard.close.title')"
+                              class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
+                              <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M6 18L18 6M6 6l12 12"/>
+                              </svg>
+                            </button>
+                          }
+                        </div>
+                      </td>
+                    </tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Mobile Card View -->
+            <div class="md:hidden space-y-4">
+              @for (visit of activeVisits(); track visit.id) {
+                <div
+                  class="space-y-3 rounded-[6px] border border-[var(--app-border)]/40 bg-brand-gray p-4 dark:bg-[var(--app-bg)]">
+                  <div class="flex items-center justify-between">
+                    <span class="text-xs font-bold text-brand-cyan dark:text-brand-cyan">{{ visit.visitNumber }}</span>
+                    <span class="text-xs font-semibold"
+                          style="color: var(--text-muted)">{{ arrivalOf(visit) | date:'HH:mm' }}</span>
+                  </div>
+                  <div>
+                    <span class="font-bold text-sm block"
+                          style="color: var(--text-primary)">{{ visit.patientName }}</span>
+                    <span class="text-xs font-medium block"
+                          style="color: var(--text-muted)">{{ visit.patientDpu }}</span>
+                  </div>
+                  <div class="flex flex-wrap items-center gap-2">
+                    <span class="inline-flex items-center rounded-[4px] px-2 py-0.5 text-xs font-semibold" [class]="stageClass(visit)">
+                      {{ t('queue.stage.' + stageOf(visit)) }}
+                    </span>
+                    @if (stageOf(visit) === 'EN_CONSULTATION' && visit.consultingPractitionerName) {
+                      <span class="text-[11px] font-semibold text-[var(--text-muted)]">
+                        {{ t('queue.stage.with') }} {{ visit.consultingPractitionerName }}
+                      </span>
+                    }
+                  </div>
+                  <app-vital-alerts [alerts]="visit.vitals?.alerts ?? []" />
+                  <div class="text-xs leading-relaxed" style="color: var(--text-secondary)">
+                    <strong>{{ t('dashboard.drawer.visitReason') }} :</strong> {{ visit.reason }}
+                  </div>
+
+                  <!-- Vitals Mobile view -->
+                  @if (visit.vitals) {
+                    <div
+                      class="grid grid-cols-1 gap-2 rounded-[6px] border border-[var(--app-border)]/50 bg-[var(--app-surface)] p-3 text-xs font-semibold min-[360px]:grid-cols-2">
+                      @if (visit.vitals.temperature) {
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.temperature') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.temperature }}°C</strong></div>
+                      }
+                      @if (visit.vitals.systolic || visit.vitals.diastolic) {
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.bloodPressure') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.systolic }}
+                          /{{ visit.vitals.diastolic }}</strong></div>
+                      }
+                      @if (visit.vitals.pulse) {
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.pulse') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.pulse }} bpm</strong></div>
+                      }
+                      @if (visit.vitals.spo2) {
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.spo2') }} : <strong
+                          class="text-[var(--text-primary)]">{{ visit.vitals.spo2 }}%</strong></div>
+                      }
+                      @if (visit.vitals.bmi) {
+                        <div class="text-[var(--text-muted)]">{{ t('dashboard.vitals.short.bmi') }} : <span
+                          class="inline-flex items-center rounded-[4px] px-1 py-0.25 text-[10px] font-bold"
+                          [class]="getBmiClass(visit.vitals.bmi)">{{ visit.vitals.bmi }}</span></div>
+                      }
+                    </div>
+                  }
+
+                  <div class="flex items-center justify-between pt-2 border-t border-[var(--app-border)]/40">
+                    <span
+                      class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan whitespace-nowrap">
+                      {{ orientation(visit) }}
+                    </span>
+                    <div class="inline-flex items-center gap-1">
+                      <!-- Bouton Détails -->
+                      <button
+                        (click)="openVisitDrawer(visit)"
+                        [title]="t('patient.list.viewRecord')"
+                        class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-brand-cyan bg-brand-cyan/10 hover:bg-brand-cyan/20 transition-colors cursor-pointer">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                        </svg>
+                      </button>
+                      <!-- Bouton Clôturer -->
+                      @if (canCloseVisit()) {
+                        <button
+                          (click)="openCloseConfirmModal(visit.id)"
+                          [title]="t('dashboard.close.title')"
+                          class="inline-flex items-center justify-center w-8 h-8 rounded-lg text-[var(--brand-danger)] bg-[var(--brand-danger-subtle)]0/10 hover:bg-[var(--brand-danger-subtle)]0/20 transition-colors cursor-pointer">
+                          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M6 18L18 6M6 6l12 12"/>
+                          </svg>
+                        </button>
+                      }
+                    </div>
+                  </div>
+                </div>
+              }
+            </div>
+          }
+
+  <!-- Close Visit Confirmation Modal -->
+  @if (visitIdToClose()) {
+    <div
+      class="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/50 backdrop-blur-xs p-4 animate-fade-in">
+      <div
+        class="bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-lg max-w-md w-full shadow-2xl p-6 relative">
+        <div class="flex items-center gap-3 mb-4">
+          <div
+            class="w-10 h-10 rounded-xl bg-[var(--brand-danger-subtle)] flex items-center justify-center text-[var(--brand-danger)] shrink-0">
+            <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+          </div>
+          <div>
+            <h3
+              class="font-display font-bold text-base text-[var(--text-primary)]">{{ t('dashboard.close.title') }}</h3>
+            <p class="text-xs text-[var(--text-muted)] mt-0.5">{{ t('dashboard.close.subtitle') }}</p>
+          </div>
+        </div>
+
+        <p class="text-sm text-[var(--text-secondary)] mb-5 leading-relaxed">
+          {{ t('dashboard.close.message') }}
+        </p>
+
+        @if (closeVisitError()) {
+          <div
+            class="p-3 bg-[var(--brand-danger-subtle)] border border-[var(--brand-danger-border)] rounded-xl text-xs text-[var(--brand-danger-text)] font-semibold mb-4 leading-relaxed">
+            {{ closeVisitError() }}
+          </div>
+        }
+
+        <div class="flex justify-end gap-3">
+          <app-ui-button variant="secondary" (pressed)="cancelCloseConfirm()" [disabled]="isClosingVisit()">
+            {{ t('common.cancel') }}
+          </app-ui-button>
+          <app-ui-button variant="primary" (pressed)="confirmCloseVisit()" [disabled]="isClosingVisit()">
+            <span class="flex items-center gap-1.5">
+              @if (isClosingVisit()) {
+                <div
+                  class="w-3.5 h-3.5 rounded-full border-2 border-[var(--app-border)] border-t-white animate-spin"></div>
+                {{ t('dashboard.close.closing') }}
+              } @else {
+                {{ t('dashboard.close.confirmButton') }}
+              }
+            </span>
+          </app-ui-button>
+        </div>
+      </div>
+    </div>
+  }
+
+@if (selectedVisitForDrawer(); as drawerVisit) {
+  <app-visit-details-drawer
+    [visit]="drawerVisit"
+    [currentUserId]="currentUserId()"
+    [canEnterVitals]="canEnterVitals()"
+    [canStartConsultation]="canStartConsultation()"
+    [canCloseVisit]="canCloseVisit()"
+    (closed)="closeVisitDrawer()"
+    (enterVitals)="openVitalsModal(drawerVisit)"
+    (startConsultation)="startConsultation(drawerVisit, $event)"
+    (release)="releaseConsultation(drawerVisit)"
+    (closeVisit)="openCloseConfirmModal(drawerVisit.id)"
+  />
+}
+
+@if (selectedVisitForVitals(); as vitalsVisit) {
+  <app-visit-vitals-form-modal
+    [visit]="vitalsVisit"
+    (saved)="onVitalsSaved()"
+    (closed)="closeVitalsModal()"
+  />
+}

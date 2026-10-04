@@ -1,0 +1,204 @@
+@if (error()) { <div role="alert" class="text-sm text-[var(--brand-danger-text)]">{{ error() }} <button type="button" class="ui-button ui-button-secondary" (click)="load()">{{ t('common.retry') }}</button></div> }
+@if (loading()) { <p role="status">{{ t('common.loading') }}</p> }
+              <div class="space-y-4">
+                <div class="flex justify-between items-center">
+                  <h5 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)]">
+                    {{ t('patients.hospitalization.workflow.reports') }}
+                  </h5>
+                  @if (canModify && !showAddReport()) {
+                    <button
+                      type="button"
+                      (click)="showAddReport.set(true)"
+                      class="px-2 py-1 text-[10px] font-extrabold text-brand-cyan hover:bg-slate-50 dark:hover:bg-slate-800/40 rounded border border-brand-cyan/20 cursor-pointer"
+                    >
+                      {{ t('patients.hospitalization.workflow.addReport') }}
+                    </button>
+                  }
+                </div>
+
+                @if (showAddReport()) {
+                  <form (submit)="saveOperatingReport($event)" class="bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)]/20 p-4 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)]/50 space-y-3">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.surgeon') }}</label>
+                        <select [(ngModel)]="surgeonId" name="surgId" class="ui-select text-xs">
+                          <option value="">{{ t('patients.hospitalization.workflow.selectPractitioner') }}</option>
+                          @for (s of staffList; track s.id) {
+                            @if (s.role === 'MEDECIN') {
+                              <option [value]="s.id">{{ s.displayName }}</option>
+                            }
+                          }
+                        </select>
+                      </div>
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.anesthetist') }}</label>
+                        <select [(ngModel)]="anesthetistId" name="anesId" class="ui-select text-xs">
+                          <option value="">{{ t('patients.hospitalization.workflow.selectPractitioner') }}</option>
+                          @for (s of staffList; track s.id) {
+                            @if (s.role === 'MEDECIN' || s.role === 'INFIRMIER') {
+                              <option [value]="s.id">{{ s.displayName }}</option>
+                            }
+                          }
+                        </select>
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.preDiagnosis') }}</label>
+                        <input type="text" [(ngModel)]="preOperativeDiagnosis" name="preDiag" class="ui-input text-xs" />
+                      </div>
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.postDiagnosis') }}</label>
+                        <input type="text" [(ngModel)]="postOperativeDiagnosis" name="postDiag" class="ui-input text-xs" />
+                      </div>
+                    </div>
+
+                    <div class="space-y-1">
+                      <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.procedure') }}</label>
+                      <input type="text" [(ngModel)]="procedureName" name="pName" required class="ui-input text-xs" [placeholder]="t('patients.hospitalization.workflow.procedureExample')" />
+                    </div>
+
+                    <div class="space-y-1">
+                      <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.description') }}</label>
+                      <textarea [(ngModel)]="procedureDescription" name="pDesc" class="ui-textarea text-xs" rows="3"></textarea>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.anesthesiaType') }}</label>
+                        <select [(ngModel)]="anesthesiaType" name="aType" class="ui-select text-xs">
+                          <option value="GÉNÉRALE">{{ t('patients.hospitalization.workflow.general') }}</option>
+                          <option value="LOCORÉGIONALE">{{ t('patients.hospitalization.workflow.regional') }}</option>
+                          <option value="LOCALE">{{ t('patients.hospitalization.workflow.local') }}</option>
+                          <option value="SÉDATION">{{ t('patients.hospitalization.workflow.sedation') }}</option>
+                          <option value="AUTRE">{{ t('patients.hospitalization.workflow.other') }}</option>
+                        </select>
+                      </div>
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.anesthesiaProtocol') }}</label>
+                        <input type="text" [(ngModel)]="anesthesiaDescription" name="aDesc" class="ui-input text-xs" />
+                      </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.kSurgeon') }}</label>
+                        <input type="number" [(ngModel)]="kSurgeonValue" name="kSurg" min="0" class="ui-input text-xs" />
+                      </div>
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.kAnesthetist') }}</label>
+                        <input type="number" [(ngModel)]="kAnesthesistValue" name="kAnes" min="0" class="ui-input text-xs" />
+                      </div>
+                      <div class="space-y-1">
+                        <label class="block text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.kRoom') }}</label>
+                        <input type="number" [(ngModel)]="kBlocValue" name="kBloc" min="0" class="ui-input text-xs" />
+                      </div>
+                    </div>
+
+                    <!-- Gestion des implants / consommables du bloc -->
+                    <div class="pt-2 border-t border-[var(--app-border)]/40 space-y-2">
+                      <p class="text-[11px] font-black text-[var(--text-secondary)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.implants') }}</p>
+
+                      @if (implantsInForm().length > 0) {
+                        <div class="p-2.5 bg-slate-50 dark:bg-slate-900 border border-[var(--app-border)]/40 rounded-[var(--radius-brand-sm)] text-xs space-y-1">
+                          @for (impl of implantsInForm(); track $index) {
+                            <div class="flex justify-between items-center py-1">
+                              <span><strong>{{ impl.implantName }}</strong> ({{ t('patients.hospitalization.workflow.lot') }} {{ impl.lotNumber || t('patients.hospitalization.workflow.unavailable') }}, {{ t('patients.hospitalization.workflow.quantityLabel') }} {{ impl.quantity }}, {{ t('patients.hospitalization.workflow.priceLabel') }} {{ impl.unitPrice }} FCFA)</span>
+                              <button type="button" (click)="removeImplantFromList($index)" class="text-red-500 hover:text-red-600 font-extrabold cursor-pointer">🗑️</button>
+                            </div>
+                          }
+                        </div>
+                      }
+
+                      <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                        <input type="text" [(ngModel)]="newImplantName" name="newImpName" class="ui-input text-xs" [placeholder]="t('patients.hospitalization.workflow.implantName')" />
+                        <input type="text" [(ngModel)]="newImplantLot" name="newImpLot" class="ui-input text-xs" [placeholder]="t('patients.hospitalization.workflow.lotNumber')" />
+                        <div class="flex gap-2">
+                          <input type="number" [(ngModel)]="newImplantQty" name="newImpQty" min="1" class="ui-input text-xs" [placeholder]="t('patients.hospitalization.workflow.quantity')" />
+                          <input type="number" [(ngModel)]="newImplantPrice" name="newImpPrice" class="ui-input text-xs" [placeholder]="t('patients.hospitalization.workflow.price')" />
+                          <button type="button" (click)="addImplantToList()" class="px-3 bg-brand-cyan/10 hover:bg-brand-cyan/20 text-brand-cyan rounded text-xs font-bold cursor-pointer">➕</button>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div class="flex justify-end gap-2 pt-2 border-t border-[var(--app-border)]/40">
+                      <button type="button" (click)="showAddReport.set(false); implantsInForm.set([])" class="px-3 py-1.5 border border-[var(--app-border)] rounded text-[11px] font-bold text-[var(--text-secondary)] hover:bg-slate-50 cursor-pointer">{{ t('patients.hospitalization.workflow.cancel') }}</button>
+                      <button type="submit" [disabled]="saving()" class="px-4 py-1.5 bg-brand-cyan hover:bg-[var(--brand-primary-hover)] text-white rounded text-[11px] font-bold cursor-pointer">{{ t('patients.hospitalization.workflow.save') }}</button>
+                    </div>
+                  </form>
+                }
+
+                @if (!loading() && !error() && operatingReports().length === 0) {
+                  <p class="text-xs text-[var(--text-muted)] italic">{{ t('patients.hospitalization.workflow.noReport') }}</p>
+                } @else if (!loading() && !error()) {
+                  <div class="space-y-4 mt-2">
+                    @for (report of operatingReports(); track report.id) {
+                      <div class="p-4 bg-[var(--app-surface-muted)] dark:bg-slate-900/40 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)]/40 space-y-3 relative">
+                        <div class="flex justify-between items-start">
+                          <div>
+                            <h6 class="text-xs font-black text-brand-cyan uppercase tracking-wider">{{ report.procedureName }}</h6>
+                            <p class="text-[11px] text-[var(--text-muted)] mt-0.5">{{ t('patients.hospitalization.workflow.operationDate') }} {{ report.operationDate | date:'dd/MM/yyyy HH:mm' }}</p>
+                          </div>
+                          @if (report.validated) {
+                            <span class="px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 text-[10px] font-extrabold rounded">{{ t('patients.hospitalization.workflow.validatedBy') }} {{ report.validatedBy }}</span>
+                          } @else if (!loading() && !error()) {
+                            <div class="flex gap-2 items-center">
+                              <span class="px-2 py-0.5 bg-amber-100 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 text-[10px] font-extrabold rounded">{{ t('patients.hospitalization.workflow.draft') }}</span>
+                              @if (canModify) {
+                                <button
+                                  type="button"
+                                  (click)="validateReport(report.id)"
+                                  class="px-2 py-0.5 bg-brand-cyan text-white hover:bg-[var(--brand-primary-hover)] text-[10px] font-extrabold rounded cursor-pointer"
+                                >
+                                  {{ t('patients.hospitalization.workflow.validateBill') }}
+                                </button>
+                              }
+                            </div>
+                          }
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs border-t border-[var(--app-border)]/20 pt-2.5">
+                          <div>
+                            <p><strong>{{ t('patients.hospitalization.workflow.preDiagLabel') }}</strong> {{ report.preOperativeDiagnosis || t('patients.hospitalization.workflow.unspecified') }}</p>
+                            <p class="mt-1"><strong>{{ t('patients.hospitalization.workflow.postDiagLabel') }}</strong> {{ report.postOperativeDiagnosis || t('patients.hospitalization.workflow.unspecified') }}</p>
+                          </div>
+                          <div>
+                            <p><strong>{{ t('patients.hospitalization.workflow.anesthesiaLabel') }}</strong> {{ t(anesthesiaLabelKey(report.anesthesiaType)) }} ({{ report.anesthesiaDescription || t('patients.hospitalization.workflow.noProtocol') }})</p>
+                          </div>
+                        </div>
+
+                        @if (report.procedureDescription) {
+                          <div class="text-xs bg-white dark:bg-slate-900/50 p-2.5 rounded border border-[var(--app-border)]/30">
+                            <strong>{{ t('patients.hospitalization.workflow.protocolLabel') }}</strong>
+                            <p class="mt-1 whitespace-pre-line text-[var(--text-secondary)] leading-relaxed">{{ report.procedureDescription }}</p>
+                          </div>
+                        }
+
+                        <div class="flex flex-wrap gap-4 text-[10px] font-black text-[var(--text-muted)] uppercase tracking-wider pt-1">
+                          <span>{{ t('patients.hospitalization.workflow.kSurgeonLabel') }} {{ report.kSurgeonValue }}</span>
+                          <span>{{ t('patients.hospitalization.workflow.kAnesthetistLabel') }} {{ report.kAnesthesistValue }}</span>
+                          <span>{{ t('patients.hospitalization.workflow.kRoomLabel') }} {{ report.kBlocValue }}</span>
+                        </div>
+
+                        @if (report.implants && report.implants.length > 0) {
+                          <div class="border-t border-[var(--app-border)]/20 pt-2 space-y-1">
+                            <p class="text-[10px] font-bold text-[var(--text-muted)] uppercase tracking-wider">{{ t('patients.hospitalization.workflow.tracedImplants') }}</p>
+                            @for (impl of report.implants; track impl.id) {
+                              <div class="text-[11px] text-[var(--text-secondary)] flex justify-between">
+                                <span>🔩 {{ impl.implantName }} ({{ t('patients.hospitalization.workflow.lot') }} {{ impl.lotNumber || t('patients.hospitalization.workflow.unavailable') }} - {{ impl.manufacturer || t('patients.hospitalization.workflow.unknownManufacturer') }})</span>
+                                <span>{{ t('patients.hospitalization.workflow.quantityLabel2') }} {{ impl.quantity }} x {{ impl.unitPrice }} FCFA</span>
+                              </div>
+                            }
+                          </div>
+                        }
+                      </div>
+                    }
+                  </div>
+                }
+              </div>
+<app-confirmation-dialog [visible]="!!pendingValidation()" [busy]="saving()"
+  [title]="t('patients.hospitalization.workflow.validateReport')"
+  [message]="t('patients.hospitalization.workflow.validateReportConfirm')"
+  [confirmLabel]="t('common.confirm')" [cancelLabel]="t('common.cancel')"
+  (confirmed)="confirmValidation()" (cancelled)="pendingValidation.set(null)" />

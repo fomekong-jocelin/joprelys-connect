@@ -34,7 +34,7 @@
   "hospitalOrg.fields.name": "Nom",
   "hospitalOrg.fields.serviceCatalog": "Type de service",
   "hospitalOrg.fields.serviceCatalogPlaceholder": "Choisir dans le référentiel",
-  "hospitalOrg.fields.serviceNameHint": "Le nom du service est défini par le référentiel afin d'éviter les variantes de saisie.",
+  "hospitalOrg.fields.serviceNameHint": "Le catalogue identifie la discipline. Un nom local facultatif permet de distinguer plusieurs services.",
   "hospitalOrg.fields.careUnitParentHint": "Une unité de soins doit être rattachée à un service actif.",
   "hospitalOrg.catalogs.services.eyebrow": "Référentiel contrôlé",
   "hospitalOrg.catalogs.services.title": "Types de services",

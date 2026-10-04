@@ -63,7 +63,9 @@ public class PharmacyControllerTest {
 	@Autowired
 	private PharmacyService pharmacyService;
 
-	private OrganizationEntity orgA;
+	@Autowired private com.joprelys.backend.auth.security.JwtService jwtService;
+    private String pharmacistToken;
+    private OrganizationEntity orgA;
 	private UserAccountEntity doctor;
 	private PatientEntity patient;
 	private VisitEntity visit;
@@ -72,7 +74,7 @@ public class PharmacyControllerTest {
 	private PrescriptionItemEntity item1;
 
 	@BeforeEach
-	void setUp() {
+	void setUp() throws Exception {
 		pharmacyService.resetLockouts();
 		jdbcTemplate.update("DELETE FROM dispensation_items");
 		jdbcTemplate.update("DELETE FROM prescription_dispensations");
@@ -113,6 +115,17 @@ public class PharmacyControllerTest {
 		prescription.getItems().add(item1);
 		prescription = prescriptionRepository.save(prescription);
 		com.joprelys.backend.auth.security.TenantContext.clear();
+        UserAccountEntity pharmacist = new UserAccountEntity("pharmacist@joprelys.local", "Pharmacien", "PHARMACIEN", "passhash");
+        pharmacist.setOrganizationId(orgA.getId());
+        pharmacist = userAccountRepository.save(pharmacist);
+        pharmacistToken = jwtService.createToken(pharmacist).value();
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/validate")
+                .header("Authorization", "Bearer " + pharmacistToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                        {"prescriptionNumber":"ORD-20260703-000001","pinCode":"1234","reviewNotes":"Doses et interactions revues."}
+                        """))
+                .andExpect(status().isNoContent());
 	}
 
 	@Test
@@ -192,6 +205,7 @@ public class PharmacyControllerTest {
 
 		// Perform Dispensation
 		mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                        .header("Authorization", "Bearer " + pharmacistToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(dispenseBody))
 				.andExpect(status().isNoContent());
@@ -224,6 +238,7 @@ public class PharmacyControllerTest {
 				""", item1.getId());
 
 		mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                        .header("Authorization", "Bearer " + pharmacistToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(dispenseBody))
 				.andExpect(status().isNoContent());
@@ -271,6 +286,7 @@ public class PharmacyControllerTest {
 				""", item1.getId());
 
 		mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                        .header("Authorization", "Bearer " + pharmacistToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(dispenseBody))
 				.andExpect(status().isNoContent());
@@ -346,12 +362,14 @@ public class PharmacyControllerTest {
 
 		// First dispense — full
 		mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                        .header("Authorization", "Bearer " + pharmacistToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(dispenseBody))
 				.andExpect(status().isNoContent());
 
 		// Second dispense — must be blocked
 		mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                        .header("Authorization", "Bearer " + pharmacistToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(dispenseBody))
 				.andExpect(status().isBadRequest())
@@ -375,8 +393,49 @@ public class PharmacyControllerTest {
 				""", item1.getId());
 
 		mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                        .header("Authorization", "Bearer " + pharmacistToken)
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(dispenseBody))
 				.andExpect(status().isBadRequest());
 	}
+    @Test
+    void unauthenticatedPinHolderCannotDispense() throws Exception {
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(dispenseBody())).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void pharmacistCannotDispenseWithoutRecordedReview() throws Exception {
+        jdbcTemplate.update("UPDATE prescriptions SET pharmacy_validated_at = NULL, pharmacy_validated_by = NULL WHERE id = ?", prescription.getId());
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                .header("Authorization", "Bearer " + pharmacistToken)
+                .contentType(MediaType.APPLICATION_JSON).content(dispenseBody()))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void clinicalWriterCannotValidateOrDispense() throws Exception {
+        UserAccountEntity nurse = new UserAccountEntity("nurse@joprelys.local", "Infirmier", "INFIRMIER", "passhash");
+        nurse.setOrganizationId(orgA.getId());
+        String nurseToken = jwtService.createToken(userAccountRepository.save(nurse)).value();
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                .header("Authorization", "Bearer " + nurseToken)
+                .contentType(MediaType.APPLICATION_JSON).content(dispenseBody())).andExpect(status().isForbidden());
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/validate")
+                .header("Authorization", "Bearer " + nurseToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"prescriptionNumber":"ORD-20260703-000001","pinCode":"1234","reviewNotes":"Review"}
+                    """)).andExpect(status().isForbidden());
+    }
+
+    private String dispenseBody() {
+        return """
+            {"prescriptionNumber":"ORD-20260703-000001","pinCode":"1234",
+             "pharmacyName":"Pharmacie","pharmacistLicense":"LIC-1",
+             "dispensedItems":[{"prescriptionItemId":"%s","quantityDispensed":1}]}
+            """.formatted(item1.getId());
+    }
+
 }

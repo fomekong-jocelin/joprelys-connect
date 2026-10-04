@@ -15,6 +15,7 @@ export interface PharmacyVerifyItem {
 }
 
 export interface PharmacyVerifyResponse {
+  pharmaceuticalValidated?: boolean;
   prescriptionId: string;
   prescriptionNumber: string;
   status: string;

@@ -23,9 +23,17 @@ public class PharmacyController {
 
 	@PostMapping("/dispense")
 	@ResponseStatus(HttpStatus.NO_CONTENT)
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('PHARMACY_DISPENSE')")
 	public void dispense(@Valid @RequestBody PharmacyDispenseRequest request) {
 		pharmacyService.dispensePrescription(request);
 	}
+
+    @PostMapping("/validate")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @org.springframework.security.access.prepost.PreAuthorize("hasAuthority('PHARMACY_VALIDATE')")
+    public void validate(@Valid @RequestBody PharmacyValidationRequest request) {
+        pharmacyService.validatePrescription(request);
+    }
 
 	@PostMapping("/history")
 	public List<PharmacyDispensationHistoryResponse> history(@Valid @RequestBody PharmacyVerifyRequest request) {

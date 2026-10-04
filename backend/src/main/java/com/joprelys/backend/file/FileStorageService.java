@@ -56,6 +56,10 @@ public class FileStorageService {
 		try {
 			Files.createDirectories(targetFolder);
 
+			if ("signature".equalsIgnoreCase(cleanSubDir)) {
+				return persistImage(SignatureImageNormalizer.toPng(fileBytes), cleanSubDir, targetFolder, "png");
+			}
+
 			// Détecter l'extension d'origine
 			String originalFilename = file.getOriginalFilename();
 			String extension = "png"; // default
@@ -141,24 +145,21 @@ public class FileStorageService {
 				// on garde le fichier brut d'origine sans modification.
 			}
 
-			// Générer un nom unique avec l'extension finale appropriée (png, jpg, webp)
-			String uniqueFilename = UUID.randomUUID().toString() + "." + finalExtension;
-			Path destinationFile = targetFolder.resolve(uniqueFilename).normalize();
-
-			// Protection stricte contre le Path Traversal
-			if (!destinationFile.getParent().startsWith(this.rootLocation)) {
-				throw new SecurityException("Tentative d'écriture hors du répertoire autorisé.");
-			}
-
-			// Écriture du fichier final
-			Files.write(destinationFile, finalBytesToSave);
-
-			// Retourne le chemin d'accès relatif (ex: uploads/logo/filename.png)
-			return "uploads/" + cleanSubDir + "/" + uniqueFilename;
+			return persistImage(finalBytesToSave, cleanSubDir, targetFolder, finalExtension);
 
 		} catch (IOException e) {
 			throw new RuntimeException("Erreur lors de l'enregistrement du fichier.", e);
 		}
+	}
+
+	private String persistImage(byte[] bytes, String subDir, Path folder, String extension) throws IOException {
+		String filename = UUID.randomUUID() + "." + extension;
+		Path destination = folder.resolve(filename).normalize();
+		if (!destination.getParent().startsWith(this.rootLocation)) {
+			throw new SecurityException("Tentative d'écriture hors du répertoire autorisé.");
+		}
+		Files.write(destination, bytes);
+		return "uploads/" + subDir + "/" + filename;
 	}
 
 	public byte[] loadFile(String relativePath) {

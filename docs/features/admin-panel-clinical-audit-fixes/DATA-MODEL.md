@@ -1,0 +1,10 @@
+# Données et migrations
+
+V113 remplace uniquement la contrainte d'identité organizational_units : SERVICE conserve une FK de discipline obligatoire et accepte un name nullable ou 2–120 caractères. Les services historiques restent inchangés, sans backfill artificiel.
+9 services et 10 spécialités ajoutés : orthopédie/traumatologie, néonatologie, infectiologie, gastro-entérologie/endoscopie, ophtalmologie, ORL, stomatologie, néphrologie et hémodialyse ; médecine d'urgence en spécialité. Catalogues totaux : 23 services, 20 spécialités.
+NEONATAL_ROOM et EMERGENCY_BOX ajoutés au référentiel inpatient, ainsi que DAY_HOSPITAL, DIALYSIS_STATION, CHEMOTHERAPY_STATION et AMBULATORY_SURGERY. L'indicateur ouvre la configuration d'un profil hospitalier ; aucune admission ni lit n'est créé automatiquement. La compatibilité fine lit/patient reste une règle clinique à valider séparément.
+MEDICAL_HEAD/NURSE_MANAGER ajoutés au catalogue des affectations staff. L'historique et les FK composites tenant existants sont réutilisés.
+V114 ajoute signed_by (FK users), signed_at (UTC), signed_content_hash (64 caractères) aux consultations et prescriptions ; pharmacy_validated_by, pharmacy_validated_at et pharmacy_validation_notes aux prescriptions. Les anciennes lignes restent null : aucun acte clinique fictif n'est signé rétroactivement.
+RBAC : le bootstrap existant ajoute les permissions et synchronise les rôles système. Les rôles personnalisés n'héritent pas implicitement des nouveaux droits ; revue obligatoire avant livraison coordonnée.
+Les migrations appliquées V87/V89/V93 ne sont jamais modifiées. Aucune migration destructive ni suppression de données.
+Signature PNG : le champ existant users.signature_path et le stockage uploads/signature/{uuid}.png sont réutilisés, sans migration supplémentaire. Les nouveaux uploads signature sont décodés puis réencodés en PNG sans métadonnées source. Les assets historiques ne sont pas transformés rétroactivement ; aucune donnée de certificat ni clé privée n'est stockée dans l'image.

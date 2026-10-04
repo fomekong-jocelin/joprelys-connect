@@ -145,6 +145,33 @@ class StaffAssignmentControllerTest {
     }
 
     @Test
+    void governanceAssignmentsRequireTheCorrespondingProfessionalQualification() throws Exception {
+        Instant from = Instant.now().minusSeconds(60);
+        mockMvc.perform(post("/api/staff/" + doctorA.getId() + "/assignments/units")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unitRequest(generalMedicineA.getId().toString(), "MEDICAL_HEAD", false, from, null)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.assignmentRoleCode").value("MEDICAL_HEAD"));
+        mockMvc.perform(post("/api/staff/" + doctorA.getId() + "/assignments/units")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unitRequest(generalMedicineA.getId().toString(), "NURSE_MANAGER", false, from, null)))
+                .andExpect(status().isBadRequest());
+        UserAccountEntity nurse = saveUser("nurse.governance-" + UUID.randomUUID() + "@test.local", "Major", "INFIRMIER", orgA);
+        mockMvc.perform(post("/api/staff/" + nurse.getId() + "/assignments/units")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unitRequest(generalMedicineA.getId().toString(), "NURSE_MANAGER", false, from, null)))
+                .andExpect(status().isCreated());
+        mockMvc.perform(post("/api/staff/" + nurse.getId() + "/assignments/units")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(unitRequest(generalMedicineA.getId().toString(), "MEDICAL_HEAD", false, from, null)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
     void givenOverlappingSameSpecialty_whenCreate_thenRejects() throws Exception {
         Instant from = Instant.now().minusSeconds(60);
         Instant to = Instant.now().plusSeconds(7200);

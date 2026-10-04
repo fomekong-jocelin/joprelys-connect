@@ -1,4 +1,5 @@
-import { Component, input, model, output, signal, HostListener } from '@angular/core';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { Component, input, model, output, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 
 @Component({
@@ -38,7 +39,7 @@ import { CommonModule } from '@angular/common';
           <div class="relative flex flex-col items-center space-y-3 w-full" (click)="$event.stopPropagation()">
             <img
               [src]="previewUrl()"
-              alt="Preview"
+              [alt]="t('fileUpload.preview')"
               class="max-h-[140px] max-w-full object-contain rounded border border-[var(--app-border)] shadow-sm"
             />
             <div class="flex items-center space-x-2">
@@ -50,7 +51,7 @@ import { CommonModule } from '@angular/common';
                 class="text-xs text-[var(--brand-danger-text)] hover:text-[var(--brand-danger-hover)] font-medium px-2 py-1 rounded bg-[var(--brand-danger-subtle)] hover:bg-[var(--brand-danger-muted)] transition-colors"
                 (click)="removeFile()"
               >
-                Supprimer
+                {{ t('fileUpload.remove') }}
               </button>
             </div>
           </div>
@@ -72,10 +73,10 @@ import { CommonModule } from '@angular/common';
               ></path>
             </svg>
             <p class="text-sm font-medium text-[var(--text-secondary)]">
-              Glissez-déposez l'image ici, ou <span class="text-[var(--brand-info-text)]">parcourez</span>
+              {{ t('fileUpload.drop') }} <span class="text-[var(--brand-info-text)]">{{ t('fileUpload.browse') }}</span>
             </p>
             <p class="text-xs" style="color:var(--text-muted)">
-              Format {{ accept() }} (Max. {{ maxSizeMb() }} Mo)
+              {{ formatLabel() }}
             </p>
           </div>
         }
@@ -89,6 +90,11 @@ import { CommonModule } from '@angular/common';
   styles: []
 })
 export class FileDragDropComponent {
+  private readonly i18n = inject(I18nService);
+  readonly t = (key: string) => this.i18n.t(key);
+  formatLabel(): string {
+    return this.t('fileUpload.format').replace('{types}', this.accept()).replace('{size}', String(this.maxSizeMb()));
+  }
   readonly label = input<string | null>(null);
   readonly required = input<boolean>(false);
   readonly accept = input<string>('image/png, image/jpeg, image/webp');
@@ -145,7 +151,7 @@ export class FileDragDropComponent {
     // Vérifier la taille
     const maxSizeBytes = this.maxSizeMb() * 1024 * 1024;
     if (file.size > maxSizeBytes) {
-      this.errorMessage.set(`Le fichier dépasse la taille maximale autorisée de ${this.maxSizeMb()} Mo.`);
+      this.errorMessage.set(this.t('fileUpload.tooLarge').replace('{size}', String(this.maxSizeMb())));
       return;
     }
 
@@ -163,7 +169,7 @@ export class FileDragDropComponent {
     });
 
     if (!isAllowed) {
-      this.errorMessage.set(`Type de fichier non autorisé. Types acceptés : ${this.accept()}.`);
+      this.errorMessage.set(this.t('fileUpload.invalidType').replace('{types}', this.accept()));
       return;
     }
 

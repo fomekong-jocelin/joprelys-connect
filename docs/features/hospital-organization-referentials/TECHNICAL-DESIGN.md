@@ -30,7 +30,7 @@ Champs :
 - `code` stable ;
 - `name_fr` ;
 - `name_en` ;
-- `service_type` typé avec l'enum `HospitalServiceType` existante (`HOSPITALIZATION`, `EMERGENCY`, `OUTPATIENT`, `MEDICO_TECHNICAL`, `PHARMACY`, `ADMINISTRATIVE`) ;
+- aucune catégorie `service_type` dans ce catalogue ; ce champ appartient à la table historique `hospital_services`, distincte de l'organisation hiérarchique ;
 - `active`.
 
 ### MedicalSpecialtyCatalogEntry
@@ -55,7 +55,7 @@ Champs :
 - timestamps.
 
 Identité :
-- pour `SERVICE`, `name` est obligatoirement `null` et le libellé FR/EN est résolu par `service_catalog_code` ;
+- depuis V113, pour `SERVICE`, `name` est facultatif ; un nom local de 2–120 caractères prime sur le libellé FR/EN du `service_catalog_code` obligatoire ;
 - pour `POLE`, `DEPARTMENT`, `CARE_UNIT`, `name` est obligatoire et `service_catalog_code` est null.
 
 Contraintes :
@@ -82,7 +82,7 @@ Le backend refuse :
 - parent inactif pour une nouvelle unité ;
 - niveau incompatible ;
 - code déjà utilisé dans le tenant ;
-- nom libre pour un SERVICE ;
+- nom local non vide de moins de 2 ou plus de 120 caractères pour un SERVICE ;
 - catalogue sur un type autre que SERVICE.
 
 ## 4. Autorisation
@@ -172,3 +172,5 @@ Création, mise à jour, activation et désactivation sont auditées via le serv
 - doublon temporaire avec `Ward` : interdit d'ajouter de nouvelles dépendances à `Ward` pour le staff ;
 - future migration des unités vers espaces : HOS-LOC utilise UUID et relations datées, pas le nom du service ;
 - l'administration plateforme doit toujours sélectionner explicitement un établissement avant de lire ou modifier les unités.
+
+Mise à jour 2026-10-04 : voir docs/features/admin-panel-clinical-audit-fixes pour catalogues enrichis, gouvernance, migration V113 et preuves nouvelles.

@@ -99,6 +99,30 @@ public class ConsultationControllerTest {
     }
 
     @Test
+    void simultaneousConsultationSavesRejectTheSecondStaleRevision() throws Exception {
+        String initial = mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                .header("Authorization", "Bearer " + tokenMedecinA).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"symptoms\":\"Fièvre\",\"diagnosis\":\"Initial\"}"))
+                .andExpect(status().is2xxSuccessful()).andReturn().getResponse().getContentAsString();
+        String updatedAt = tools.jackson.databind.json.JsonMapper.builder().build().readTree(initial).get("updatedAt").asString();
+        String body = "{\"symptoms\":\"Fièvre\",\"diagnosis\":\"Révision\",\"expectedUpdatedAt\":\"%s\"}".formatted(updatedAt);
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            java.util.concurrent.Callable<Integer> save = () -> {
+                start.await();
+                return mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA).contentType(MediaType.APPLICATION_JSON)
+                        .content(body)).andReturn().getResponse().getStatus();
+            };
+            var first = workers.submit(save); var second = workers.submit(save); start.countDown();
+            var results = java.util.stream.Stream.of(first.get(15, java.util.concurrent.TimeUnit.SECONDS),
+                    second.get(15, java.util.concurrent.TimeUnit.SECONDS)).sorted().toList();
+            org.junit.jupiter.api.Assertions.assertEquals(409, results.get(1));
+            org.junit.jupiter.api.Assertions.assertTrue(results.get(0) >= 200 && results.get(0) < 300);
+        }
+    }
+
+    @Test
     void givenMedecinA_whenSaveConsultation_thenSuccess() throws Exception {
         String json = "{\"symptoms\":\"Fièvre à 39°C, frissons, maux de tête\",\"clinicalExam\":\"Gorge rouge, amygdales hypertrophiées\",\"diagnosis\":\"Angine bactérienne\",\"advice\":\"Repos, hydratation, éviter les contacts\",\"followUp\":\"Contrôle dans 7 jours\"}";
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
@@ -249,6 +273,37 @@ public class ConsultationControllerTest {
                 .andExpect(jsonPath("$.error.code").value("CONSENT_REQUIRED"))
                 .andExpect(jsonPath("$.error.action").value("REQUEST_ACCESS"))
                 .andExpect(jsonPath("$.error.required_scope").value("medical_records"));
+    }
+
+    @Test
+    void closingVisitSealsConsultationAndRejectsEditsEvenIfVisitIsReopened() throws Exception {
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"symptoms\":\"Fièvre\",\"diagnosis\":\"Diagnostic initial\"}"))
+                .andExpect(status().isOk());
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/close")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk());
+        mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("VALIDEE"))
+                .andExpect(jsonPath("$.signedBy").value(userMedecinA.getId().toString()))
+                .andExpect(jsonPath("$.signedAt").isNotEmpty())
+                .andExpect(jsonPath("$.signedContentHash").value(org.hamcrest.Matchers.matchesPattern("[a-f0-9]{64}")));
+        String originalHash = jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM consultations WHERE visit_id = ?", String.class, visitA.getId());
+        jdbcTemplate.update("UPDATE visits SET status = 'EN_COURS' WHERE id = ?", visitA.getId());
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"symptoms\":\"Altération\",\"diagnosis\":\"Diagnostic modifié\"}"))
+                .andExpect(status().isConflict());
+        org.junit.jupiter.api.Assertions.assertEquals(originalHash, jdbcTemplate.queryForObject(
+                "SELECT signed_content_hash FROM consultations WHERE visit_id = ?", String.class, visitA.getId()));
+        org.junit.jupiter.api.Assertions.assertEquals("Diagnostic initial", jdbcTemplate.queryForObject(
+                "SELECT diagnosis FROM consultations WHERE visit_id = ?", String.class, visitA.getId()));
     }
 
     @Test

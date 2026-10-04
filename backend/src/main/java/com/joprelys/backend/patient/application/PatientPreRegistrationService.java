@@ -79,8 +79,9 @@ public class PatientPreRegistrationService {
     }
 
     @Transactional(readOnly = true)
-    public Page<PatientPreRegistrationResponse> getPendingPreRegistrations(Pageable pageable) {
-        return preRegistrationRepository.findAllByStatus(PreRegistrationStatus.AWAITING_VALIDATION, pageable)
+    public Page<PatientPreRegistrationResponse> getPreRegistrations(PreRegistrationStatus status, Pageable pageable) {
+        PreRegistrationStatus effectiveStatus = status != null ? status : PreRegistrationStatus.AWAITING_VALIDATION;
+        return preRegistrationRepository.findAllByStatus(effectiveStatus, pageable)
                 .map(this::mapToResponse);
     }
 
@@ -172,6 +173,7 @@ public class PatientPreRegistrationService {
         preRegistration.setStatus(PreRegistrationStatus.VALIDATED);
         preRegistration.setValidatedAt(Instant.now());
         preRegistration.setValidatedBy(actorId);
+        preRegistration.setValidatedPatientId(patientId);
         preRegistrationRepository.save(preRegistration);
 
         return patientId;
@@ -253,7 +255,8 @@ public class PatientPreRegistrationService {
                 entity.getCreatedAt(),
                 bestScore,
                 similarPatientId,
-                similarPatientName
+                similarPatientName,
+                entity.getValidatedPatientId()
         );
     }
 }

@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ToastService } from '../shared/ui/toast.service';
 import { Router } from '@angular/router';
 import { catchError, finalize, of, Subject, switchMap, timer } from 'rxjs';
 import { AdmissionCompleted, UnifiedAdmissionComponent } from '../admission/unified-admission.component';
@@ -35,6 +36,7 @@ export class PatientListComponent implements OnInit {
   private readonly api = inject(PatientApiService);
   private readonly i18n = inject(I18nService);
   private readonly router = inject(Router);
+  private readonly toasts = inject(ToastService);
   private readonly destroyRef = inject(DestroyRef);
   private readonly searchRequests = new Subject<PatientSearchRequest>();
 
@@ -116,6 +118,9 @@ export class PatientListComponent implements OnInit {
 
   onAdmissionCompleted(result: AdmissionCompleted): void {
     this.showCreateForm.set(false);
+    this.toasts.show(result.carePath === 'EMERGENCY'
+      ? `${this.i18n.t('admission.toast.emergencyCreated')} ${result.patientDisplayName}`
+      : `${this.i18n.t('admission.toast.visitCreated')} ${result.patientDisplayName}. ${this.i18n.t('admission.toast.nextStepVitals')}`);
     const route = result.carePath === 'EMERGENCY'
       ? ['/clinic/emergencies']
       : ['/patients', result.patientId];

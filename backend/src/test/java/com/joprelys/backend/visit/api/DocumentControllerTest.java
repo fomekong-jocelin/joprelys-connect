@@ -2,6 +2,10 @@ package com.joprelys.backend.visit.api;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -33,6 +37,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -177,6 +182,91 @@ public class DocumentControllerTest {
             file.delete();
         }
         TenantContext.clear();
+    }
+
+    @Test
+    void doctorCanUploadSaveAndRenderSignatureAsPng() throws Exception {
+        var image = new java.awt.image.BufferedImage(17, 7, java.awt.image.BufferedImage.TYPE_INT_RGB);
+        var encoded = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "jpg", encoded);
+        String upload = mockMvc.perform(multipart("/api/files/upload")
+                        .file(new MockMultipartFile("file", "signature.jpg", "image/jpeg", encoded.toByteArray()))
+                        .param("type", "signature").header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isCreated()).andReturn().getResponse().getContentAsString();
+        String path = com.jayway.jsonpath.JsonPath.read(upload, "$.filePath");
+        assertTrue(path.startsWith("uploads/signature/"));
+        assertTrue(path.endsWith(".png"));
+        byte[] stored = mockMvc.perform(get("/api/public/files/view").param("path", path))
+                .andExpect(status().isOk()).andExpect(content().contentType(MediaType.IMAGE_PNG))
+                .andReturn().getResponse().getContentAsByteArray();
+        assertEquals(17, javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(stored)).getWidth());
+        mockMvc.perform(put("/api/profile").header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Dr. Alpha\",\"registrationNumber\":\"ORD-TEST\",\"signaturePath\":\"" + path + "\"}"))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.signaturePath").value(path));
+        mockMvc.perform(get("/api/profile").header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.signaturePath").value(path));
+        TenantContext.setTenantId(orgA.getId());
+        VisitEntity visit;
+        try {
+            visit = visitRepository.save(new VisitEntity(patientA, "VIS-SIGN-PNG", "Consultation", "Médecine"));
+            consultationRepository.save(new ConsultationEntity(visit, userMedecinA, "CONS-SIGN-PNG",
+                    "Observation", "Examen", "Diagnostic", "Conclusion", "Conseils"));
+        } finally { TenantContext.clear(); }
+        mockMvc.perform(post("/api/visits/" + visit.getId() + "/close")
+                .header("Authorization", "Bearer " + tokenMedecinA)).andExpect(status().isOk());
+        byte[] pdf = mockMvc.perform(get("/api/visits/" + visit.getId() + "/document")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        assertTrue(hasImage(pdf, 17, 7), "La signature téléversée doit être intégrée au PDF médical.");
+    }
+
+    @Test
+    void nonDoctorCannotAttachMedicalSignatureToOwnProfile() throws Exception {
+        mockMvc.perform(put("/api/profile").header("Authorization", "Bearer " + tokenPharmacienA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"displayName\":\"Pharmacien Alpha\",\"signaturePath\":\"uploads/signature/test.png\"}"))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void administratorCanUploadPhysicianSignatureAssetsWithoutMedicalSigningRights() throws Exception {
+        var image = new java.awt.image.BufferedImage(17, 7, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        var encoded = new java.io.ByteArrayOutputStream();
+        javax.imageio.ImageIO.write(image, "png", encoded);
+        mockMvc.perform(multipart("/api/files/upload")
+                        .file(new MockMultipartFile("file", "signature.png", "image/png", encoded.toByteArray()))
+                        .param("type", "signature").header("Authorization", "Bearer " + tokenAdminJoprelys))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.filePath").value(org.hamcrest.Matchers.endsWith(".png")));
+    }
+
+    @Test
+    void signatureHeaderAloneIsNotAcceptedAsAnImage() throws Exception {
+        mockMvc.perform(multipart("/api/files/upload")
+                        .file(new MockMultipartFile("file", "signature.png", "image/png",
+                                new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10, 0, 0, 0, 0}))
+                        .param("type", "signature").header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isBadRequest());
+    }
+
+    private boolean hasImage(byte[] pdf, int width, int height) throws java.io.IOException {
+        var reader = new com.lowagie.text.pdf.PdfReader(pdf);
+        try {
+            for (int page = 1; page <= reader.getNumberOfPages(); page++) {
+                var resources = reader.getPageN(page).getAsDict(com.lowagie.text.pdf.PdfName.RESOURCES);
+                var objects = resources.getAsDict(com.lowagie.text.pdf.PdfName.XOBJECT);
+                if (objects == null) continue;
+                for (var key : objects.getKeys()) {
+                    var object = com.lowagie.text.pdf.PdfReader.getPdfObject(objects.get(key));
+                    if (object instanceof com.lowagie.text.pdf.PdfDictionary dictionary
+                            && com.lowagie.text.pdf.PdfName.IMAGE.equals(dictionary.getAsName(com.lowagie.text.pdf.PdfName.SUBTYPE))
+                            && dictionary.getAsNumber(com.lowagie.text.pdf.PdfName.WIDTH).intValue() == width
+                            && dictionary.getAsNumber(com.lowagie.text.pdf.PdfName.HEIGHT).intValue() == height) return true;
+                }
+            }
+            return false;
+        } finally { reader.close(); }
     }
 
     @Test

@@ -38,6 +38,16 @@ describe('application route role boundaries', () => {
       ...PROFESSIONAL_ACCESS_POLICIES.billingWorkspace,
     ]);
   });
+
+  it('should redirect the audit shortcut to the permission audit and provide a distinct interop page', () => {
+    const auditRoute = routes.find((route) => route.path === 'audit-trail');
+    expect(auditRoute?.redirectTo).toBe('clinic/rbac?tab=audit');
+    expect(auditRoute?.pathMatch).toBe('full');
+    const interopRoute = routes.find((route) => route.path === 'interop');
+    expect(interopRoute?.loadComponent).toBeDefined();
+    expect(interopRoute?.canActivate).toContain(roleGuard);
+    expect(interopRoute?.data?.['expectedPermissions']).toContain('ORGANIZATION_MANAGE');
+  });
 });
 
 function flatten(source: Route[]): Route[] {

@@ -18,6 +18,7 @@ import org.springframework.web.server.ResponseStatusException;
 import tools.jackson.databind.ObjectMapper;
 
 @Service
+@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")
 @ConditionalOnProperty(
         name = "joprelys.ai.openai.final-review-enabled",
         havingValue = "true")

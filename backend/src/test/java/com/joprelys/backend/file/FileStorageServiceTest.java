@@ -85,4 +85,67 @@ class FileStorageServiceTest {
 			fileStorageService.storeFile(file, "photo");
 		});
 	}
+
+	@Test
+	void signatureJpegIsReencodedAsRealPngRegardlessOfFilename() throws IOException {
+		var image = new java.awt.image.BufferedImage(800, 160, java.awt.image.BufferedImage.TYPE_INT_RGB);
+		String path = storeSignature(image, "jpg", "misleading.png");
+		assertTrue(path.endsWith(".png"));
+		byte[] stored = fileStorageService.loadFile(path);
+		assertArrayEquals(new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10}, java.util.Arrays.copyOf(stored, 8));
+		var decoded = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(stored));
+		assertEquals(500, decoded.getWidth());
+		assertEquals(100, decoded.getHeight());
+	}
+
+	@Test
+	void transparentSignatureKeepsItsAlphaChannel() throws IOException {
+		var image = new java.awt.image.BufferedImage(17, 7, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		image.setRGB(4, 3, 0x7f010203);
+		String path = storeSignature(image, "png", "signature.png");
+		var decoded = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(fileStorageService.loadFile(path)));
+		assertEquals(0, decoded.getRGB(0, 0) >>> 24);
+		assertEquals(0x7f, decoded.getRGB(4, 3) >>> 24);
+		assertEquals(17, decoded.getWidth());
+	}
+
+	@Test
+	void veryThinSignatureStillHasNonzeroOutputDimensions() throws IOException {
+		var image = new java.awt.image.BufferedImage(8192, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		String path = storeSignature(image, "png", "signature.png");
+		var decoded = javax.imageio.ImageIO.read(new java.io.ByteArrayInputStream(fileStorageService.loadFile(path)));
+		assertEquals(500, decoded.getWidth());
+		assertEquals(1, decoded.getHeight());
+	}
+
+	@Test
+	void malformedSignatureIsRejectedWithoutStoringRawBytes() throws IOException {
+		for (byte[] content : java.util.List.of(
+				new byte[] {(byte) 0x89, 0x50, 0x4e, 0x47, 13, 10, 26, 10, 0, 0, 0, 0},
+				new byte[] {0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50})) {
+			assertThrows(IllegalArgumentException.class, () -> fileStorageService.storeFile(
+					new MockMultipartFile("file", "signature.png", "image/png", content), "signature"));
+		}
+		try (var files = Files.list(tempDir.resolve("signature"))) { assertEquals(0, files.count()); }
+	}
+
+	@Test
+	void excessiveDimensionsAreRejectedBeforeAllocatingTheImage() throws IOException {
+		var image = new java.awt.image.BufferedImage(1, 1, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+		var output = new java.io.ByteArrayOutputStream();
+		javax.imageio.ImageIO.write(image, "png", output);
+		byte[] header = output.toByteArray();
+		java.nio.ByteBuffer.wrap(header).putInt(16, 8193);
+		var crc = new java.util.zip.CRC32(); crc.update(header, 12, 17);
+		java.nio.ByteBuffer.wrap(header).putInt(29, (int) crc.getValue());
+		assertThrows(IllegalArgumentException.class, () -> fileStorageService.storeFile(
+				new MockMultipartFile("file", "large.png", "image/png", header), "signature"));
+		try (var files = Files.list(tempDir.resolve("signature"))) { assertEquals(0, files.count()); }
+	}
+
+	private String storeSignature(java.awt.image.BufferedImage image, String format, String filename) throws IOException {
+		var output = new java.io.ByteArrayOutputStream();
+		javax.imageio.ImageIO.write(image, format, output);
+		return fileStorageService.storeFile(new MockMultipartFile("file", filename, "image/" + format, output.toByteArray()), "signature");
+	}
 }

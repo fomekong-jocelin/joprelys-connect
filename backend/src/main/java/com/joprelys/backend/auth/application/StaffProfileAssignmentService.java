@@ -58,6 +58,7 @@ public class StaffProfileAssignmentService {
     @Transactional(readOnly = true)
     public ActiveStructureResponse getOwnActiveStructure(Authentication authentication) {
         UserAccountEntity user = currentUser(authentication);
+        if (user.getOrganizationId() == null) return new ActiveStructureResponse(List.of(), List.of());
         Instant now = Instant.now();
 
         List<ActiveSpecialtyResponse> specialties = specialtyAssignmentRepository
@@ -107,7 +108,7 @@ public class StaffProfileAssignmentService {
 
         String nameFr = unit.getName();
         String nameEn = unit.getName();
-        if (unit.getServiceCatalogCode() != null) {
+        if ((unit.getName() == null || unit.getName().isBlank()) && unit.getServiceCatalogCode() != null) {
             HospitalServiceCatalogEntity service = hospitalServiceCatalogRepository
                     .findById(unit.getServiceCatalogCode())
                     .orElseThrow(() -> new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Référentiel de service incohérent."));
@@ -137,9 +138,7 @@ public class StaffProfileAssignmentService {
         UserAccountEntity user = userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase(Locale.ROOT))
                 .filter(UserAccountEntity::isEnabled)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur non trouvé ou désactivé."));
-        if (user.getOrganizationId() == null) {
-            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Collaborateur non rattaché à un établissement.");
-        }
+
         return user;
     }
 }

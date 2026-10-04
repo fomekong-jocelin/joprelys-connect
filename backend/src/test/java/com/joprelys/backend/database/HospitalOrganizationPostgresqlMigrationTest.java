@@ -38,8 +38,8 @@ class HospitalOrganizationPostgresqlMigrationTest {
                 POSTGRESQL.getUsername(),
                 POSTGRESQL.getPassword()));
 
-        assertEquals(14, count(jdbc, "hospital_service_catalog"));
-        assertEquals(10, count(jdbc, "medical_specialty_catalog"));
+        assertEquals(23, count(jdbc, "hospital_service_catalog"));
+        assertEquals(20, count(jdbc, "medical_specialty_catalog"));
         assertEquals(4, count(jdbc, "organizational_unit_type_catalog"));
         assertEquals(1, countByCode(jdbc, "hospital_service_catalog", "GENERAL_MEDICINE"));
         assertEquals(1, countByCode(jdbc, "medical_specialty_catalog", "GENERAL_MEDICINE"));
@@ -71,11 +71,11 @@ class HospitalOrganizationPostgresqlMigrationTest {
                 ) VALUES (?, ?, NULL, 'SVC-NO-CATALOG', NULL, 'SERVICE', NULL, TRUE, ?, ?)
                 """, UUID.randomUUID(), organizationA, now, now));
 
-        assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""
+        assertEquals(1, jdbc.update("""
                 INSERT INTO organizational_units (
                     id, organization_id, parent_id, code, name, unit_type,
                     service_catalog_code, active, created_at, updated_at
-                ) VALUES (?, ?, NULL, 'SVC-FREE-NAME', 'Texte libre interdit', 'SERVICE', 'GENERAL_MEDICINE', TRUE, ?, ?)
+                ) VALUES (?, ?, NULL, 'SVC-FREE-NAME', 'Chirurgie septique', 'SERVICE', 'GENERAL_MEDICINE', TRUE, ?, ?)
                 """, UUID.randomUUID(), organizationA, now, now));
 
         assertThrows(DataIntegrityViolationException.class, () -> jdbc.update("""

@@ -1,0 +1,125 @@
+<div [formGroup]="form()">
+<section class="ui-card overflow-hidden">
+  <header
+    class="border-b border-[var(--app-border)] bg-[var(--app-surface-muted)] px-4 py-3 sm:px-5 sm:py-4"
+  >
+    <h2 class="text-sm font-bold text-[var(--text-primary)]">
+      {{ i18n.t('consultation.lab.title') }}
+    </h2>
+    <p class="mt-0.5 text-xs text-[var(--text-muted)]">
+      {{
+        i18n
+          .t('consultation.lab.subtitle')
+          .replace('{count}', labExams.length.toString())
+      }}
+    </p>
+  </header>
+
+  <div class="space-y-4 p-4 sm:p-5">
+    <div>
+      <label class="ui-label">{{ i18n.t('consultation.lab.suggestions') }}</label>
+      <div class="mt-2 flex flex-wrap gap-1.5">
+        @for (exam of commonExams(); track exam.code) {
+          <button
+            type="button"
+            (click)="added.emit(exam.code)"
+            class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)] transition hover:border-[var(--brand-primary-border)] hover:bg-[var(--brand-primary-subtle)]"
+          >
+            {{ commonExamLabel(exam) }}
+          </button>
+        }
+      </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <label class="space-y-1 sm:col-span-2">
+        <span class="ui-label">{{ i18n.t('consultation.lab.customLabel') }}</span>
+        <div class="flex gap-2">
+          <input
+            #customExamInput
+            type="text"
+            [placeholder]="i18n.t('consultation.lab.customPlaceholder')"
+            class="ui-input min-w-0 flex-1"
+            (keyup.enter)="
+              added.emit(customExamInput.value); customExamInput.value = ''
+            "
+          />
+          <button
+            type="button"
+            (click)="added.emit(customExamInput.value); customExamInput.value = ''"
+            class="ui-button ui-button-primary shrink-0"
+          >
+            {{ i18n.t('consultation.lab.customAdd') }}
+          </button>
+        </div>
+      </label>
+
+      <label class="space-y-1">
+        <span class="ui-label">{{ i18n.t('consultation.lab.priority') }}</span>
+        <select formControlName="labPriority" class="ui-select">
+          <option value="NORMALE">
+            {{ i18n.t('consultation.lab.priorityNormal') }}
+          </option>
+          <option value="URGENTE">
+            {{ i18n.t('consultation.lab.priorityUrgent') }}
+          </option>
+        </select>
+      </label>
+    </div>
+
+    <label class="block space-y-1">
+      <span class="ui-label">{{ i18n.t('consultation.lab.reason') }}</span>
+      <input
+        type="text"
+        formControlName="labReason"
+        [placeholder]="i18n.t('consultation.lab.reasonPlaceholder')"
+        class="ui-input"
+      />
+    </label>
+
+    @if (labExams.length === 0) {
+      <div
+        class="rounded-[var(--radius-brand-sm)] border border-dashed border-[var(--app-border)] bg-[var(--app-surface-muted)] p-5 text-center"
+      >
+        <p class="text-xs font-medium text-[var(--text-secondary)]">
+          {{ i18n.t('consultation.lab.noExams') }}
+        </p>
+        <p class="mt-1 text-[10px] text-[var(--text-muted)]">
+          {{ i18n.t('consultation.lab.examsHelp') }}
+        </p>
+      </div>
+    } @else {
+      <div class="flex flex-wrap gap-2">
+        @for (ctrl of labExams.controls; track $index; let i = $index) {
+          <span
+            class="inline-flex items-center gap-2 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] px-2.5 py-1.5 text-xs font-medium text-[var(--text-secondary)]"
+          >
+            {{ ctrl.value }}
+            <button
+              type="button"
+              (click)="removed.emit(i)"
+              [title]="i18n.t('consultation.lab.remove')"
+              class="inline-flex h-5 w-5 items-center justify-center rounded-[var(--radius-brand-xs)] text-[var(--brand-danger-text)] hover:bg-[var(--brand-danger-subtle)]"
+            >
+              <svg
+                class="h-3.5 w-3.5"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                aria-hidden="true"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+          </span>
+        }
+      </div>
+    }
+  </div>
+</section>
+</div>

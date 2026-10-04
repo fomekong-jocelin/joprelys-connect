@@ -1,4 +1,5 @@
-import { Component, computed, inject, input, model, output } from '@angular/core';
+import { Component, computed, inject, input, model, output, signal } from '@angular/core';
+import { I18nService } from '../../core/i18n/i18n.service';
 import { HttpClient } from '@angular/common/http';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
@@ -35,7 +36,7 @@ export interface OrganizationFormLabels {
   imports: [AlertComponent, ButtonComponent, CardComponent, InputComponent, FileDragDropComponent],
   template: `
     <app-ui-card [title]="labels().title" class="mb-8">
-      <form class="space-y-5" (submit)="$event.preventDefault(); submitted.emit()">
+      <form novalidate class="space-y-5" (submit)="$event.preventDefault(); submit()">
         @if (error()) {
           <app-ui-alert tone="error">{{ error() }}</app-ui-alert>
         }
@@ -43,6 +44,7 @@ export interface OrganizationFormLabels {
         <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <app-ui-input
             [label]="labels().name"
+            [error]="fieldError('name')"
             [placeholder]="labels().namePlaceholder"
             [required]="true"
             [(value)]="name"
@@ -50,6 +52,7 @@ export interface OrganizationFormLabels {
           <app-ui-input
             type="email"
             [label]="labels().email"
+            [error]="fieldError('email')"
             [placeholder]="labels().emailPlaceholder"
             [required]="true"
             [(value)]="email"
@@ -61,12 +64,14 @@ export interface OrganizationFormLabels {
           />
           <app-ui-input
             [label]="labels().city"
+            [error]="fieldError('city')"
             [placeholder]="labels().cityPlaceholder"
             [required]="true"
             [(value)]="city"
           />
           <app-ui-input
             [label]="labels().country"
+            [error]="fieldError('country')"
             [placeholder]="labels().countryPlaceholder"
             [required]="true"
             [(value)]="country"
@@ -81,19 +86,21 @@ export interface OrganizationFormLabels {
               class="ui-input bg-[var(--app-surface)] text-slate-900 dark:text-slate-100"
               required
             >
-              <option value="HOSPITAL">Hôpital</option>
-              <option value="CLINIC">Clinique</option>
-              <option value="CABINET">Cabinet médical</option>
-              <option value="LABORATORY">Laboratoire</option>
-              <option value="IMAGING_CENTER">Centre d'imagerie</option>
-              <option value="PHARMACY">Pharmacie</option>
-              <option value="HEALTH_PLATFORM">Plateforme santé</option>
-              <option value="NGO">Association / ONG</option>
-              <option value="INSTITUTION">Institution</option>
+              <option value="HOSPITAL">{{ t('organizations.types.HOSPITAL') }}</option>
+              <option value="CLINIC">{{ t('organizations.types.CLINIC') }}</option>
+              <option value="CABINET">{{ t('organizations.types.CABINET') }}</option>
+              <option value="LABORATORY">{{ t('organizations.types.LABORATORY') }}</option>
+              <option value="IMAGING_CENTER">{{ t('organizations.types.IMAGING_CENTER') }}</option>
+              <option value="PHARMACY">{{ t('organizations.types.PHARMACY') }}</option>
+              <option value="HEALTH_PLATFORM">{{ t('organizations.types.HEALTH_PLATFORM') }}</option>
+              <option value="NGO">{{ t('organizations.types.NGO') }}</option>
+              <option value="INSTITUTION">{{ t('organizations.types.INSTITUTION') }}</option>
             </select>
+            <p class="text-xs text-[var(--text-muted)]">{{ t('organizations.typeHints.' + type()) }}</p>
           </div>
           <app-ui-input
             [label]="labels().responsibleName"
+            [error]="fieldError('responsibleName')"
             [placeholder]="labels().responsibleNamePlaceholder"
             [required]="true"
             [(value)]="responsibleName"
@@ -120,7 +127,7 @@ export interface OrganizationFormLabels {
           <div class="sm:col-span-2">
             <app-file-drag-drop
               #logoUploader
-              label="Logo de l'établissement"
+              [label]="t('organizations.logo')"
               [previewUrl]="logoViewUrl()"
               (fileSelected)="onLogoSelected($event, logoUploader)"
               (fileRemoved)="logoPath.set(null)"
@@ -143,6 +150,9 @@ export interface OrganizationFormLabels {
 })
 export class OrganizationFormComponent {
   private readonly http = inject(HttpClient);
+  private readonly i18n = inject(I18nService);
+  readonly attempted = signal(false);
+  readonly t = (key: string) => this.i18n.t(key);
 
   readonly labels = input.required<OrganizationFormLabels>();
   readonly loading = input(false);
@@ -163,6 +173,23 @@ export class OrganizationFormComponent {
 
   readonly submitted = output<void>();
   readonly cancelled = output<void>();
+
+  fieldError(field: 'name' | 'email' | 'city' | 'country' | 'responsibleName'): string | null {
+    if (!this.attempted()) return null;
+    if (!this[field]().trim()) return this.t('organizations.fieldRequired');
+    if (field === 'email' && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(this.email().trim())) {
+      return this.t('organizations.emailInvalid');
+    }
+    return null;
+  }
+
+  submit(): void {
+    this.attempted.set(true);
+    if (this.loading()) return;
+    if (['name', 'email', 'city', 'country', 'responsibleName'].some(field =>
+      this.fieldError(field as 'name' | 'email' | 'city' | 'country' | 'responsibleName'))) return;
+    this.submitted.emit();
+  }
 
   onLogoSelected(file: File, uploader: FileDragDropComponent): void {
     const formData = new FormData();

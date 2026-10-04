@@ -1,8 +1,11 @@
 import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
+import { By } from '@angular/platform-browser';
+import { FileDragDropComponent } from '../shared/ui/file-drag-drop.component';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
 import { ProfileComponent } from './profile.component';
 
@@ -77,4 +80,42 @@ describe('ProfileComponent', () => {
     expect(text).toContain('Praticien');
     expect(text).toContain('MEDECIN');
   });
+  for (const status of [403, 500]) {
+    it(`keeps the profile editable when assignments fail with ${status}`, () => {
+      staffApi.getOwnActiveAssignments.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
+      component.loadProfile();
+      httpTesting.expectOne('/api/profile').flush({ displayName: 'Admin plateforme', role: 'ADMIN_JOPRELYS' });
+      fixture.detectChanges();
+      expect(component.displayName()).toBe('Admin plateforme');
+      expect(component.loading()).toBe(false);
+      expect(component.error()).toBeNull();
+      expect(component.assignments()).toEqual({ specialties: [], unitAssignments: [] });
+      expect(component.assignmentsWarning()).toBeTruthy();
+      expect(fixture.nativeElement.querySelector('input[required]').disabled).toBe(false);
+    });
+  }
+
+  it('uploads the physician signature and saves the canonical PNG path in the profile', () => {
+    const signatureUploader = fixture.debugElement.queryAll(By.directive(FileDragDropComponent))[1].componentInstance as FileDragDropComponent;
+    expect(signatureUploader.accept()).toBe('image/png, image/jpeg');
+    signatureUploader.fileSelected.emit(new File(['synthetic'], 'signature.jpg', { type: 'image/jpeg' }));
+    const upload = httpTesting.expectOne('/api/files/upload');
+    expect((upload.request.body as FormData).get('type')).toBe('signature');
+    upload.flush({ filePath: 'uploads/signature/test.png', viewUrl: '/api/public/files/view?path=uploads/signature/test.png' });
+    expect(component.signaturePath()).toBe('uploads/signature/test.png');
+    component.saveProfile();
+    const save = httpTesting.expectOne('/api/profile');
+    expect(save.request.method).toBe('PUT');
+    expect(save.request.body.signaturePath).toBe('uploads/signature/test.png');
+    save.flush({});
+    expect(component.error()).toBeNull();
+  });
+
+  it('still reports a failure of the primary profile API', () => {
+    component.loadProfile();
+    httpTesting.expectOne('/api/profile').flush({}, { status: 500, statusText: 'Server Error' });
+    expect(component.loading()).toBe(false);
+    expect(component.error()).toBeTruthy();
+  });
+
 });

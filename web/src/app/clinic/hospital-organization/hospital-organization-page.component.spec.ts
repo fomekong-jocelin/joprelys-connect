@@ -117,12 +117,12 @@ describe('HospitalOrganizationPageComponent', () => {
     expect(fixture.componentInstance.unitLabel(fixture.componentInstance.units()[0])).toBe('General medicine');
   });
 
-  it('does not expose a free-text service name when creating a service', () => {
+  it('exposes an optional local service name when creating a service', () => {
     fixture.componentInstance.openCreate('SERVICE');
     fixture.detectChanges();
 
     expect(fixture.nativeElement.querySelector('#service-catalog')).not.toBeNull();
-    expect(fixture.nativeElement.querySelector('#org-unit-name')).toBeNull();
+    expect(fixture.nativeElement.querySelector('#org-unit-name')).not.toBeNull();
   });
 
   it('requires a service parent for a care unit', () => {
@@ -182,4 +182,19 @@ describe('HospitalOrganizationPageComponent', () => {
     expect(dialog.classList).toContain('overflow-x-hidden');
     expect(dialog.classList).toContain('min-w-0');
   });
+  it('saves and displays a local service name without losing the discipline code', () => {
+    const component = fixture.componentInstance;
+    component.openCreate('SERVICE');
+    const form = component.editor()!;
+    form.code = 'SURGERY_SEPTIC'; form.serviceCatalogCode = 'GENERAL_MEDICINE'; form.name = '  Chirurgie septique  ';
+    component.submit();
+    expect(api.createUnit).toHaveBeenCalledWith(expect.objectContaining({
+      name: 'Chirurgie septique', serviceCatalogCode: 'GENERAL_MEDICINE',
+    }), undefined);
+    const unit = { ...component.units()[0], name: 'Chirurgie septique' };
+    expect(component.unitLabel(unit)).toBe('Chirurgie septique');
+    locale.set('en');
+    expect(component.unitLabel(unit)).toBe('Chirurgie septique');
+  });
+
 });

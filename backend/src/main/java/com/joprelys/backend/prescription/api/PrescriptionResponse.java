@@ -19,7 +19,10 @@ public record PrescriptionResponse(
 		UUID visitId,
 		UUID documentId,
 		Instant createdAt,
-		Instant updatedAt
+		Instant updatedAt,
+        UUID signedBy,
+        Instant signedAt,
+        String signedContentHash
 ) {
 	public static PrescriptionResponse fromEntity(PrescriptionEntity e) {
 		return new PrescriptionResponse(
@@ -36,7 +39,10 @@ public record PrescriptionResponse(
 				e.getVisitId(),
 				e.getDocumentId(),
 				e.getCreatedAt(),
-				e.getUpdatedAt()
+				e.getUpdatedAt(),
+                e.getSignedBy(),
+                e.getSignedAt(),
+                e.getSignedContentHash()
 		);
 	}
 }

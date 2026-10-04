@@ -8,6 +8,63 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FIX-20261004-ADMIN-PANEL-CLINICAL-AUDIT** : profil indépendant des affectations et contexte plateforme vide autorisé ; lien/alias du journal RBAC opérationnels, interop distinct et fiche de clés sélectionnée ; nom local optionnel des services, neuf services/dix spécialités ajoutés et responsabilités staff historisées. V113 rend néonatologie/box urgences compatibles et ajoute quatre types ambulatoires. Feedback accessible par champ, aide par type, uploader/breadcrumbs FR/EN réactifs et accents corrigés ; panneaux consultation et métriques spatiales extraits sans refonte.
+- **Signature graphique PNG — complément utilisateur** : le médecin importe PNG/JPEG puis enregistre son profil ; conversion serveur en PNG réel, alpha conservé, dimensions bornées et images invalides refusées. Assets administratifs existants préservés ; preuve upload/profil/image PDF automatisée. ImageIO et OpenPDF existants, aucune dépendance ni service payant ajouté ; DSS retenu pour une future signature cryptographique, sans intégration ni certificat qualifié revendiqués.
+- **BREAKING CHANGE — autorisations cliniques/pharmacie** : prescription exige PRESCRIPTION_WRITE, signature/annulation PRESCRIPTION_SIGN avec médecin actif ; clôture exige CLINICAL_SIGN + CONSULTATION_LOCK en plus de VISIT_MANAGE et ne contourne plus la complétude d'ordonnance. PHARMACY_VALIDATE enregistre la revue humaine ; PHARMACY_DISPENSE et revue préalable obligatoires, même sous /api/public. Nouveaux actes exclus des droits automatiques administrateur/soignant. V114 ajoute acteur/date/empreinte et revue ; contenu validé verrouillé par l'API. Scellement serveur sans revendication de signature qualifiée ou d'horodatage certifié. 647 tests Angular, build/i18n, Maven complet 922 (9 PostgreSQL ignorés faute de Docker), 61 cas ciblés finaux verts. ADR et mapping de tous les constats disponibles ; rôles personnalisés/clients à coordonner. MAJOR candidat, aucun bump/tag/release/déploiement.
+
+- **UX-20261004-CLINICAL-LAYOUT-SPACING — alignement et marges** : actions du drawer d'admission empilées en pleine largeur, consultation en premier et fermeture secondaire séparée ; header/footer fixes et corps défilable. Consultation avec gap explicite entre composants, progression aérée et grille responsive. Handlers, droits, alertes, libellés FR/EN et tokens existants conservés. Correctif de présentation rétrocompatible candidat PATCH, sans bump/release ; recette visuelle ouverte.
+
+- **UX-20261004-VITALS-ENTRY-CLARITY — saisie des constantes** : mode manuel initial, dictée ponctuelle et écoute continue décrites par radios sans activation du microphone à la sélection ; CTA vocal séparé, texte optionnel pleine largeur, distinction report des propositions / enregistrement final. Modale avec patient unique, en-tête/footer hors défilement, labels reliés et navigation clavier ; valeurs conservées, sauvegarde bloquée pendant activité de l'assistant et permission tardive libérée après fermeture/réduction. FR/EN et tokens centraux conservés. 633 tests Angular / build final / i18n verts ; recette visuelle et microphone réel ouverte. Correctif rétrocompatible candidat PATCH, aucun bump/release.
+
+- **UX-20261004 — entrée et formulaire de consultation** : maquette acceptée implémentée avec trois modes explicites (manuel, dictée, conversation), sélection sans activation du microphone et bouton contextualisé ; formulaire affiché par un état partagé avec l'assistant pour saisie manuelle, consultation chargée et rapport accepté, indépendamment de `form.dirty`. Le bandeau ne prétend plus valider un rapport lors d'une simple ouverture manuelle. Reprise sans perte des saisies, retour manuel après arrêt de capture, blocage des doubles démarrages pendant l'autorisation du microphone. FR/EN et tokens light/dark conservés. 619 tests Angular / build / contrôles i18n verts ; recette visuelle et microphone réel ouverts. Correctif rétrocompatible candidat PATCH, aucun bump ni release préparé.
+
+- **FIX-20261004-HOSPITAL-PATH — corrections du parcours hospitalier** : lectures de placement/praticiens/visites autorisées par les droits hospitaliers, sans droits de configuration ajoutés ; verrous de visite pour prise en charge et révisions concurrentes ; précalcul financier refusé si une source clinique échoue. Angular distingue chargement/erreur/vide, permet la reprise, bloque les doubles admissions, extrait consentements/CRO et traduit les libellés FR/EN avec tokens d'arrondi centraux.
+- **BREAKING CHANGE — administration médicamenteuse hospitalière** : prescriptionItemId devient obligatoire ; prescription ACTIVE non expirée du patient canonique et du tenant, nom cohérent, contrôlés côté serveur. Sélection depuis les prescriptions admissibles dans Angular. Choix accepté par l'utilisateur, documenté dans ADR-20261004-hospital-medication-prescription-required. Lot MAJOR candidat ; aucun numéro de version/release préparé. Recette navigateur et PostgreSQL restent à effectuer.
+
+
+- **TICKET-20261003-PATIENT-JOURNEY-AUDIT (lot 2) — Prise en charge, historique des constantes, admission unifiée** :
+  - étapes de prise en charge d'une visite (attente constantes → prêt pour le médecin → en consultation chez Dr X), un seul praticien à la fois, reprise explicite tracée (`take-charge`, `release`, Flyway V112) ;
+  - historique horodaté et signé des mesures de constantes, visible dans la file et dans la consultation ;
+  - alertes de constantes calculées par le backend (`VitalSignAlertPolicy`, seuils adultes à valider) ;
+  - file active filtrable (Toute la file / Mes patients / Mon service), avec résumé par étape et alertes critiques ;
+  - formulaire de visite commun aux deux admissions (codes d'orientation, service, praticien du service, heure d'arrivée) ;
+  - recherche serveur du patient existant, avec date de naissance, DPU et téléphone pour distinguer les homonymes ;
+  - refactor : tableau de bord découpé en composants (469 → 69 lignes), admission unifiée 504 → 432 lignes ;
+  - **SemVer** : nouvelles fonctionnalités rétrocompatibles (champs et endpoints additifs) → `MINOR` (0.10.1 → 0.11.0, regroupé avec le lot 1).
+
+- **TICKET-20261003-PATIENT-JOURNEY-AUDIT — Correctifs ciblés du parcours patient (pré-enregistrement → constantes → consultation)** :
+  - un seul bon d'examens actif par visite : un nouvel enregistrement de la consultation ne crée plus de doublon au laboratoire ;
+  - consultation : l'auteur reste figé et un enregistrement concurrent est refusé (409, `expectedUpdatedAt`) au lieu d'un écrasement silencieux ;
+  - constantes : contrôle serveur systolique > diastolique, audit `VISIT_VITALS_RECORDED`, heure de mesure (`recordedAt`) visible du médecin, avertissement sur l'unité de glycémie ;
+  - pré-enregistrements : filtres par statut côté serveur, lien `validatedPatientId` (Flyway V111), action « Ouvrir le dossier », QR code généré par le backend (plus d'appel à `api.qrserver.com`), libellés traduits FR/EN ;
+  - admission : brouillon en `sessionStorage` (purgé à chaque changement d'utilisateur), plus d'orientation « Urgences » dans le parcours normal, praticien principal limité aux médecins et infirmiers ;
+  - file d'attente : statut de visite traduit ; consultation : erreur de chargement affichée, appels HTTP déplacés dans `VisitApiService` ;
+  - **SemVer** : nouveaux champs d'API et migration additive, rétrocompatibles → candidat `MINOR` (0.10.1 → 0.11.0).
+
+- **BUG-20261003 — Correction du démarrage Spring Boot sans IA (`FinalClinicalReview`)** :
+  - ajout de `@ConditionalOnProperty(name = "joprelys.ai.enabled", havingValue = "true")` sur `FinalClinicalReviewController`, `FinalClinicalReviewService` et `OpenAiFinalClinicalReviewGateway` ;
+  - élimination de l'`UnsatisfiedDependencyException` liée à l'absence du bean `AiConsultationService` lorsque `joprelys.ai.enabled=false` ;
+  - déblocage des migrations Flyway V88 à V110 sur environnement local ;
+  - **SemVer** : correctif rétrocompatible candidat `PATCH`.
+
+- **BUG-20260809 — Clarification de la navigation clinique** :
+  - remplacement des libellés ambigus par `Services & unités de soins`, `Suivi des lits` et `Configurer chambres & lits` ;
+  - regroupement sous `Établissement` et `Capacité d’accueil` ;
+  - **SemVer** : correctif rétrocompatible candidat `PATCH`.
+
+- **BUG-20260809 — Filtrage du médecin responsable par service** :
+  - les modales d’admission normale et de continuité urgence proposent uniquement les médecins actifs affectés à l’unité sélectionnée ;
+  - l’admission normale impose maintenant l’ordre service → médecin et désactive le médecin avant la sélection du service ;
+  - le choix est réinitialisé lors d’un changement de service s’il devient invalide ;
+  - **SemVer** : correctif rétrocompatible candidat `PATCH`.
+
+- **DIAG-20260809 — Durcissement du parcours d’attribution du lit** :
+  - les admissions normales et la continuité urgence ne proposent que les lits disponibles, ouverts et prêts ;
+  - le backend contrôle le tenant, l’activation, le rôle `MEDECIN` et l’affectation active du praticien responsable ;
+  - un échec de génération documentaire reste visible et récupérable sans rejouer l’admission ;
+  - les workflows de demande, réservation, arrivée et handoff restent dans les lots `HOS-ADM`, `HOS-MOV` et `HOS-PATH` ;
+  - **SemVer** : candidat `MINOR`, aucun bump ni release préparé.
+
 - **BUG-20260804 — Support ordonnances/examens, captation continue non-bloquante et chunking strict backend** :
   - **Assistant IA Mobile** : ajout du support des prescriptions et examens complémentaires (`prescriptions` et `labOrders`) dans `ConsultationNote`, extrait par l'IA et affiché dans l'aperçu clinique `ClinicalAcceptedPreview`. Notification explicite du praticien si des ordonnances/examens sont détectés pour leur saisie dans les modules dédiés.
   - **Performance Écoute** : passage de l'analyse progressive (`analyzeProgressiveSegment`) en mode non-bloquant (`unawaited`) dans `ClinicalVoiceProgressiveCoordinator` pour éviter tout blocage de la boucle de sérialisation audio.

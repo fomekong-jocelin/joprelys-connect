@@ -1,5 +1,7 @@
 package com.joprelys.backend.spatial.api;
 
+import static org.hamcrest.Matchers.contains;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -429,4 +431,30 @@ public class SpatialControllerTest {
             TenantContext.clear();
         }
     }
+    @Test
+    void clinicalAndAmbulatorySpaceTypesSupportInpatientProfiles() throws Exception {
+        for (String code : java.util.List.of("NEONATAL_ROOM", "EMERGENCY_BOX", "DAY_HOSPITAL",
+                "DIALYSIS_STATION", "CHEMOTHERAPY_STATION", "AMBULATORY_SURGERY")) {
+            mockMvc.perform(get("/api/spatial/configuration/space-types")
+                    .header("Authorization", "Bearer " + tokenAdmin))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.code == '" + code + "')].inpatientCompatible").value(contains(true)));
+            String response = mockMvc.perform(post("/api/spatial/configuration/spaces")
+                    .header("Authorization", "Bearer " + tokenAdmin)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("""
+                        {"code":"TEST-%s","name":"Espace %s","spaceTypeCode":"%s","enableInpatientProfile":true}
+                        """.formatted(code, code, code)))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.inpatientProfile").value(true))
+                    .andReturn().getResponse().getContentAsString();
+            String spaceId = jsonMapper.readTree(response).get("id").asString();
+            mockMvc.perform(post("/api/spatial/configuration/beds")
+                    .header("Authorization", "Bearer " + tokenAdmin)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content("{\"spaceId\":\"" + spaceId + "\",\"bedNumber\":\"TEST-01\"}"))
+                    .andExpect(status().isCreated());
+        }
+    }
+
 }

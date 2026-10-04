@@ -36,6 +36,8 @@ export interface SaveConsultationRequest {
   conclusion?: string;
   advice?: string;
   followUp?: string;
+  /** Dernière version connue ; le backend refuse un enregistrement concurrent (409). */
+  expectedUpdatedAt?: string;
 }
 
 export interface PrescriptionItem {
