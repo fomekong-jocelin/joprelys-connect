@@ -44,16 +44,61 @@ public interface OrganizationalUnitSpaceAssignmentRepository
             WHERE a.organizationId = :organizationId
               AND a.organizationalUnitId = :unitId
               AND a.spaceId = :spaceId
-              AND (:excludedId IS NULL OR a.id <> :excludedId)
-              AND a.validFrom < COALESCE(:validTo, :infinity)
-              AND COALESCE(a.validTo, :infinity) > :validFrom
+              AND (a.validTo IS NULL OR a.validTo > :validFrom)
             """)
-    boolean hasOverlap(
+    boolean hasOverlapOpenEnded(
+            @Param("organizationId") UUID organizationId,
+            @Param("unitId") UUID unitId,
+            @Param("spaceId") UUID spaceId,
+            @Param("validFrom") Instant validFrom);
+
+    @Query("""
+            SELECT COUNT(a) > 0
+            FROM OrganizationalUnitSpaceAssignmentEntity a
+            WHERE a.organizationId = :organizationId
+              AND a.organizationalUnitId = :unitId
+              AND a.spaceId = :spaceId
+              AND a.validFrom < :validTo
+              AND (a.validTo IS NULL OR a.validTo > :validFrom)
+            """)
+    boolean hasOverlapBounded(
+            @Param("organizationId") UUID organizationId,
+            @Param("unitId") UUID unitId,
+            @Param("spaceId") UUID spaceId,
+            @Param("validFrom") Instant validFrom,
+            @Param("validTo") Instant validTo);
+
+    @Query("""
+            SELECT COUNT(a) > 0
+            FROM OrganizationalUnitSpaceAssignmentEntity a
+            WHERE a.organizationId = :organizationId
+              AND a.organizationalUnitId = :unitId
+              AND a.spaceId = :spaceId
+              AND a.id <> :excludedId
+              AND (a.validTo IS NULL OR a.validTo > :validFrom)
+            """)
+    boolean hasOverlapOpenEndedExcluding(
+            @Param("organizationId") UUID organizationId,
+            @Param("unitId") UUID unitId,
+            @Param("spaceId") UUID spaceId,
+            @Param("excludedId") UUID excludedId,
+            @Param("validFrom") Instant validFrom);
+
+    @Query("""
+            SELECT COUNT(a) > 0
+            FROM OrganizationalUnitSpaceAssignmentEntity a
+            WHERE a.organizationId = :organizationId
+              AND a.organizationalUnitId = :unitId
+              AND a.spaceId = :spaceId
+              AND a.id <> :excludedId
+              AND a.validFrom < :validTo
+              AND (a.validTo IS NULL OR a.validTo > :validFrom)
+            """)
+    boolean hasOverlapBoundedExcluding(
             @Param("organizationId") UUID organizationId,
             @Param("unitId") UUID unitId,
             @Param("spaceId") UUID spaceId,
             @Param("excludedId") UUID excludedId,
             @Param("validFrom") Instant validFrom,
-            @Param("validTo") Instant validTo,
-            @Param("infinity") Instant infinity);
+            @Param("validTo") Instant validTo);
 }

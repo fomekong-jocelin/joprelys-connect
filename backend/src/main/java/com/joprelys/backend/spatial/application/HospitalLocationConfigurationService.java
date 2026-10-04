@@ -45,7 +45,6 @@ import org.springframework.web.server.ResponseStatusException;
 public class HospitalLocationConfigurationService {
 
     private static final Pattern CODE_PATTERN = Pattern.compile("[A-Z][A-Z0-9_]{1,63}");
-    private static final Instant OVERLAP_INFINITY = Instant.parse("9999-12-31T23:59:59Z");
 
     private final FacilityLocationNodeRepository locationRepository;
     private final FacilitySpaceRepository spaceRepository;
@@ -462,14 +461,36 @@ public class HospitalLocationConfigurationService {
             UUID organizationId,
             SaveUnitSpaceAssignmentRequest request,
             UUID excludedId) {
-        boolean overlap = assignmentRepository.hasOverlap(
-                organizationId,
-                request.organizationalUnitId(),
-                request.spaceId(),
-                excludedId,
-                request.validFrom(),
-                request.validTo(),
-                OVERLAP_INFINITY);
+        boolean overlap;
+        if (excludedId == null) {
+            overlap = request.validTo() == null
+                    ? assignmentRepository.hasOverlapOpenEnded(
+                            organizationId,
+                            request.organizationalUnitId(),
+                            request.spaceId(),
+                            request.validFrom())
+                    : assignmentRepository.hasOverlapBounded(
+                            organizationId,
+                            request.organizationalUnitId(),
+                            request.spaceId(),
+                            request.validFrom(),
+                            request.validTo());
+        } else {
+            overlap = request.validTo() == null
+                    ? assignmentRepository.hasOverlapOpenEndedExcluding(
+                            organizationId,
+                            request.organizationalUnitId(),
+                            request.spaceId(),
+                            excludedId,
+                            request.validFrom())
+                    : assignmentRepository.hasOverlapBoundedExcluding(
+                            organizationId,
+                            request.organizationalUnitId(),
+                            request.spaceId(),
+                            excludedId,
+                            request.validFrom(),
+                            request.validTo());
+        }
         rejectConflict(overlap, "Cette période chevauche déjà un rattachement pour la même unité et le même espace.");
     }
 

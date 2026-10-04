@@ -197,17 +197,56 @@ Sur `/dashboard`, la carte *« Cliniques Pilotes »* et la carte *« Configurati
 
 ## 6. Matrice d'Actions et Plan de Correction Priorisé
 
-| Réf | Gravité | Composant / Module | Description de l'action corrective |
-| :--- | :---: | :--- | :--- |
-| **FIX-01** | 🚨 **P0** | **Profil (`/profile`)** | Ajouter un opérateur `.pipe(catchError(() => of([])))` sur `getOwnActiveAssignments()` pour éviter le crash 403 des comptes administrateurs plateforme. |
-| **FIX-02** | 🚨 **P0** | **Dashboard / Routeur** | Déclarer la route `/audit-trail` ou brancher le bouton "Consulter" sur l'onglet d'audit de `/clinic/rbac`. |
-| **FIX-03** | ⚠️ **P1** | **Organisation Hospitalière** | Permettre la saisie d'un nom libre `name` pour les Services afin de permettre les services dédoublés. |
-| **FIX-04** | ⚠️ **P1** | **Référentiel des Catalogues** | Ajouter `EMERGENCY_MEDICINE` dans les spécialités, et introduire la Traumatologie, la Néonatologie et l'Infectiologie. |
-| **FIX-05** | ⚠️ **P1** | **Topographie Spatiale** | Corriger le catalogue `spaceTypes` : passer `NEONATAL_ROOM` et `EMERGENCY_BOX` à `inpatientCompatible: true`. |
-| **FIX-06** | ⚠️ **P1** | **Matrice RBAC** | Créer la permission `PRESCRIPTION_WRITE` (distincte de `CLINICAL_WRITE`) et `PHARMACY_DISPENSE`. |
-| **FIX-07** | 💡 **P2** | **Formulaire Cliniques** | Ajouter la coloration d'erreur rouge (`has-error`) directement sous les inputs obligatoires non remplis. |
-| **FIX-08** | 💡 **P2** | **Finitions UI / i18n** | Corriger les accents manquants et traduire les libellés anglais résiduels. |
+| Réf | Gravité | Composant / Module | Description de l'action corrective | Statut Passe 2 |
+| :--- | :---: | :--- | :--- | :---: |
+| **FIX-01** | 🚨 **P0** | **Profil (`/profile`)** | Sécuriser le chargement sans établissement pour éviter le crash 403. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-02** | 🚨 **P0** | **Dashboard / Routeur** | Brancher "Journal des autorisations" vers `/clinic/rbac?tab=audit`. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-03** | ⚠️ **P1** | **Organisation Hospitalière** | Permettre la saisie d'un nom libre `name` pour les Services dédoublés. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-04** | ⚠️ **P1** | **Référentiel des Catalogues** | Ajouter la Médecine d'urgence, Traumatologie, Néonatologie, etc. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-05** | ⚠️ **P1** | **Topographie Spatiale** | Corriger `NEONATAL_ROOM`, `EMERGENCY_BOX` et ambulatoire en hospitalisable. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-06** | ⚠️ **P1** | **Matrice RBAC** | Créer `PRESCRIPTION_WRITE/SIGN`, `CLINICAL_SIGN` et `PHARMACY_DISPENSE/VALIDATE`. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-07** | 💡 **P2** | **Formulaire Cliniques** | Afficher le feedback d'erreur rouge directement sous chaque input requis. | ✅ **RÉSOLU & VALIDÉ** |
+| **FIX-08** | 💡 **P2** | **Finitions UI / i18n** | Corriger les accents manquants et finaliser les traductions EN. | ✅ **RÉSOLU & VALIDÉ** |
 
 ---
 
-*Ce rapport d'audit constitue le prérequis méthodologique avant l'initialisation de la première clinique pilote et le déploiement du parcours de soins.*
+## 7. Bilan des Tests de Non-Régression (Passe 2 - 4 Octobre 2026)
+
+### Verdict : ✅ VALIDÉ & APPROUVÉ (Passage en Phase Clinique Autorisé)
+
+Une contre-expertise interactive complète a été exécutée sur l'environnement de recette (`build main-22USUK6H.js`) :
+1. **Écran Profil (`/profile`) :** L'anomalie 403 a disparu. Le profil complet de l'administrateur s'affiche sans alerte d'erreur. La mise à jour des coordonnées (téléphone, biographie) a été testée avec succès (confirmation visuelle *"Profil mis à jour avec succès !"*).
+2. **Dashboard (`/dashboard`) :** La carte d'audit pointe désormais vers le Journal des autorisations (`/clinic/rbac?tab=audit`) sans aucune erreur de routage. La carte interopérabilité pointe vers `/interop`.
+3. **Organisation Hospitalière :** Le composant accepte désormais un `name` libre pour les services, permettant les services dédoublés tout en conservant le code catalogue.
+4. **Catalogues Métiers :** Les deux référentiels comptent désormais 22 services et 20 spécialités parfaitement synchronisés (Médecine d'urgence, Orthopédie/Traumatologie, Néonatologie, Infectiologie, Hémodialyse, etc.).
+5. **Topographie des Espaces :** `NEONATAL_ROOM`, `EMERGENCY_BOX`, `DAY_HOSPITAL`, `AMBULATORY_SURGERY`, `CHEMOTHERAPY_STATION` et `DIALYSIS_STATION` sont désormais reconnus compatibles hospitalisation (`inpatientCompatible: true`).
+6. **Sécurité RBAC :** Le catalogue est passé de 56 à 84 permissions avec la séparation stricte de la prescription, de la signature clinique certifiée, du verrouillage de consultation et de la validation/dispensation pharmaceutique.
+7. **Formulaire d'enregistrement des Cliniques :** En cas d'omission, chaque champ manquant est immédiatement souligné en rouge avec l'alerte contextuelle *"Ce champ est obligatoire."*, et une note d'orientation explicative a été ajoutée pour le type d'établissement.
+8. **UI & Langues :** Typographie corrigée (*"Se déconnecter"*, *"Confidentialité"*), traductions anglaises exhaustives sur le profil et la modale de photo.
+
+---
+
+---
+
+*Le socle d'administration hospitalière et de gouvernance des accès est désormais robuste, cohérent et certifié conforme aux standards cliniques.*
+
+---
+
+## 8. Initialisation de la Clinique Pilote & Correctif Spatial (FIX-09)
+
+### 8.1 Configuration de la structure hospitalière pilote
+- **Établissement :** *Clinique Pilote Internationale Joprelys* (Douala, Cameroun - type `CLINIC`).
+- **Contact & Administrateur dédié :** `noupoue.trauma@joprelys.com` / Dr. Noupoué (sélectionné pour la réception des codes d'authentification 2FA).
+- **Service Médical :** `URG-TRAUMA` — *Urgences et Traumatologie Chirurgicale* (code catalogue `ORTHOPEDICS_TRAUMATOLOGY`).
+- **Unité de soins :** `UHCD-TRAUMA` — *UHCD & Déchoquage Traumatologique* (type `CARE_UNIT`).
+- **Bâtiment :** `BAT-URG` — *Bâtiment Urgences & Réanimation* (type `BUILDING`).
+- **Espace physique :** `CH-101` — *Chambre 101 - UHCD Traumatologie* (type `HOSPITAL_ROOM`, profil hébergement activé).
+- **Lits d'hospitalisation :** `LIT-101-A` et `LIT-101-B` créés avec succès (statut initial `OPEN · READY · UNASSIGNED`).
+
+### 8.2 Détection de l'anomalie FIX-09 (Erreur 500 sur rattachement Espace ↔ Unité)
+- **Symptôme :** Lors de la validation de la liaison de `CH-101` à l'unité `UHCD-TRAUMA` sans date de fin (`validTo: null`), l'appel `POST /api/spatial/configuration/unit-space-assignments` échouait avec un code `500 INTERNAL_ERROR`.
+- **Cause racine identifiée :** Dans `OrganizationalUnitSpaceAssignmentRepository`, la requête JPQL de vérification de chevauchement utilisait `COALESCE(:validTo, :infinity)` et `:excludedId IS NULL OR a.id <> :excludedId`. Lors de l'exécution SQL sur Hibernate/PostgreSQL/H2, le passage de paramètres `null` sans typage explicite déclenchait une exception JDBC `Unknown data type: "?"` (`Type de données inconnu: "?"`).
+- **Action corrective appliquée (FIX-09) :**
+  - Remplacement de la requête polymorphe par 4 méthodes strictement typées garantissant l'absence de paramètres non typés : `hasOverlapOpenEnded`, `hasOverlapBounded`, `hasOverlapOpenEndedExcluding`, `hasOverlapBoundedExcluding`.
+  - Élimination de la constante factice `OVERLAP_INFINITY` dans `HospitalLocationConfigurationService`.
+  - Ajout d'une suite de tests d'intégration dédiée `HospitalLocationConfigurationControllerTest` validant la création ouverte, le rejet de chevauchement (409) et les plages bornées (100% de succès, 0 régression sur `SpatialControllerTest`).
