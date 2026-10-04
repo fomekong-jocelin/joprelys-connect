@@ -99,15 +99,21 @@ class HospitalLocationConfigurationControllerTest {
     @AfterEach
     void tearDown() {
         TenantContext.clear();
-        jdbcTemplate.execute("DELETE FROM organizational_unit_space_assignments");
-        jdbcTemplate.execute("DELETE FROM beds");
-        jdbcTemplate.execute("DELETE FROM inpatient_space_profiles");
-        jdbcTemplate.execute("DELETE FROM facility_spaces");
-        jdbcTemplate.execute("DELETE FROM facility_location_nodes");
-        jdbcTemplate.execute("DELETE FROM organizational_units");
-        jdbcTemplate.execute("DELETE FROM user_roles");
-        jdbcTemplate.execute("DELETE FROM users");
-        jdbcTemplate.execute("DELETE FROM organizations");
+        if (organization == null || organization.getId() == null) {
+            return;
+        }
+        UUID orgId = organization.getId();
+        jdbcTemplate.update("DELETE FROM organizational_unit_space_assignments WHERE organization_id = ?", orgId);
+        jdbcTemplate.update("DELETE FROM beds WHERE organization_id = ?", orgId);
+        jdbcTemplate.update("DELETE FROM inpatient_space_profiles WHERE organization_id = ?", orgId);
+        jdbcTemplate.update("DELETE FROM facility_spaces WHERE organization_id = ?", orgId);
+        jdbcTemplate.update("DELETE FROM facility_location_nodes WHERE organization_id = ?", orgId);
+        jdbcTemplate.update("DELETE FROM organizational_units WHERE organization_id = ?", orgId);
+        if (admin != null && admin.getId() != null) {
+            jdbcTemplate.update("DELETE FROM user_roles WHERE user_id = ?", admin.getId());
+            jdbcTemplate.update("DELETE FROM users WHERE id = ?", admin.getId());
+        }
+        jdbcTemplate.update("DELETE FROM organizations WHERE id = ?", orgId);
     }
 
     @Test

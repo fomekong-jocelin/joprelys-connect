@@ -16,7 +16,8 @@ class PermissionFirstControllerPolicyTest {
             "PasswordRecoveryController.java",
             "PatientAuthController.java",
             "PharmacyController.java",
-            "LabResultUploadController.java");
+            "LabResultUploadController.java",
+            "PublicDemoRequestController.java");
 
     @Test
     void controllersNeverAuthorizeWithRoleNames() throws IOException {
