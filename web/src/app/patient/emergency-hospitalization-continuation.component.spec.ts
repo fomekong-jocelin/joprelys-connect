@@ -1,5 +1,7 @@
+import { readFileSync } from 'node:fs';
+const dictionary: Record<string, string> = JSON.parse(readFileSync('src/assets/i18n/features/hospital-continuity/fr.json', 'utf8'));
 import { ComponentFixture, TestBed } from '@angular/core/testing';
-import { of, throwError } from 'rxjs';
+import { of, throwError, forkJoin, Observable } from 'rxjs';
 import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
@@ -11,7 +13,7 @@ import { SpatialApiService } from './spatial-api.service';
 
 describe('EmergencyHospitalizationContinuationComponent', () => {
   let fixture: ComponentFixture<EmergencyHospitalizationContinuationComponent>;
-  let hospitalizationApi: { admit: ReturnType<typeof vi.fn> };
+  let hospitalizationApi: { admit: ReturnType<typeof vi.fn<(...args: unknown[]) => unknown>>; placementOptions?: ReturnType<typeof vi.fn>; placementBeds?: ReturnType<typeof vi.fn> };
   let documentApi: { generateBundle: ReturnType<typeof vi.fn> };
   let rbacApi: { hasPermission: ReturnType<typeof vi.fn> };
   let spatialApi: Record<string, ReturnType<typeof vi.fn>>;
@@ -113,6 +115,12 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
       }])),
     };
 
+    hospitalizationApi['placementOptions'] = vi.fn(() => forkJoin({
+      units: (hospitalOrganizationApi['listUnits'] as () => Observable<unknown>)(), serviceCatalog: (hospitalOrganizationApi['listServiceCatalog'] as () => Observable<unknown>)(),
+      spaces: (spatialApi['listSpaces'] as () => Observable<unknown>)(), assignments: (spatialApi['listUnitSpaceAssignments'] as () => Observable<unknown>)(), staff: (staffApi.list as () => Observable<unknown>)(),
+    }));
+    hospitalizationApi['placementBeds'] = vi.fn(() => (spatialApi['listBeds'] as () => Observable<unknown>)());
+
     await TestBed.configureTestingModule({
       imports: [EmergencyHospitalizationContinuationComponent],
       providers: [
@@ -125,7 +133,7 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
         {
           provide: I18nService,
           useValue: {
-            t: (_key: string, fallback: string) => fallback,
+            t: (key: string, fallback?: string) => dictionary[key] ?? fallback ?? key,
             currentLanguage: () => 'fr',
           },
         },
@@ -207,6 +215,7 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
   it('does not load admission data or execute admission without the dedicated permission', () => {
     fixture.destroy();
     rbacApi.hasPermission.mockReturnValue(false);
+    hospitalizationApi['placementOptions']!.mockClear();
     spatialApi['listSpaces'].mockClear();
     hospitalOrganizationApi['listUnits'].mockClear();
     staffApi.list.mockClear();
@@ -226,6 +235,7 @@ describe('EmergencyHospitalizationContinuationComponent', () => {
     expect(fixture.nativeElement.textContent).toContain(
       'Votre profil ne peut pas créer un séjour hospitalier.',
     );
+    expect(hospitalizationApi['placementOptions']).not.toHaveBeenCalled();
     expect(spatialApi['listSpaces']).not.toHaveBeenCalled();
     expect(hospitalOrganizationApi['listUnits']).not.toHaveBeenCalled();
     expect(staffApi.list).not.toHaveBeenCalled();

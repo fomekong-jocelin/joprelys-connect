@@ -91,7 +91,7 @@ public class VisitService {
 
 	@Transactional
 	public VisitEntity closeVisit(UUID visitId) {
-		VisitEntity visit = visitRepository.findById(visitId)
+		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"EN_COURS".equals(visit.getStatus())) {
@@ -148,7 +148,7 @@ public class VisitService {
 
 	@Transactional
 	public VisitEntity cancelVisit(UUID visitId) {
-		VisitEntity visit = visitRepository.findById(visitId)
+		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"EN_COURS".equals(visit.getStatus())) {
@@ -167,7 +167,7 @@ public class VisitService {
 
 	@Transactional
 	public VisitEntity correctVisit(UUID visitId, CorrectVisitRequest request, UUID correctedByUserId, UUID actorOrganizationId) {
-		VisitEntity visit = visitRepository.findById(visitId)
+		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"TERMINEE".equals(visit.getStatus()) && !"ANNULEE".equals(visit.getStatus())) {

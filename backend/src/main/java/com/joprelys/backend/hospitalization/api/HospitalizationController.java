@@ -1,5 +1,7 @@
 package com.joprelys.backend.hospitalization.api;
 
+import com.joprelys.backend.hospitalization.application.HospitalizationMedicationUseCase;
+
 import com.joprelys.backend.hospitalization.application.CanonicalHospitalizationQueryService;
 import com.joprelys.backend.hospitalization.application.HospitalizationAdmissionService;
 import com.joprelys.backend.hospitalization.application.HospitalizationCareService;
@@ -35,6 +37,7 @@ public class HospitalizationController {
     private final CanonicalHospitalizationQueryService canonicalHospitalizationQueryService;
     private final HospitalizationCareService hospitalizationCareService;
     private final OperatingReportService operatingReportService;
+    private final HospitalizationMedicationUseCase medicationPolicy;
 
     public HospitalizationController(
             HospitalizationAdmissionService hospitalizationAdmissionService,
@@ -43,7 +46,8 @@ public class HospitalizationController {
             HospitalizationEntryDocumentService hospitalizationEntryDocumentService,
             CanonicalHospitalizationQueryService canonicalHospitalizationQueryService,
             HospitalizationCareService hospitalizationCareService,
-            OperatingReportService operatingReportService) {
+            OperatingReportService operatingReportService,
+            HospitalizationMedicationUseCase medicationPolicy) {
         this.hospitalizationAdmissionService = hospitalizationAdmissionService;
         this.hospitalizationService = hospitalizationService;
         this.hospitalizationDischargeWorkflowService = hospitalizationDischargeWorkflowService;
@@ -51,6 +55,7 @@ public class HospitalizationController {
         this.canonicalHospitalizationQueryService = canonicalHospitalizationQueryService;
         this.hospitalizationCareService = hospitalizationCareService;
         this.operatingReportService = operatingReportService;
+        this.medicationPolicy = medicationPolicy;
     }
 
     @PostMapping
@@ -146,6 +151,12 @@ public class HospitalizationController {
     @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
     public List<DailyCareResponse> getDailyCares(@PathVariable UUID id) {
         return hospitalizationCareService.getDailyCares(id);
+    }
+
+    @GetMapping("/{id}/eligible-medications")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_MEDICATION_ADMINISTER')")
+    public List<HospitalizationMedicationOption> eligibleMedications(@PathVariable UUID id) {
+        return medicationPolicy.options(id);
     }
 
     @PostMapping("/{id}/medication-administrations")

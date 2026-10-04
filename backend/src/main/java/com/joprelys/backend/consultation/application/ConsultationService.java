@@ -51,7 +51,7 @@ public class ConsultationService {
 
 	@Transactional
 	public ConsultationEntity saveConsultation(UUID visitId, String doctorEmail, SaveConsultationRequest request) {
-		VisitEntity visit = visitRepository.findById(visitId)
+		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"EN_COURS".equals(visit.getStatus())) {

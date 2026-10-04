@@ -24,19 +24,21 @@ public class HospitalizationCareService {
     private final PatientConsumptionRepository patientConsumptionRepository;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
+    private final HospitalizationMedicationUseCase medicationPolicy;
 
     public HospitalizationCareService(HospitalizationRepository hospitalizationRepository,
                                       HospitalizationDailyCareRepository dailyCareRepository,
                                       MedicationAdministrationRepository medicationAdministrationRepository,
                                       PatientConsumptionRepository patientConsumptionRepository,
                                       UserAccountRepository userAccountRepository,
-                                      AuditService auditService) {
+                                      AuditService auditService, HospitalizationMedicationUseCase medicationPolicy) {
         this.hospitalizationRepository = hospitalizationRepository;
         this.dailyCareRepository = dailyCareRepository;
         this.medicationAdministrationRepository = medicationAdministrationRepository;
         this.patientConsumptionRepository = patientConsumptionRepository;
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
+        this.medicationPolicy = medicationPolicy;
     }
 
     @Transactional
@@ -91,7 +93,7 @@ public class HospitalizationCareService {
 
     @Transactional
     public MedicationAdministrationResponse addMedicationAdministration(UUID hospitalizationId, CreateMedicationAdministrationRequest request) {
-        HospitalizationEntity hosp = hospitalizationRepository.findById(hospitalizationId)
+        HospitalizationEntity hosp = hospitalizationRepository.findByIdForUpdate(hospitalizationId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Hospitalisation introuvable"));
 
         if (!"EN_COURS".equals(hosp.getStatus())) {
@@ -101,12 +103,13 @@ public class HospitalizationCareService {
         UserAccountEntity actor = getCurrentUser();
         String administeredBy = actor != null ? actor.getDisplayName() : "Inconnu";
         Instant administeredAt = request.administeredAt() != null ? request.administeredAt() : Instant.now();
+        var prescribedItem = medicationPolicy.validate(hosp, request);
 
         MedicationAdministrationEntity admin = new MedicationAdministrationEntity(
                 hospitalizationId,
                 request.prescriptionItemId(),
-                request.medicationName(),
-                request.dose(),
+                prescribedItem.getDrugName(),
+                request.dose().trim(),
                 administeredBy,
                 administeredAt
         );

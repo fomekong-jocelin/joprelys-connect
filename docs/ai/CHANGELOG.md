@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FIX-20261004-HOSPITAL-PATH — corrections du parcours hospitalier** : lectures de placement/praticiens/visites autorisées par les droits hospitaliers, sans droits de configuration ajoutés ; verrous de visite pour prise en charge et révisions concurrentes ; précalcul financier refusé si une source clinique échoue. Angular distingue chargement/erreur/vide, permet la reprise, bloque les doubles admissions, extrait consentements/CRO et traduit les libellés FR/EN avec tokens d'arrondi centraux.
+- **BREAKING CHANGE — administration médicamenteuse hospitalière** : prescriptionItemId devient obligatoire ; prescription ACTIVE non expirée du patient canonique et du tenant, nom cohérent, contrôlés côté serveur. Sélection depuis les prescriptions admissibles dans Angular. Choix accepté par l'utilisateur, documenté dans ADR-20261004-hospital-medication-prescription-required. Lot MAJOR candidat ; aucun numéro de version/release préparé. Recette navigateur et PostgreSQL restent à effectuer.
+
+
 - **TICKET-20261003-PATIENT-JOURNEY-AUDIT (lot 2) — Prise en charge, historique des constantes, admission unifiée** :
   - étapes de prise en charge d'une visite (attente constantes → prêt pour le médecin → en consultation chez Dr X), un seul praticien à la fois, reprise explicite tracée (`take-charge`, `release`, Flyway V112) ;
   - historique horodaté et signé des mesures de constantes, visible dans la file et dans la consultation ;

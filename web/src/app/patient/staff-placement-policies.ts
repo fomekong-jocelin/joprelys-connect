@@ -1,7 +1,7 @@
-import { StaffMember } from '../clinic/staff/staff.models';
+import { HospitalPractitioner } from './hospitalization-workflow.models';
 
 export function isEligibleHospitalizationPractitioner(
-  member: StaffMember,
+  member: HospitalPractitioner,
   organizationalUnitId: string,
 ): boolean {
   if (!organizationalUnitId || !member.enabled || !hasRole(member.role, 'MEDECIN')) return false;

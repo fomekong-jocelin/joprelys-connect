@@ -1,12 +1,12 @@
+import { HospitalPractitioner, AdmissionVisit } from './hospitalization-workflow.models';
+import { HospitalizationConsentPanelComponent } from './hospitalization-consent-panel.component';
+import { HospitalizationOperatingReportPanelComponent } from './hospitalization-operating-report-panel.component';
 import { CommonModule, DatePipe } from '@angular/common';
 import { Component, Input, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
-import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
+import { forkJoin, finalize } from 'rxjs';
 import { HospitalServiceCatalogEntry, OrganizationalUnit } from '../clinic/hospital-organization/hospital-organization.models';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
-import { StaffApiService } from '../clinic/staff/staff-api.service';
-import { StaffMember } from '../clinic/staff/staff.models';
 import { BedConfiguration, FacilitySpace, UnitSpaceAssignment } from '../clinic/spatial/spatial-configuration.models';
 import { I18nService } from '../core/i18n/i18n.service';
 import { HospitalizationConsumptionPanelComponent } from './hospitalization-consumption-panel.component';
@@ -33,6 +33,8 @@ interface PlacementBed extends BedConfiguration {
     FormsModule,
     CommonModule,
     HospitalizationStayHeaderComponent,
+    HospitalizationConsentPanelComponent,
+    HospitalizationOperatingReportPanelComponent,
     HospitalizationNotesPanelComponent,
     HospitalizationDailyCarePanelComponent,
     HospitalizationMedicationPanelComponent,
@@ -46,21 +48,29 @@ export class PatientHospitalizationComponent implements OnInit {
   private readonly patientApi = inject(PatientApiService);
   private readonly hospitalizationApi = inject(HospitalizationLocationApiService);
   private readonly spatialApi = inject(SpatialApiService);
-  private readonly hospitalOrganizationApi = inject(HospitalOrganizationApiService);
   private readonly rbacApi = inject(RbacApiService);
   private readonly i18n = inject(I18nService);
-  private readonly staffApi = inject(StaffApiService);
+  private bedRequest = 0;
 
   readonly t = (key: string, defaultValue?: string) => this.i18n.t(key, defaultValue);
 
   readonly list = signal<StructuredHospitalization[]>([]);
-  readonly staffList = signal<StaffMember[]>([]);
-  readonly patientVisits = signal<any[]>([]);
+  readonly staffList = signal<HospitalPractitioner[]>([]);
+  readonly patientVisits = signal<AdmissionVisit[]>([]);
+  readonly visitsLoading = signal(false);
+  readonly visitsError = signal<string | null>(null);
 
   readonly showAdmitModal = signal(false);
   readonly showDischargeModal = signal(false);
   readonly showPhysicalDepartureModal = signal(false);
   readonly showTransferModal = signal(false);
+  readonly loading = signal(false);
+  readonly loadError = signal<string | null>(null);
+  readonly actionError = signal<string | null>(null);
+  readonly admissionSubmitting = signal(false);
+  readonly transferSubmitting = signal(false);
+  readonly placementLoading = signal(false);
+  readonly bedsLoading = signal(false);
   readonly admitError = signal<string | null>(null);
   readonly transferError = signal<string | null>(null);
   readonly transferSuccessMsg = signal<string | null>(null);
@@ -68,35 +78,7 @@ export class PatientHospitalizationComponent implements OnInit {
   readonly physicalDepartureError = signal<string | null>(null);
   readonly physicalDepartureSubmitting = signal(false);
 
-  readonly consents = signal<any[]>([]);
-  readonly showAddConsent = signal(false);
-  consentType = 'ANESTHESIA';
-  patientSignaturePresent = false;
-  witnessName = '';
-  consentFile: File | null = null;
-
   activeTab = 'notes';
-
-  readonly operatingReports = signal<any[]>([]);
-  readonly showAddReport = signal(false);
-  procedureName = '';
-  procedureDescription = '';
-  preOperativeDiagnosis = '';
-  postOperativeDiagnosis = '';
-  anesthesiaType = 'GÉNÉRALE';
-  anesthesiaDescription = '';
-  kSurgeonValue = 0.0;
-  kAnesthesistValue = 0.0;
-  kBlocValue = 0.0;
-  surgeonId = '';
-  anesthetistId = '';
-  readonly implantsInForm = signal<any[]>([]);
-
-  newImplantName = '';
-  newImplantLot = '';
-  newImplantQty = 1;
-  newImplantPrice = 0.0;
-  newImplantManufacturer = '';
 
   readonly units = signal<OrganizationalUnit[]>([]);
   readonly serviceCatalog = signal<HospitalServiceCatalogEntry[]>([]);
@@ -153,33 +135,30 @@ export class PatientHospitalizationComponent implements OnInit {
     if (this.patientId) {
       this.loadHospitalizations();
       this.loadStaff();
-      this.loadVisits();
+      if (this.canAdmit()) this.loadVisits();
     }
   }
 
   loadStaff(): void {
-    this.staffApi.list().subscribe({ next: (data) => this.staffList.set(data) });
+    this.hospitalizationApi.practitioners().subscribe({ next: (data) => this.staffList.set(data), error: () => this.actionError.set(this.t('patients.hospitalization.workflow.loadStaffError')) });
   }
 
   loadVisits(): void {
-    this.patientApi.getPatientVisits(this.patientId).subscribe({ next: (data) => this.patientVisits.set(data) });
-  }
-
-  loadHospitalizations(): void {
-    this.hospitalizationApi.listForPatient(this.patientId).subscribe({
-      next: (data) => {
-        this.list.set(data);
-        const active = this.activeHospitalization();
-        if (active) {
-          this.loadConsents(active.id);
-          this.loadOperatingReports(active.id);
-        }
-      },
+    this.visitsLoading.set(true); this.visitsError.set(null);
+    this.hospitalizationApi.admissionVisits(this.patientId).pipe(finalize(() => this.visitsLoading.set(false))).subscribe({
+      next: (data) => this.patientVisits.set(data),
+      error: () => { this.patientVisits.set([]); this.visitsError.set(this.t('patients.hospitalization.workflow.loadVisitsError')); },
     });
   }
 
-  loadConsents(hospitalizationId: string): void {
-    this.patientApi.getConsents(hospitalizationId).subscribe({ next: (data) => this.consents.set(data) });
+  loadHospitalizations(): void {
+    this.loading.set(true); this.loadError.set(null);
+    this.hospitalizationApi.listForPatient(this.patientId).pipe(finalize(() => this.loading.set(false))).subscribe({
+      next: (data) => {
+        this.list.set(data);
+      },
+      error: () => this.loadError.set(this.t('patients.hospitalization.workflow.loadError')),
+    });
   }
 
   hasRole(roleStr: string | undefined, allowedRoles: string[] | string): boolean {
@@ -212,7 +191,7 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   openAdmitModal(): void {
-    if (!this.canAdmit()) return;
+    if (!this.canAdmit() || this.loading() || this.loadError()) return;
     this.admissionReason = '';
     this.visitId = '';
     this.responsiblePractitionerId = '';
@@ -246,6 +225,7 @@ export class PatientHospitalizationComponent implements OnInit {
     if (!this.eligiblePractitioners().some((practitioner) => practitioner.id === this.responsiblePractitionerId)) {
       this.responsiblePractitionerId = '';
     }
+    this.admitError.set(null); this.transferError.set(null);
     this.loadFreeBedsForUnit(this.selectedUnitId());
   }
 
@@ -257,7 +237,7 @@ export class PatientHospitalizationComponent implements OnInit {
   saveAdmission(event: Event): void {
     event.preventDefault();
     this.onAdmissionBedChange();
-    if (!this.canAdmit()
+    if (this.admissionSubmitting() || this.loading() || this.loadError() || this.visitsLoading() || this.visitsError() || this.placementLoading() || this.bedsLoading() || !this.canAdmit()
       || !this.selectedUnitId()
       || !this.selectedSpaceId()
       || !this.selectedBedId()
@@ -266,6 +246,7 @@ export class PatientHospitalizationComponent implements OnInit {
       || !this.responsiblePractitionerId) return;
 
     this.admitError.set(null);
+    this.admissionSubmitting.set(true);
     this.hospitalizationApi.admit({
       patientId: this.patientId,
       serviceUnitId: this.selectedUnitId(),
@@ -274,14 +255,15 @@ export class PatientHospitalizationComponent implements OnInit {
       admissionReason: this.admissionReason.trim(),
       visitId: this.visitId,
       responsiblePractitionerId: this.responsiblePractitionerId,
-    }).subscribe({
+    }).pipe(finalize(() => this.admissionSubmitting.set(false))).subscribe({
       next: () => {
         this.showAdmitModal.set(false);
         this.loadHospitalizations();
       },
-      error: (error) => this.admitError.set(
-        error.error?.detail || error.error?.title || this.t('patients.hospitalization.bedOccupied', 'Le lit sélectionné n’est plus disponible.'),
-      ),
+      error: (error) => {
+        this.admitError.set(error.error?.detail || error.error?.title || this.t('patients.hospitalization.bedOccupied'));
+        if (error.status === 409) this.loadFreeBedsForUnit(this.selectedUnitId());
+      },
     });
   }
 
@@ -290,7 +272,7 @@ export class PatientHospitalizationComponent implements OnInit {
     const active = this.activeHospitalization();
     const bed = this.freeBeds().find((candidate) => candidate.id === this.selectedBedId());
     if (bed) this.selectedSpaceId.set(bed.spaceId);
-    if (!active
+    if (this.transferSubmitting() || this.placementLoading() || this.bedsLoading() || !active
       || active.dischargeDecidedAt
       || !this.selectedUnitId()
       || !this.selectedSpaceId()
@@ -298,23 +280,30 @@ export class PatientHospitalizationComponent implements OnInit {
 
     this.transferError.set(null);
     this.transferSuccessMsg.set(null);
+    this.transferSubmitting.set(true);
     this.spatialApi.transferPatient({
       hospitalizationId: active.id,
       targetServiceUnitId: this.selectedUnitId(),
       targetSpaceId: this.selectedSpaceId(),
       targetBedId: this.selectedBedId(),
-    }).subscribe({
+    }).pipe(finalize(() => this.transferSubmitting.set(false))).subscribe({
       next: () => {
-        this.transferSuccessMsg.set(this.t('patients.hospitalization.transferSuccess', 'Transfert effectué.'));
+        this.transferSuccessMsg.set(this.t('patients.hospitalization.transferSuccess'));
         setTimeout(() => {
           this.showTransferModal.set(false);
           this.loadHospitalizations();
         }, 800);
       },
       error: (error) => this.transferError.set(
-        error.error?.detail || error.error?.title || this.t('patients.hospitalization.transferError', 'Le transfert n’a pas pu être effectué.'),
+        error.error?.detail || error.error?.title || this.t('patients.hospitalization.transferError'),
       ),
     });
+  }
+
+  retryPlacement(): void {
+    this.admitError.set(null); this.transferError.set(null);
+    if (this.showAdmitModal()) this.loadVisits();
+    this.loadPlacementOptions(() => this.loadFreeBedsForUnit(this.selectedUnitId()));
   }
 
   unitLabel(unit: OrganizationalUnit): string {
@@ -325,21 +314,18 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   private loadPlacementOptions(afterLoad?: () => void): void {
-    forkJoin({
-      units: this.hospitalOrganizationApi.listUnits(undefined, false),
-      serviceCatalog: this.hospitalOrganizationApi.listServiceCatalog(),
-      spaces: this.spatialApi.listSpaces(undefined, undefined, false),
-      assignments: this.spatialApi.listUnitSpaceAssignments(undefined, { activeAt: new Date().toISOString() }),
-    }).subscribe({
+    this.placementLoading.set(true);
+    this.hospitalizationApi.placementOptions().pipe(finalize(() => this.placementLoading.set(false))).subscribe({
       next: (data) => {
         this.units.set(data.units);
         this.serviceCatalog.set(data.serviceCatalog);
         this.spaces.set(data.spaces);
         this.assignments.set(data.assignments);
+        this.staffList.set(data.staff);
         afterLoad?.();
       },
       error: (error) => {
-        const message = error.error?.detail || error.error?.title || this.t('patients.hospitalization.loadPlacementError', 'Impossible de charger les services et espaces disponibles.');
+        const message = error.error?.detail || error.error?.title || this.t('patients.hospitalization.loadPlacementError');
         if (this.showTransferModal()) this.transferError.set(message);
         else this.admitError.set(message);
       },
@@ -347,6 +333,8 @@ export class PatientHospitalizationComponent implements OnInit {
   }
 
   private loadFreeBedsForUnit(unitId: string): void {
+    const request = ++this.bedRequest;
+    this.bedsLoading.set(false);
     if (!unitId) {
       this.freeBeds.set([]);
       return;
@@ -360,9 +348,11 @@ export class PatientHospitalizationComponent implements OnInit {
       this.freeBeds.set([]);
       return;
     }
-    const requests = Object.fromEntries(spaces.map((space) => [space.id, this.spatialApi.listBeds(space.id)]));
-    forkJoin(requests).subscribe({
+    const requests = Object.fromEntries(spaces.map((space) => [space.id, this.hospitalizationApi.placementBeds(space.id)]));
+    this.bedsLoading.set(true);
+    forkJoin(requests).pipe(finalize(() => { if (request === this.bedRequest) this.bedsLoading.set(false); })).subscribe({
       next: (bedsBySpace) => {
+        if (request !== this.bedRequest || unitId !== this.selectedUnitId()) return;
         const candidates: PlacementBed[] = [];
         for (const space of spaces) {
           const beds = (bedsBySpace[space.id] ?? []) as BedConfiguration[];
@@ -373,7 +363,12 @@ export class PatientHospitalizationComponent implements OnInit {
         this.freeBeds.set(candidates);
         this.selectedBedId.set('');
       },
-      error: () => this.freeBeds.set([]),
+      error: () => {
+        if (request !== this.bedRequest || unitId !== this.selectedUnitId()) return;
+        this.freeBeds.set([]);
+        const message = this.t('patients.hospitalization.workflow.loadBedsError');
+        if (this.showTransferModal()) this.transferError.set(message); else this.admitError.set(message);
+      },
     });
   }
 
@@ -403,7 +398,7 @@ export class PatientHospitalizationComponent implements OnInit {
         this.loadHospitalizations();
       },
       error: (error) => this.dischargeError.set(
-        error.error?.detail || error.error?.title || this.t('patients.hospitalization.dischargeError', 'Impossible d’enregistrer la décision médicale de sortie.'),
+        error.error?.detail || error.error?.title || this.t('patients.hospitalization.dischargeError'),
       ),
     });
   }
@@ -434,7 +429,7 @@ export class PatientHospitalizationComponent implements OnInit {
       },
       error: (error) => {
         this.physicalDepartureSubmitting.set(false);
-        this.physicalDepartureError.set(error.error?.detail || error.error?.title || this.t('patients.hospitalization.physicalDepartureError', 'Impossible de confirmer le départ physique.'));
+        this.physicalDepartureError.set(error.error?.detail || error.error?.title || this.t('patients.hospitalization.physicalDepartureError'));
       },
     });
   }
@@ -443,8 +438,7 @@ export class PatientHospitalizationComponent implements OnInit {
     this.patientApi.downloadDischargePdf(hospitalization.id).subscribe({
       next: (blob) => this.downloadBlob(blob, `fiche-sortie-${hospitalization.id}.pdf`),
       error: (error) => {
-        console.error('Error downloading pdf', error);
-        alert('Erreur lors du téléchargement du PDF');
+        this.actionError.set(this.t('patients.hospitalization.workflow.downloadError'));
       },
     });
   }
@@ -453,8 +447,7 @@ export class PatientHospitalizationComponent implements OnInit {
     this.patientApi.downloadEntryPdf(hospitalization.id).subscribe({
       next: (blob) => this.downloadBlob(blob, `billet-entree-${hospitalization.id}.pdf`),
       error: (error) => {
-        console.error('Error downloading entry pdf', error);
-        alert('Erreur lors du téléchargement du billet d\'entrée');
+        this.actionError.set(this.t('patients.hospitalization.workflow.downloadError'));
       },
     });
   }
@@ -470,120 +463,4 @@ export class PatientHospitalizationComponent implements OnInit {
     window.URL.revokeObjectURL(url);
   }
 
-  onConsentFileChange(event: Event): void {
-    const input = event.target as HTMLInputElement;
-    this.consentFile = input.files && input.files.length > 0 ? input.files[0] : null;
-  }
-
-  saveConsent(event: Event): void {
-    event.preventDefault();
-    const active = this.activeHospitalization();
-    if (!active || !this.canRecordConsent()) return;
-
-    const formData = new FormData();
-    formData.append('consentType', this.consentType);
-    formData.append('patientSignaturePresent', String(this.patientSignaturePresent));
-    formData.append('witnessName', this.witnessName.trim());
-    if (this.consentFile) formData.append('file', this.consentFile);
-
-    this.patientApi.addConsent(active.id, formData).subscribe({
-      next: () => {
-        this.showAddConsent.set(false);
-        this.consentFile = null;
-        this.witnessName = '';
-        this.patientSignaturePresent = false;
-        this.loadConsents(active.id);
-      },
-      error: (error) => {
-        console.error('Error saving consent', error);
-        alert('Erreur lors de l\'enregistrement du consentement');
-      },
-    });
-  }
-
-  downloadConsentFile(documentId: string): void {
-    window.open(`/api/documents/${documentId}/download`, '_blank');
-  }
-
-  loadOperatingReports(hospitalizationId: string): void {
-    this.patientApi.getOperatingReports(hospitalizationId).subscribe({ next: (data) => this.operatingReports.set(data) });
-  }
-
-  addImplantToList(): void {
-    if (!this.newImplantName.trim()) return;
-    this.implantsInForm.update((list) => [...list, {
-      implantName: this.newImplantName.trim(),
-      lotNumber: this.newImplantLot.trim(),
-      quantity: this.newImplantQty,
-      unitPrice: this.newImplantPrice,
-      manufacturer: this.newImplantManufacturer.trim(),
-    }]);
-    this.newImplantName = '';
-    this.newImplantLot = '';
-    this.newImplantQty = 1;
-    this.newImplantPrice = 0.0;
-    this.newImplantManufacturer = '';
-  }
-
-  removeImplantFromList(index: number): void {
-    this.implantsInForm.update((list) => list.filter((_, itemIndex) => itemIndex !== index));
-  }
-
-  saveOperatingReport(event: Event): void {
-    event.preventDefault();
-    const active = this.activeHospitalization();
-    if (!active || !this.canWriteOperatingReport() || !this.procedureName.trim()) return;
-
-    this.patientApi.createOperatingReport(active.id, {
-      procedureName: this.procedureName.trim(),
-      procedureDescription: this.procedureDescription.trim(),
-      preOperativeDiagnosis: this.preOperativeDiagnosis.trim(),
-      postOperativeDiagnosis: this.postOperativeDiagnosis.trim(),
-      anesthesiaType: this.anesthesiaType.trim(),
-      anesthesiaDescription: this.anesthesiaDescription.trim(),
-      kSurgeonValue: this.kSurgeonValue,
-      kAnesthesistValue: this.kAnesthesistValue,
-      kBlocValue: this.kBlocValue,
-      surgeonId: this.surgeonId || null,
-      anesthetistId: this.anesthetistId || null,
-      implants: this.implantsInForm(),
-    }).subscribe({
-      next: () => {
-        this.showAddReport.set(false);
-        this.procedureName = '';
-        this.procedureDescription = '';
-        this.preOperativeDiagnosis = '';
-        this.postOperativeDiagnosis = '';
-        this.anesthesiaType = 'GÉNÉRALE';
-        this.anesthesiaDescription = '';
-        this.kSurgeonValue = 0.0;
-        this.kAnesthesistValue = 0.0;
-        this.kBlocValue = 0.0;
-        this.surgeonId = '';
-        this.anesthetistId = '';
-        this.implantsInForm.set([]);
-        this.loadOperatingReports(active.id);
-      },
-      error: (error) => {
-        console.error('Error saving operating report', error);
-        alert('Erreur lors de l\'enregistrement du compte-rendu opératoire');
-      },
-    });
-  }
-
-  validateReport(reportId: string): void {
-    if (!this.canWriteOperatingReport()) return;
-    if (!confirm('Êtes-vous sûr de vouloir valider ce compte-rendu opératoire ? Cette action le rendra immuable et générera les actes de facturation.')) return;
-
-    this.patientApi.validateOperatingReport(reportId).subscribe({
-      next: () => {
-        const active = this.activeHospitalization();
-        if (active) this.loadOperatingReports(active.id);
-      },
-      error: (error) => {
-        console.error('Error validating report', error);
-        alert('Erreur lors de la validation du compte-rendu opératoire');
-      },
-    });
-  }
 }

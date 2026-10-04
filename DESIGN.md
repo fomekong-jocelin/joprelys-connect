@@ -275,3 +275,10 @@ La page « Mes disponibilités » (`clinic/availability`) introduit la grille he
 - Interdiction de Tailwind v3 ou d'utiliser un fichier de configuration externe `tailwind.config.js`.
 - Ne pas utiliser d'arrondis supérieurs à `8px` sur les cartes et boutons.
 - Ne pas réautoriser le retour à la ligne interne d'un bouton pour masquer un défaut de layout.
+
+
+## Parcours hospitalier — correction du 2026-10-04
+
+Consentements et compte-rendu opératoire sont des panneaux Angular dédiés. Les cartes/formulaires de ce périmètre réutilisent `--radius-brand-sm` (4px à 6px), avec bordures et ombres existantes légères ; aucun arrondi supérieur à 8px. Les surfaces/textes/états réutilisent les tokens centraux light/dark. Les libellés et erreurs sont centralisés dans les catalogues `features/hospital-continuity/{fr,en}.json`.
+
+Chaque lecture clinique distingue chargement, erreur et absence de données. L'erreur offre une reprise. Les formulaires désactivent la soumission pendant la requête ; la validation CRO utilise ConfirmationDialogComponent. L'administration médicamenteuse propose une ligne de prescription validée au lieu d'un nom libre. La recette visuelle multi-thèmes/langues reste ouverte et ne se déduit pas des tests unitaires.

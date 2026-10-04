@@ -10,6 +10,10 @@ import org.springframework.data.repository.query.Param;
 
 public interface HospitalizationRepository extends JpaRepository<HospitalizationEntity, UUID> {
 
+    @org.springframework.data.jpa.repository.Lock(jakarta.persistence.LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT h FROM HospitalizationEntity h WHERE h.id = :id")
+    Optional<HospitalizationEntity> findByIdForUpdate(@Param("id") UUID id);
+
     Optional<HospitalizationEntity> findByVisitId(UUID visitId);
 
     Optional<HospitalizationEntity> findByEmergencyId(UUID emergencyId);

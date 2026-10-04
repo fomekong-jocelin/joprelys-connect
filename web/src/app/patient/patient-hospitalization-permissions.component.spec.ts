@@ -1,5 +1,6 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
+import { BedConfiguration } from '../clinic/spatial/spatial-configuration.models';
 import { HospitalOrganizationApiService } from '../clinic/hospital-organization/hospital-organization-api.service';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
@@ -60,7 +61,7 @@ describe('PatientHospitalizationComponent permissions', () => {
         },
         {
           provide: HospitalizationLocationApiService,
-          useValue: { listForPatient: () => of([]) },
+          useValue: { listForPatient: () => of([]), practitioners: () => of([]), admissionVisits: () => of([]), placementBeds: () => of([]), placementOptions: () => of({ units: [], serviceCatalog: [], spaces: [], assignments: [], staff: [] }), admit: vi.fn().mockReturnValue(of({})) },
         },
         {
           provide: SpatialApiService,
@@ -193,5 +194,48 @@ describe('PatientHospitalizationComponent permissions', () => {
 
     expect(component.canModify()).toBe(false);
     expect(hasPermission).toHaveBeenCalledWith('HOSPITALIZATION_ADMIT');
+  });
+  it('keeps a loading failure distinct from an empty history and allows retry', () => {
+    grantedPermissions.add('HOSPITALIZATION_ADMIT');
+    const api = TestBed.inject(HospitalizationLocationApiService);
+    const list = vi.spyOn(api, 'listForPatient').mockReturnValueOnce(throwError(() => new Error('offline')));
+    component.loadHospitalizations();
+    expect(component.loadError()).toBeTruthy();
+    component.openAdmitModal();
+    expect(component.showAdmitModal()).toBe(false);
+    component.loadHospitalizations();
+    expect(component.loadError()).toBeNull();
+    expect(list).toHaveBeenCalledTimes(2);
+    component.openAdmitModal();
+    expect(component.showAdmitModal()).toBe(true);
+  });
+
+  it('sends only one admission while a request is pending and releases the form after failure', () => {
+    grantedPermissions.add('HOSPITALIZATION_ADMIT');
+    const pending = new Subject<StructuredHospitalization>();
+    const admit = vi.spyOn(TestBed.inject(HospitalizationLocationApiService), 'admit').mockReturnValue(pending);
+    component.selectedUnitId.set('unit-1'); component.selectedBedId.set('bed-1');
+    component.freeBeds.set([{ id: 'bed-1', spaceId: 'space-1', bedNumber: 'A', status: 'FREE',
+      capacityStatus: 'OPEN', readinessStatus: 'READY', usageStatus: 'UNASSIGNED', available: true, version: 0, roomNumber: '101' }]);
+    component.admissionReason = 'Surveillance'; component.visitId = 'visit-1'; component.responsiblePractitionerId = 'doctor-1';
+    component.saveAdmission(new Event('submit')); component.saveAdmission(new Event('submit'));
+    expect(admit).toHaveBeenCalledOnce(); expect(component.admissionSubmitting()).toBe(true);
+    pending.error({ status: 500 });
+    expect(component.admissionSubmitting()).toBe(false);
+    expect(component.admitError()).toBeTruthy();
+  });
+
+  it('ignores an older bed response and waits for the latest request', () => {
+    const first = new Subject<BedConfiguration[]>(), latest = new Subject<BedConfiguration[]>();
+    vi.spyOn(TestBed.inject(HospitalizationLocationApiService), 'placementBeds')
+      .mockReturnValueOnce(first).mockReturnValueOnce(latest);
+    component.spaces.set([{ id: 'space-1', code: '101', name: '101', spaceTypeCode: 'HOSPITAL_ROOM', active: true, inpatientProfile: true }]);
+    component.assignments.set([{ id: 'assignment-1', organizationalUnitId: 'unit-1', spaceId: 'space-1', validFrom: '2026-01-01T00:00:00Z' }]);
+    component.selectedUnitId.set('unit-1');
+    component.onAdmissionWardChange(); component.onAdmissionWardChange();
+    first.next([]); first.complete();
+    expect(component.bedsLoading()).toBe(true);
+    latest.next([]); latest.complete();
+    expect(component.bedsLoading()).toBe(false);
   });
 });

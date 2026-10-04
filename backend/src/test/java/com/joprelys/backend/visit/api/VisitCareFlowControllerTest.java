@@ -97,6 +97,27 @@ class VisitCareFlowControllerTest {
 		TenantContext.clear();
 	}
 
+    @Test
+    void simultaneousTakeChargeAllowsExactlyOnePractitioner() throws Exception {
+        var start = new java.util.concurrent.CountDownLatch(1);
+        try (var workers = java.util.concurrent.Executors.newFixedThreadPool(2)) {
+            var first = workers.submit(() -> {
+                start.await();
+                return mockMvc.perform(post("/api/visits/" + visit.getId() + "/take-charge")
+                        .header("Authorization", "Bearer " + tokenDoctorA)).andReturn().getResponse().getStatus();
+            });
+            var second = workers.submit(() -> {
+                start.await();
+                return mockMvc.perform(post("/api/visits/" + visit.getId() + "/take-charge")
+                        .header("Authorization", "Bearer " + tokenDoctorB)).andReturn().getResponse().getStatus();
+            });
+            start.countDown();
+            org.junit.jupiter.api.Assertions.assertEquals(java.util.List.of(200, 409),
+                    java.util.stream.Stream.of(first.get(15, java.util.concurrent.TimeUnit.SECONDS),
+                            second.get(15, java.util.concurrent.TimeUnit.SECONDS)).sorted().toList());
+        }
+    }
+
 	@Test
 	void vitalsMoveVisitToReadyAndAreKeptAsHistoryWithAlerts() throws Exception {
 		postVitals("{\"temperature\": 39.2, \"systolic\": 120, \"diastolic\": 80}");

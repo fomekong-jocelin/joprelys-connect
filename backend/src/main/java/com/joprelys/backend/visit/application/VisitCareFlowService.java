@@ -91,7 +91,7 @@ public class VisitCareFlowService implements VisitCareFlowUseCase {
 	}
 
 	private VisitEntity requireActiveVisit(UUID visitId) {
-		VisitEntity visit = visitRepository.findById(visitId)
+		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 		if (!ACTIVE_VISIT_STATUS.equals(visit.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT, "La visite n'est plus active.");
