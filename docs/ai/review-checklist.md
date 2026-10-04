@@ -1,5 +1,16 @@
 # Production-Ready Review Checklist
 
+## Exécution — UX-20261004-CLINICAL-LAYOUT-SPACING
+
+- [x] Captures/code diagnostiqués ; ticket, spécification et conception écrits avant modification.
+- [x] Actions du drawer en pleine largeur avec fermeture secondaire séparée ; header/footer non rétrécissables et corps défilable.
+- [x] Gap explicite entre hôtes de consultation, progression avec padding et grille responsive ; Tailwind v4 et tokens existants.
+- [x] Conditions/handlers, API, backend maître, alertes, FR/EN, light/dark, OWASP et configuration 12-Factor inchangés.
+- [x] Suite Angular 115 fichiers / 633 tests verts, build production, i18n et diff verts ; utilitaires présents dans CSS compilé.
+- [x] `.gitignore` contrôlé : captures patient, logs et builds non versionnés ; pas de lint script, pas de test miroir des classes.
+- [ ] Conformité taille : template consultation existant 800 lignes (inchangé) > limite HTML 300 ; extraction ou ADR acceptée nécessaire avant approbation. Drawer 297 (alerte >200), entrée 136.
+- [ ] Recette visuelle desktop/mobile FR/EN light/dark et zoom/clavier ; accès navigateur précédemment refusé.
+
 > Checklist obligatoire pour chaque Pull Request, Merge Request ou intervention IA.
 > Tout élément doit être marqué ✅, ❌ ou ➖ avec justification.
 > Cette checklist s’applique à Spring Boot, Angular, Flutter, CI/CD, sécurité, tests, observabilité et documentation.

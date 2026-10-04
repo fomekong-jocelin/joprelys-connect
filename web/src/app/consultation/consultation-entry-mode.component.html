@@ -1,11 +1,11 @@
-<div class="space-y-5 sm:space-y-6">
+<div class="flex flex-col gap-5 sm:gap-6">
   <ol
-    class="flex flex-wrap gap-3 border-b border-[var(--app-border)] pb-5 sm:gap-6"
+    class="grid grid-cols-1 gap-3 border-y border-[var(--app-border)] py-4 sm:grid-cols-3 sm:gap-6 sm:py-5"
     [attr.aria-label]="i18n.t('consultation.entry.stepsLabel')"
   >
     @for (step of steps; track step; let index = $index) {
       <li
-        class="flex min-w-0 flex-1 items-center gap-2 text-xs font-semibold sm:text-sm"
+        class="flex min-w-0 items-center gap-3 text-xs font-semibold sm:text-sm"
         [attr.aria-current]="index === 0 ? 'step' : null"
         [ngClass]="index === 0 ? 'text-[var(--brand-primary)]' : 'text-[var(--text-muted)]'"
       >

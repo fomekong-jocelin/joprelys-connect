@@ -187,6 +187,13 @@ La page publique de connexion suit les règles suivantes :
 - les réglages langue/thème ne sont jamais dupliqués dans le contenu lorsque l’en-tête les expose déjà ;
 - les thèmes light/dark, les libellés FR/EN, les rayons de `4px` à `8px` et les ombres sobres restent obligatoires.
 
+### Espacement clinique et actions d'admission
+
+- Le conteneur de consultation utilise une colonne avec `gap-6` (`gap-8` dès sm) pour séparer les hôtes Angular, le bandeau patient et le workspace ; ne pas compter sur des marges verticales entre hôtes inline.
+- La progression utilise une grille empilée sur mobile, trois colonnes dès sm, avec `py-4` / `sm:py-5` et `gap-3` / `sm:gap-6` ; les cartes de choix restent séparées par un gap explicite.
+- Dans le drawer d'admission étroit, les actions se présentent en colonne pleine largeur, consultation en premier ; « Fermer » utilise une zone secondaire séparée. Chaque bouton a une cible d'au moins 44px ; header/footer ne rétrécissent pas, seul le corps défile.
+- Ces dispositions utilisent l'échelle Tailwind v4 et les tokens existants ; aucune palette ou rayon propre à l'écran n'est ajoutée.
+
 ### Interfaces IA et assistant de constantes
 
 - mobile d'abord : sous `640px`, l'assistant de constantes démarre replié et ne monopolise pas la modale ;

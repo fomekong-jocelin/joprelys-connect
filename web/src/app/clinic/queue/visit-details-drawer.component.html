@@ -11,7 +11,7 @@
 
       <!-- Drawer Header -->
       <div
-        class="px-6 py-4 border-b border-[var(--app-border)]/80 flex items-center justify-between bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] rounded-t-3xl md:rounded-t-none">
+        class="px-6 py-4 shrink-0 border-b border-[var(--app-border)]/80 flex items-center justify-between bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] rounded-t-[var(--radius-brand-lg)] md:rounded-t-none">
         <div>
           <div class="flex items-center gap-2">
             <span
@@ -34,7 +34,7 @@
       </div>
 
       <!-- Drawer Body (scrollable) -->
-      <div class="flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 space-y-6">
+      <div class="min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-6 py-5 space-y-6">
         <!-- Patient Info Card -->
         <div class="p-4 rounded-2xl bg-brand-gray dark:bg-[var(--app-bg)] border border-[var(--app-border)]/50">
           <span class="ui-label text-[10px] opacity-80 mb-1">{{ t('dashboard.vitals.patient') }}</span>
@@ -264,9 +264,9 @@
 
       <!-- Drawer Footer -->
       <div
-        class="p-6 border-t border-[var(--app-border)]/80 bg-[var(--app-surface-muted)] dark:bg-[var(--brand-danger-subtle)] flex gap-3 flex-wrap">
+        class="flex shrink-0 flex-col gap-3 border-t border-[var(--app-border)]/80 bg-[var(--app-surface-muted)] px-6 py-4 dark:bg-[var(--brand-danger-subtle)]">
         @if (canStartConsultation()) {
-          <app-ui-button variant="primary" class="flex-1" (pressed)="requestStart()">
+          <app-ui-button variant="primary" class="min-h-11 w-full" (pressed)="requestStart()">
             <span class="flex items-center gap-1.5">
               <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -276,20 +276,21 @@
             </span>
           </app-ui-button>
           @if (heldByMe()) {
-            <app-ui-button variant="secondary" class="flex-1" (pressed)="release.emit()">
+            <app-ui-button variant="secondary" class="min-h-11 w-full" (pressed)="release.emit()">
               {{ t('queue.action.release') }}
             </app-ui-button>
           }
         }
         @if (canCloseVisit()) {
-          <app-ui-button variant="secondary" class="flex-1" (pressed)="closeVisit.emit()">
+          <app-ui-button variant="secondary" class="min-h-11 w-full" (pressed)="closeVisit.emit()">
             {{ t('dashboard.close.title') }}
           </app-ui-button>
         }
-        <app-ui-button variant="secondary" [class]="canCloseVisit() || canStartConsultation() ? 'w-24' : 'flex-1'"
-                       (pressed)="closed.emit()">
-          {{ t('dashboard.drawer.closeButton') }}
-        </app-ui-button>
+        <div class="border-t border-[var(--app-border)] pt-3">
+          <app-ui-button variant="link" class="min-h-11 w-full inline-flex items-center justify-center" (pressed)="closed.emit()">
+            {{ t('dashboard.drawer.closeButton') }}
+          </app-ui-button>
+        </div>
       </div>
 
     </div>
