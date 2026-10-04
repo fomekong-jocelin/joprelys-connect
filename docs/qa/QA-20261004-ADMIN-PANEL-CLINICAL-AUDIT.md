@@ -369,3 +369,24 @@ Le système hospitalier **Joprelys Connect** démontre un niveau de conception m
 - La **sécurisation financière** (facturation, caisse fermée, rapprochement physique et bordereau de clôture à écart nul) est exemplaire et parfaitement étanche aux risques de fraude ou d'erreur humaine.
 
 Les quelques frictions relevées ci-dessus relèvent de la jeunesse de certaines liaisons entre composants (séparation API interne/externe pour le labo, propagation des constantes d'urgence vers les consultations, alignement des enums de genre en facturation, et gouvernance d'amorçage pour le premier médecin administrateur). Leur correction placera immédiatement Joprelys au rang des meilleurs progiciels hospitaliers internationaux.
+
+---
+
+## 12. Validation et Recette Post-Remédiation en Environnement Réel
+
+**Date de validation :** 4 Octobre 2026  
+**Commit validé :** `536708da` (`agent/hospital-bed-assignment-hardening`)  
+**Environnement :** `https://recette.joprelys.com`  
+**Praticien auditeur :** Dr. Noupoué (`noupoue.trauma@joprelys.com`)
+
+| Réf | Correction Appliquée | Résultat de Validation en Recette | Statut |
+| :--- | :--- | :--- | :---: |
+| **CLIN-01** | Déverrouillage de l'auto-attribution des rôles cliniques (`MEDECIN`, `INFIRMIER`, etc.) avec maintien strict et verrouillé d' `ADMIN_CLINIQUE`. Autorisation d'affectation spatiale/unités aux administrateurs-praticiens. | Validé en direct : Le compte `noupoue.trauma@joprelys.com` a activé avec succès le rôle `MEDECIN` via `/clinic/rbac`. L'agenda et les prérogatives de prescription/consultation sont immédiatement débloqués. | 🟢 **RÉSOLU** |
+| **CLIN-02** | Création de l'endpoint authentifié `POST /api/lab-orders/results` (protégé JWT, `LAB_ORDER_WRITE`) et suppression de la saisie de clé API dans le formulaire du portail. | Validé en direct : Résultat d'hémoglobine (13.5 g/dL) saisi sans clé API, validé avec succès, statut passé à `VALIDÉE`, marqueur instantanément visible dans l'historique et la courbe du DPU patient. | 🟢 **RÉSOLU** |
+| **CLIN-03** | Comparaison robuste du genre prenant en compte `MASCULIN` et `MALE`. | Validé en direct sur `/clinic/billing` : Le patient Jean-Pierre TCHOUANGA affiche désormais `Sexe : Masculin` (rejet d'assurance neutralisé). | 🟢 **RÉSOLU** |
+| **CLIN-04** | Propagation automatique des constantes du tri ABCDE d'urgence (`systolic`, `diastolic`, `pulse`, `temperature`, `spo2`, `respiratory_rate`, `pain_scale`) vers `VitalsEntity` à la création de visite liée. | Validé en code et test d'intégration Spring Boot (`VisitControllerTest`, 18/18 tests passants). | 🟢 **RÉSOLU** |
+| **CLIN-05** | Émission d'événement `paymentRecorded` dans `BillingCashierQueueComponent` relié à `loadActiveSession()`. | Validé en test unitaire et bundle de production Angular (647 tests passants). Solde théorique et mouvements recalculés réactivement. | 🟢 **RÉSOLU** |
+| **CLIN-06** | Remplacement de l'incitation erronée par l'alerte explicite *"Vous ne disposez pas des privilèges de prescription sur cet établissement."* pour les profils non-prescripteurs. | Validé en test et vérifié en direct dans la consultation avec activation des boutons d'ajout pour le médecin. | 🟢 **RÉSOLU** |
+| **CLIN-07** | Intégration de `CONSULTATION` ("Consultation spécialisée") et `TRANSFER` ("Transfert externe") dans les orientations de stabilisation post-urgence. | Validé en direct : Options déployées et traduites dans `fr.json` et `en.json`. | 🟢 **RÉSOLU** |
+| **CLIN-08** | Nettoyage des libellés et ajout des clés manquantes (`breadcrumb.patients.audit`, `pharmacy.stocks.manageLink`). Normalisation du préfixe `formatDoctorName()` évitant les doublons. | Validé en direct : Onglet "Journal d'Audit", bouton "Gérer l'inventaire →" et signature "Prescrit par : Dr. Noupoué" affichés sans dédoublement. | 🟢 **RÉSOLU** |
+
