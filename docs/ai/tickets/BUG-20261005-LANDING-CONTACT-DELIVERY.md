@@ -34,7 +34,9 @@ Statut : READY_FOR_REVIEW — correctif local et vérifications automatisées te
 
 ## Versionnement demandé par l'utilisateur
 
-Le 2026-10-05, commit et push autorisés sur `main`. Lot limité au présent correctif, tests et documentation ; travaux teaser exclus. Base locale et GitHub vérifiée : `59d2d12ac36daad6e6ca50a0e38ff95948373f8d`. L'environnement refuse l'écriture de `.git/index.lock` : publication via le connecteur GitHub, sans modification des métadonnées Git locales. Le résultat de publication est vérifié sur la branche distante et fourni dans le compte rendu final. La synchronisation du dépôt local reste à effectuer dans un environnement autorisant les écritures Git ; aucune release/version/tag préparé.
+Le 2026-10-05, commit et push autorisés sur `main`. Lot limité au présent correctif, tests et documentation ; travaux teaser exclus. Base locale et GitHub vérifiée : `59d2d12ac36daad6e6ca50a0e38ff95948373f8d`. L'environnement refusait initialement l'écriture de `.git/index.lock` : publication via le connecteur GitHub du commit `59fc39d8783b12373d5f79cc9e318f5195c54f9c`, vérifié sur la branche distante.
+
+Après levée des restrictions et demande « tente le commit local », `git fetch` et `git add` ont réussi. L'arbre indexé a été vérifié identique au commit publié (`3438095b95f4397954c13cb7f2e6cf9bfe3581db`). `git commit` a recréé localement le même commit `59fc39d8` en conservant ses métadonnées : pas de doublon ni de divergence du correctif. Synchronisation locale résolue ; ce complément de suivi est versionné séparément. Aucun code nouveau, aucune release/version/tag préparé ; tests précédents toujours applicables.
 
 ## Preuves
 

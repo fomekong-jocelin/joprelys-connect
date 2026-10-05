@@ -6,7 +6,7 @@
 
 Intervention 2026-10-05 — BUG-20261005-LANDING-CONTACT-DELIVERY : READY_FOR_REVIEW. Contacts landing corrigés (+237691501780 / contact@joprelys.com), faux succès HTTP supprimé, notification mail après commit implémentée. Angular : 663 tests, build production et i18n verts. Maven : 19 tests ciblés verts, zéro skip, compilation complète des sources/tests et intégration H2 ; SMTP simulé. Recette SMTP/navigateur et déploiement restent ouverts. Correction bornée hors sprint ; aucune capacité engagée ni version préparée.
 
-Versionnement de ce lot autorisé par l'utilisateur le 2026-10-05 sur `main` ; publication via connecteur GitHub car `.git` est en lecture seule. Base distante contrôlée, périmètre limité au correctif et à ses documents/tests. Résultat distant dans le compte rendu final ; synchronisation du checkout local requise hors restriction. Aucun bump/tag/release ni engagement de capacité supplémentaire.
+Versionnement de ce lot autorisé par l'utilisateur le 2026-10-05 sur `main` ; publication initiale via connecteur GitHub car `.git` était en lecture seule. Commit distant `59fc39d8` vérifié, puis recréé à l'identique par `git commit` local après levée des restrictions et demande utilisateur : arbre et SHA identiques, synchronisation résolue sans doublon/divergence du correctif. Complément de suivi versionné séparément ; travaux teaser préservés. Aucun code nouveau, bump/tag/release ni engagement de capacité supplémentaire.
 
 | Champ | Valeur |
 |---|---|
