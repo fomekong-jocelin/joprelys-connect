@@ -145,7 +145,6 @@ export interface LandingContent {
     successTitle: string;
     successDesc: string;
     whatsappBtn: string;
-    emailBtn: string;
     errorDesc: string;
     referenceLabel: string;
   };
@@ -391,16 +390,15 @@ export const LANDING_I18N: Record<'fr' | 'en', LandingContent> = {
       messageLabel: 'Vos priorités ou questions',
       messagePlaceholder:
         'Ex : Digitalisation des admissions urgences et dossier médical informatisé...',
-      submitBtn: 'Valider ma demande de démonstration gratuite',
-      submittingBtn: 'Enregistrement en cours...',
+      submitBtn: 'Demander une démo',
+      submittingBtn: 'Envoi en cours…',
       privacyNote:
         'Vos coordonnées sont confidentielles et ne seront jamais partagées à des tiers.',
       successTitle: 'Demande enregistrée avec succès !',
       successDesc:
         'Notre équipe Joprelys HealthTech prendra contact avec vous sous 24h ouvrées pour planifier votre session de démonstration personnalisée.',
       whatsappBtn: 'Discuter directement sur WhatsApp ↗',
-      emailBtn: 'Nous contacter par e-mail',
-      errorDesc: 'L’enregistrement de votre demande n’a pas pu être confirmé. Réessayez ou contactez-nous par WhatsApp ou e-mail.',
+      errorDesc: 'L’enregistrement de votre demande n’a pas pu être confirmé. Réessayez ou contactez-nous sur WhatsApp.',
       referenceLabel: 'Référence de la demande :',
     },
     footer: {
@@ -644,16 +642,15 @@ export const LANDING_I18N: Record<'fr' | 'en', LandingContent> = {
       messageLabel: 'Your Priorities or Questions',
       messagePlaceholder:
         'E.g., Digitizing emergency triage and unifying inpatient medical records...',
-      submitBtn: 'Submit My Free Demonstration Request',
-      submittingBtn: 'Registering your request...',
+      submitBtn: 'Request a free demo',
+      submittingBtn: 'Sending…',
       privacyNote:
         'Your contact details are strictly confidential and will never be shared with third parties.',
       successTitle: 'Demo Request Successfully Received!',
       successDesc:
         'Our Joprelys HealthTech team will contact you within 24 business hours to arrange your customized walkthrough.',
       whatsappBtn: 'Chat Directly on WhatsApp ↗',
-      emailBtn: 'Contact us by email',
-      errorDesc: 'Your request could not be confirmed. Please try again or contact us via WhatsApp or email.',
+      errorDesc: 'Your request could not be confirmed. Please try again or contact us via WhatsApp.',
       referenceLabel: 'Request reference:',
     },
     footer: {

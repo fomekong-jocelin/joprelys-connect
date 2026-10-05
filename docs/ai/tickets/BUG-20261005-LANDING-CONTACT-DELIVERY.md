@@ -40,6 +40,32 @@ Après levée des restrictions et demande « tente le commit local », `git fetc
 
 ## Preuves
 
+### Complément UX mobile — capture utilisateur du 2026-10-05
+
+Diagnostic : le CTA de soumission affiche un libellé long sur une largeur mobile contrainte, avec `white-space: nowrap`, centrage flex et padding trop faible. Son texte dépasse de part et d'autre. L'utilisateur demande la suppression du bouton e-mail du formulaire et un CTA plus aéré.
+
+Critères : aucun bouton e-mail dans la carte du formulaire ; CTA principal intégralement visible, padding intérieur et autour de l'action, cible tactile ≥44px, libellé concis FR/EN sans retour à la ligne ; WhatsApp et envoi API existants préservés. Vérifier 320/360/390px et desktop en light/dark. Le mail de notification et le contact du footer restent applicables.
+
+- [x] Examiner capture utilisateur, styles et standards de boutons ; actualiser specs avant code.
+- [x] Supprimer le CTA e-mail, raccourcir les libellés et ajouter le padding.
+- [x] Adapter les assertions de parcours et vérifier tests/build/i18n/rendu mobile.
+- [x] Actualiser suivi et changelog avec les résultats.
+
+Correction bornée Angular, sans impact API/DB/SMTP/Flutter/CI ni capacité sprint ; candidat PATCH, aucun bump applicatif.
+
+### Complément mail — capture utilisateur du 2026-10-05
+
+Diagnostic : la notification des demandes emploie `SimpleMailMessage` et ignore le gabarit HTML existant des mails de compte. La capture confirme la réception réelle du mail, mais sa présentation est brute et la fonction apparaît comme un code (`directeur`).
+
+Critères : reprendre le même logo inline, carte, bandeau cyan et footer que les mails existants ; afficher la référence et les coordonnées en lignes lisibles, fonction libellée, message préservé ; HTML avec alternative texte UTF-8, champs visiteurs échappés, aucun script/HTML injecté. Destinataire, persistance et notification après commit inchangés. Extraire le cadre et l'envoi MIME partagés pour éviter deux chartes divergentes ; mails de compte conservés.
+
+- [x] Lire la structure des mails existants et documenter l'impact avant code.
+- [x] Réutiliser le cadre/envoi des mails et créer le contenu de demande de démonstration.
+- [x] Adapter les tests MIME, échappement HTML, compte et commit/rollback.
+- [x] Vérifier le rendu mail avec données fictives et mettre à jour le suivi.
+
+Spring Boot/Maven concerné, aucune dépendance/migration/API nouvelle. OWASP : HTML échappé et en-têtes non contrôlés par le visiteur ; configuration SMTP 12-Factor conservée. Candidat PATCH ; recette de clients mail à confirmer après déploiement.
+
 - Angular : 120 fichiers / 663 tests verts ; build production et i18n verts.
 - Maven wrapper hors ligne dans cache workspace : 19 tests ciblés verts, aucun échec/erreur/skip ; tous les sources et tests backend compilés, intégration H2 et SMTP simulé.
 - `git diff --check` vert ; `.gitignore` vérifié, caches/artefacts ignorés. Aucun script lint existant.
@@ -47,7 +73,7 @@ Après levée des restrictions et demande « tente le commit local », `git fetc
 
 ## Impacts
 
-Angular et Spring Boot concernés ; endpoint/response existants conservés, aucune migration, Flutter et CI/CD inchangés. OWASP : validations serveur, email texte brut, destinataire fixé par configuration, pas de fuite de coordonnées dans les logs. 12-Factor : SMTP et destinataire externalisés sans secret nouveau. SemVer : candidat PATCH 0.10.2 depuis VERSION 0.10.1 ; aucun bump/release demandé.
+Angular et Spring Boot concernés ; endpoint/response existants conservés, aucune migration, Flutter et CI/CD inchangés. OWASP : validations serveur, HTML utilisateur échappé et alternative texte, destinataire fixé par configuration, pas de fuite de coordonnées dans les logs. 12-Factor : SMTP et destinataire externalisés sans secret nouveau. SemVer : candidat PATCH 0.10.2 depuis VERSION 0.10.1 ; aucun bump/release demandé.
 
 ## Reste à faire
 
@@ -59,3 +85,9 @@ Review et déploiement, puis recette SMTP réelle et navigateur mobile/desktop F
 - Backend : module `lead` (controller, DTO, service, contrat RegisterDemoRequest, événement, port/listener et implémentation SMTP), `notification/infrastructure/mail/MailSenderConfig.java`, `src/main/resources/application.yml`.
 - Tests : `PublicDemoRequestControllerTest`, `SmtpDemoRequestNotificationTest`, `MailSenderConfigTest`.
 - Documentation : ce ticket, `docs/features/landing-contact-delivery/`, ADR après commit, suivi, changelog et checklist review.
+
+## Preuves des compléments UI / mail
+
+16 tests Angular ciblés, build production et i18n verts ; 22 tests Maven ciblés verts, aucun skip. Contrôle Chromium du CTA : 16 scénarios 320/360/390/1280px, FR/EN, light/dark, cible 44px et texte dans le padding. Aperçu du mail généré par les factories Java : 6 scénarios FR/EN, 320/390/900px sans débordement et logo présent ; captures inspectées. Tests MIME, échappement, rôles, alternative texte et commit/rollback verts. Voir TEST-PLAN pour commandes, preuves locales et ajustements des fixtures.
+
+Compléments bornés UI et infrastructure mail existante : aucun changement API/DB/Flutter/CI, aucun impact de capacité sprint. Candidat PATCH sans bump ni release. Reste : review, déploiement web/backend et recette du nouveau mail dans les clients réels.

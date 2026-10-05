@@ -9,7 +9,11 @@ import com.joprelys.backend.lead.repository.DemoRequestRepository;
 import java.util.List;
 import java.util.UUID;
 import org.mockito.ArgumentCaptor;
-import org.springframework.mail.SimpleMailMessage;
+import jakarta.mail.Session;
+import jakarta.mail.internet.MimeMessage;
+import java.util.Properties;
+import org.junit.jupiter.api.BeforeEach;
+import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.mail.MailSendException;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -49,6 +53,11 @@ public class PublicDemoRequestControllerTest {
 
     @MockitoBean
     private JavaMailSender mailSender;
+
+    @BeforeEach
+    void prepareMimeMessages() {
+        when(mailSender.createMimeMessage()).thenAnswer(invocation -> new MimeMessage(Session.getInstance(new Properties())));
+    }
 
     @Test
     void shouldCreateDemoRequestWithoutAuthentication() throws Exception {
@@ -105,14 +114,15 @@ public class PublicDemoRequestControllerTest {
     @Test
     void shouldNotifyTheConfiguredContactOnlyAfterCommit() throws Exception {
         UUID id = submitValidRequest();
-        verifyNoInteractions(mailSender);
+        verify(mailSender, never()).send(any(MimeMessage.class));
         TestTransaction.flagForCommit();
         TestTransaction.end();
         try {
-            ArgumentCaptor<SimpleMailMessage> message = ArgumentCaptor.forClass(SimpleMailMessage.class);
+            ArgumentCaptor<MimeMessage> message = ArgumentCaptor.forClass(MimeMessage.class);
             verify(mailSender).send(message.capture());
-            assertThat(message.getValue().getTo()).containsExactly("contact@joprelys.com");
-            assertThat(message.getValue().getText()).contains(id.toString(), "Demo Test", "+237600000000");
+            assertThat(message.getValue().getAllRecipients()).extracting(Object::toString).containsExactly("contact@joprelys.com");
+            assertThat(new MimeMessageHelper(message.getValue()).getMimeMessage().getSubject()).contains("Joprelys Connect");
+            assertThat(repository.findById(id)).get().extracting(DemoRequest::getFullName).isEqualTo("Demo Test");
             assertThat(repository.findById(id)).isPresent();
         } finally {
             repository.deleteById(id);
@@ -121,12 +131,12 @@ public class PublicDemoRequestControllerTest {
 
     @Test
     void shouldKeepTheRequestWhenSmtpFails() throws Exception {
-        doThrow(new MailSendException("Simulated SMTP failure")).when(mailSender).send(any(SimpleMailMessage.class));
+        doThrow(new MailSendException("Simulated SMTP failure")).when(mailSender).send(any(MimeMessage.class));
         UUID id = submitValidRequest();
         TestTransaction.flagForCommit();
         TestTransaction.end();
         try {
-            verify(mailSender).send(any(SimpleMailMessage.class));
+            verify(mailSender).send(any(MimeMessage.class));
             assertThat(repository.findById(id)).isPresent();
         } finally {
             repository.deleteById(id);
@@ -138,7 +148,7 @@ public class PublicDemoRequestControllerTest {
         UUID id = submitValidRequest();
         TestTransaction.flagForRollback();
         TestTransaction.end();
-        verifyNoInteractions(mailSender);
+        verify(mailSender, never()).send(any(MimeMessage.class));
         assertThat(repository.findById(id)).isEmpty();
     }
 
@@ -148,7 +158,7 @@ public class PublicDemoRequestControllerTest {
                 "invalid-email", null, null, null, "en");
         mockMvc.perform(post("/api/public/demo-requests").contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(dto))).andExpect(status().isBadRequest());
-        verifyNoInteractions(mailSender);
+        verify(mailSender, never()).send(any(MimeMessage.class));
     }
 
     private UUID submitValidRequest() throws Exception {

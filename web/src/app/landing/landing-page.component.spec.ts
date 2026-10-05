@@ -141,7 +141,8 @@ describe('LandingPageComponent', () => {
       .toContain(component.t().demo.errorDesc);
     expect(fixture.nativeElement.querySelector('a[href^="https://wa.me/"]').href)
       .toContain('wa.me/237691501780');
-    expect(fixture.nativeElement.querySelector('a[href="mailto:contact@joprelys.com"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.demo-card a[href^="mailto:"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.landing-footer a[href="mailto:contact@joprelys.com"]')).toBeTruthy();
     submit.mockReturnValue(of({ id: 'retry-id' } as DemoLeadResponse));
     component.submitDemoRequest();
     expect(component.demoError()).toBe(false);
@@ -180,7 +181,7 @@ describe('LandingPageComponent', () => {
     expect(submit).not.toHaveBeenCalled();
   });
 
-  it('keeps direct contacts available before submission and validates the optional email', async () => {
+  it('keeps WhatsApp available without an email CTA and validates the optional email', async () => {
     for (const [id, value] of [['demo-name', 'Dr. Test'], ['demo-org', 'Clinic'],
       ['demo-phone', '+237600000000'], ['demo-email', 'invalid-email']]) {
       const input = fixture.nativeElement.querySelector(`#${id}`) as HTMLInputElement;
@@ -191,7 +192,8 @@ describe('LandingPageComponent', () => {
     await fixture.whenStable();
     fixture.detectChanges();
     expect(fixture.nativeElement.querySelector('.demo-form button[type="submit"]').disabled).toBe(true);
-    expect(fixture.nativeElement.querySelector('a[href="mailto:contact@joprelys.com"]')).toBeTruthy();
+    expect(fixture.nativeElement.querySelector('.demo-card a[href^="mailto:"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('.demo-card a[href^="https://wa.me/237691501780"]')).toBeTruthy();
     const email = fixture.nativeElement.querySelector('#demo-email') as HTMLInputElement;
     email.value = '';
     email.dispatchEvent(new Event('input'));

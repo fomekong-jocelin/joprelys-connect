@@ -732,17 +732,19 @@
               ></textarea>
             </div>
 
-            <button
-              type="submit"
-              class="landing-btn landing-btn-primary w-full justify-center py-3 text-base font-bold"
-              [disabled]="isSubmittingDemo() || !form.form.valid"
-            >
-              @if (isSubmittingDemo()) {
-                <span>{{ t().demo.submittingBtn }}</span>
-              } @else {
-                <span>{{ t().demo.submitBtn }}</span>
-              }
-            </button>
+            <div class="px-2 pt-2">
+              <button
+                type="submit"
+                class="landing-btn landing-btn-primary demo-submit-btn w-full"
+                [disabled]="isSubmittingDemo() || !form.form.valid"
+              >
+                @if (isSubmittingDemo()) {
+                  <span>{{ t().demo.submittingBtn }}</span>
+                } @else {
+                  <span>{{ t().demo.submitBtn }}</span>
+                }
+              </button>
+            </div>
             <p class="text-xs text-[var(--text-muted)] text-center mt-3">
               {{ t().demo.privacyNote }}
             </p>
@@ -751,9 +753,6 @@
         <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-3">
           <a [href]="demoWhatsAppUrl()" target="_blank" rel="noopener noreferrer" class="landing-btn landing-btn-primary">
             {{ t().demo.whatsappBtn }}
-          </a>
-          <a [href]="'mailto:' + brand.contactEmail" class="landing-btn landing-btn-secondary">
-            {{ t().demo.emailBtn }}
           </a>
         </div>
       </div>

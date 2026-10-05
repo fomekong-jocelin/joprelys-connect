@@ -283,7 +283,7 @@ La page « Mes disponibilités » (`clinic/availability`) introduit la grille he
 
 ### Landing — formulaire de contact (2026-10-05)
 
-Le formulaire conserve sa saisie et affiche une alerte FR/EN via `--brand-danger-text` si l'enregistrement n'est pas confirmé. Les contacts WhatsApp/mail restent disponibles avant soumission, après succès et en erreur, avec les classes de boutons existantes et leurs rayons centraux sobres. Le succès exige une référence serveur ; chargement et double soumission sont contrôlés. Aucun nouveau token ni thème local ; la recette responsive/light/dark reste à effectuer.
+Le formulaire conserve sa saisie et affiche une alerte FR/EN via `--brand-danger-text` si l'enregistrement n'est pas confirmé. WhatsApp reste disponible dans la carte avant soumission, après succès et en erreur ; le contact e-mail est conservé dans le footer, sans bouton e-mail dans le formulaire. Les classes de boutons et leurs rayons centraux sobres sont conservés. Le succès exige une référence serveur ; chargement et double soumission sont contrôlés. Le CTA principal « Demander une démo » / « Request a free demo » conserve une ligne, un padding intérieur de 16px, un espace horizontal de 8px autour et une cible tactile de 44px via les tokens centraux. Aucun nouveau token ni thème local ; vérification navigateur 320/360/390/1280px, FR/EN, light/dark effectuée sur le build local.
 
 ### Panel administrateur — correction du 2026-10-04
 

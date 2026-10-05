@@ -5,35 +5,27 @@ import com.joprelys.backend.notification.application.MailDeliveryUnavailableExce
 import com.joprelys.backend.notification.application.MailRecipientRejectedException;
 import jakarta.mail.MessagingException;
 import jakarta.mail.SendFailedException;
-import jakarta.mail.internet.MimeMessage;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayDeque;
 import java.util.Collections;
 import java.util.IdentityHashMap;
 import java.util.Set;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ClassPathResource;
 import org.springframework.mail.MailException;
 import org.springframework.mail.MailParseException;
 import org.springframework.mail.MailSendException;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Service;
 
 @Service
 public class SmtpAccountMailService implements AccountMailService {
 
-    private final JavaMailSender mailSender;
+    private final BrandedSmtpMailSender mailSender;
     private final AccountMailTemplateFactory templateFactory;
-    private final String sender;
 
     public SmtpAccountMailService(
-            JavaMailSender mailSender,
-            AccountMailTemplateFactory templateFactory,
-            @Value("${spring.mail.username:noreply@joprelys.com}") String sender) {
+            BrandedSmtpMailSender mailSender,
+            AccountMailTemplateFactory templateFactory) {
         this.mailSender = mailSender;
         this.templateFactory = templateFactory;
-        this.sender = sender;
     }
 
     @Override
@@ -56,16 +48,9 @@ public class SmtpAccountMailService implements AccountMailService {
         send(recipient, templateFactory.patientLoginCode(displayName, code));
     }
 
-    private void send(String recipient, AccountMailTemplateFactory.MailContent content) {
+    private void send(String recipient, BrandedMailContent content) {
         try {
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-            helper.setFrom(sender);
-            helper.setTo(recipient);
-            helper.setSubject(content.subject());
-            helper.setText(content.plainText(), content.html());
-            helper.addInline("joprelys-logo", new ClassPathResource("mail/logo_principal.png"), "image/png");
-            mailSender.send(message);
+            mailSender.send(recipient, content);
         } catch (MailException | MessagingException exception) {
             if (isRecipientRejected(exception)) {
                 throw new MailRecipientRejectedException(exception);

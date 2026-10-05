@@ -6,7 +6,7 @@ import org.junit.jupiter.api.Test;
 
 class AccountMailTemplateFactoryTest {
 
-    private final AccountMailTemplateFactory factory = new AccountMailTemplateFactory();
+    private final AccountMailTemplateFactory factory = new AccountMailTemplateFactory(new BrandedMailTemplateFactory());
 
     @Test
     void loginCodeShouldProduceBrandedHtmlAndPlainText() {

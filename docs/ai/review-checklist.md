@@ -526,3 +526,14 @@ Règles minimales :
 - [ ] Recette navigateur/clinique multi-profils, FR/EN light/dark, mobile, review Tech Lead/médecin/pharmacien/bed manager.
 - [x] ADMIN-04-PNG : PNG/JPEG réellement normalisés en PNG, transparence/limites/rejets vérifiés ; upload administratif préservé, association profil contrôlée, image PDF prouvée ; 56 nouvelles clés FR/EN.
 - [ ] Fournisseur signature/horodatage qualifiés et vérification ordinale (ADMIN-04-EXT), coordination des rôles personnalisés/mobile/partenaires avant livraison.
+
+## Compléments — BUG-20261005-LANDING-CONTACT-DELIVERY (UI / mail)
+
+- [x] Captures utilisateur diagnostiquées ; ticket, specs et conception mis à jour avant code.
+- [x] Bouton e-mail retiré de la carte ; footer préservé, CTA concis FR/EN avec espace extérieur et padding intérieur, tokens centraux, cible 44px.
+- [x] Contrôle Chromium 16 scénarios mobile/desktop, FR/EN, light/dark ; aucune troncature du CTA.
+- [x] Cadre et transport des mails de compte réutilisés ; logo CID, carte/bandeau/footer, rôle libellé, HTML échappé et alternative texte UTF-8.
+- [x] 16 tests Angular ciblés, build/i18n et 22 tests Maven ciblés verts ; commit/rollback et erreurs SMTP conservés.
+- [x] Aperçus fictifs FR/EN à 320/390/900px sans débordement ; mobile/desktop inspectés. Aucun mail réel envoyé.
+- [x] Aucun secret/dépendance/contrat/migration nouveau ; `.gitignore` préserve gouvernance et ignore preuves/caches ; travaux teaser exclus.
+- [ ] Review, déploiement web/backend et recette nouveau mail dans les clients réels.
