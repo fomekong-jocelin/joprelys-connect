@@ -1,5 +1,17 @@
 # Production-Ready Review Checklist
 
+## Exécution — BUG-20261005-LANDING-CONTACT-DELIVERY
+
+- [x] Gouvernance/standards/design lus ; diagnostic, ticket et documentation initiale avant code.
+- [x] Contacts landing centralisés, formulaire sans faux succès ; reprise HTTP et contacts toujours visibles FR/EN.
+- [x] Validation serveur et contrat existant conservés ; email optionnel validé. Controller dépend d'un contrat de use case ; notification déléguée à un port SMTP après commit.
+- [x] Pas de nouveau secret/dépendance ; logs limités à référence/classe d'erreur, pas de nouveaux contacts dans localStorage ; API relative/proxy, YAML et paramètres SMTP externalisés.
+- [x] 663 tests Angular, build production et i18n verts ; absence de script lint documentée.
+- [x] Maven ciblé : 19 tests verts, zéro skip, compilation sources/tests et intégration H2 après copie du cache dans le workspace ; aucun SMTP réel.
+- [x] Diff sans erreur, `.gitignore` conforme et caches/builds ignorés ; aucune modification des travaux teaser préexistants.
+- [ ] Recette navigateur mobile/desktop FR/EN light/dark et réception SMTP réelle après déploiement.
+- [ ] Dette préexistante : template/CSS landing monolithiques (>500 lignes), refactoring global hors correctif ; notification sans outbox/retry durable.
+
 ## Exécution — QA-20261004-AUTH-RBAC-SESSION-VERIFICATION
 
 - [x] Diagnostic documenté avant probes ; rapport avec références, priorités et limites.

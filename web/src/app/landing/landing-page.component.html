@@ -631,20 +631,15 @@
             </p>
             @if (demoSubmittedLead()?.id) {
               <div class="mt-2 inline-block bg-white/70 dark:bg-black/20 text-xs font-mono px-2.5 py-1 rounded text-green-800 dark:text-green-300">
-                Réf dossier : {{ demoSubmittedLead()?.id }}
+                {{ t().demo.referenceLabel }} {{ demoSubmittedLead()?.id }}
               </div>
             }
-            <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-3">
-              <a [href]="demoWhatsAppUrl()" target="_blank" rel="noopener noreferrer" class="landing-btn landing-btn-primary gap-2">
-                <svg class="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                  <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-                </svg>
-                {{ t().demo.whatsappBtn }}
-              </a>
-            </div>
           </div>
         } @else {
-          <form (ngSubmit)="submitDemoRequest()" class="demo-form" #form="ngForm">
+          <form (ngSubmit)="form.valid && submitDemoRequest()" class="demo-form" #form="ngForm">
+            @if (demoError()) {
+              <p role="alert" class="mb-4 text-sm text-[var(--brand-danger-text)]">{{ t().demo.errorDesc }}</p>
+            }
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
               <div>
                 <label for="demo-name" class="demo-label">{{ t().demo.nameLabel }}</label>
@@ -655,6 +650,7 @@
                   class="demo-input"
                   [placeholder]="t().demo.namePlaceholder"
                   required
+                  maxlength="255"
                   [(ngModel)]="demoFullName"
                 />
               </div>
@@ -667,6 +663,7 @@
                   class="demo-input"
                   [placeholder]="t().demo.orgPlaceholder"
                   required
+                  maxlength="255"
                   [(ngModel)]="demoOrgName"
                 />
               </div>
@@ -690,6 +687,7 @@
                   class="demo-input"
                   [placeholder]="t().demo.phonePlaceholder"
                   required
+                  maxlength="50"
                   [(ngModel)]="demoPhone"
                 />
               </div>
@@ -701,6 +699,7 @@
                   name="demoCity"
                   class="demo-input"
                   [placeholder]="t().demo.cityPlaceholder"
+                  maxlength="100"
                   [(ngModel)]="demoCity"
                 />
               </div>
@@ -710,6 +709,8 @@
               <label for="demo-email" class="demo-label">{{ t().demo.emailLabel }}</label>
               <input
                 type="email"
+                email
+                maxlength="255"
                 id="demo-email"
                 name="demoEmail"
                 class="demo-input"
@@ -724,6 +725,7 @@
                 id="demo-message"
                 name="demoMessage"
                 rows="3"
+                maxlength="2000"
                 class="demo-input"
                 [placeholder]="t().demo.messagePlaceholder"
                 [(ngModel)]="demoMessage"
@@ -746,6 +748,14 @@
             </p>
           </form>
         }
+        <div class="mt-6 flex flex-col sm:flex-row justify-center items-center gap-3">
+          <a [href]="demoWhatsAppUrl()" target="_blank" rel="noopener noreferrer" class="landing-btn landing-btn-primary">
+            {{ t().demo.whatsappBtn }}
+          </a>
+          <a [href]="'mailto:' + brand.contactEmail" class="landing-btn landing-btn-secondary">
+            {{ t().demo.emailBtn }}
+          </a>
+        </div>
       </div>
     </div>
   </section>
@@ -818,7 +828,7 @@
           <li><a routerLink="/legal/terms">{{ t().footer.cgu }}</a></li>
           <li><a routerLink="/legal/privacy">{{ t().footer.privacy }}</a></li>
           <li><a routerLink="/legal/consent">{{ t().footer.consent }}</a></li>
-          <li><a href="mailto:support@joprelys.com">{{ t().footer.support }}</a></li>
+          <li><a [href]="'mailto:' + brand.contactEmail">{{ t().footer.support }} {{ brand.contactEmail }}</a></li>
           <li><span class="text-xs text-white/70">{{ t().footer.location }}</span></li>
         </ul>
       </div>

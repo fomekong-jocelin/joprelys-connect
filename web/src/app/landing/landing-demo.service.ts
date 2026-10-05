@@ -1,6 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject } from '@angular/core';
-import { Observable, catchError, of, tap } from 'rxjs';
+import { Observable, timeout } from 'rxjs';
+import { APP_BRAND_CONFIG } from '../core/config/app-brand.config';
 
 export interface DemoLeadPayload {
   fullName: string;
@@ -23,29 +24,13 @@ export interface DemoLeadResponse {
   message: string;
 }
 
-const LOCAL_STORAGE_KEY = 'joprelys_demo_leads_backup';
-const OFFICIAL_WHATSAPP_PHONE = '237691893198';
-
 @Injectable({ providedIn: 'root' })
 export class LandingDemoService {
   private readonly http = inject(HttpClient);
   private readonly apiUrl = '/api/public/demo-requests';
 
-  submitDemo(payload: DemoLeadPayload): Observable<DemoLeadResponse | null> {
-    // 1. Safety First: Persist lead locally immediately so no message is EVER lost
-    this.saveLeadLocally(payload, 'PENDING');
-
-    return this.http.post<DemoLeadResponse>(this.apiUrl, payload).pipe(
-      tap((response) => {
-        // Mark locally saved lead as synced with server ID
-        this.updateLocalLeadStatus(payload.phone, 'SYNCED', response.id);
-      }),
-      catchError((error) => {
-        // Network/offline error: the lead remains stored locally for subsequent sync
-        console.warn('[LandingDemoService] Backend unreachable, lead preserved in offline storage.', error);
-        return of(null);
-      })
-    );
+  submitDemo(payload: DemoLeadPayload): Observable<DemoLeadResponse> {
+    return this.http.post<DemoLeadResponse>(this.apiUrl, payload).pipe(timeout(20_000));
   }
 
   buildWhatsAppUrl(payload: DemoLeadPayload, lang: 'fr' | 'en' = 'fr'): string {
@@ -68,37 +53,6 @@ export class LandingDemoService {
       (payload.message ? `🎯 Priorities: ${payload.message}\n` : '');
 
     const message = lang === 'en' ? textEn : textFr;
-    return `https://wa.me/${OFFICIAL_WHATSAPP_PHONE}?text=${encodeURIComponent(message)}`;
-  }
-
-  private saveLeadLocally(payload: DemoLeadPayload, syncStatus: 'PENDING' | 'SYNCED'): void {
-    try {
-      const existingRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
-      const leads = existingRaw ? JSON.parse(existingRaw) : [];
-      leads.push({
-        ...payload,
-        syncStatus,
-        timestamp: new Date().toISOString()
-      });
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(leads));
-    } catch {
-      // LocalStorage might be disabled in private mode
-    }
-  }
-
-  private updateLocalLeadStatus(phone: string, syncStatus: string, serverId?: string): void {
-    try {
-      const existingRaw = localStorage.getItem(LOCAL_STORAGE_KEY);
-      if (!existingRaw) return;
-      const leads = JSON.parse(existingRaw);
-      const lead = leads.find((l: any) => l.phone === phone);
-      if (lead) {
-        lead.syncStatus = syncStatus;
-        if (serverId) lead.serverId = serverId;
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(leads));
-      }
-    } catch {
-      // ignore
-    }
+    return `https://wa.me/${APP_BRAND_CONFIG.contactWhatsAppPhone}?text=${encodeURIComponent(message)}`;
   }
 }

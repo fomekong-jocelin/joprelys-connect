@@ -26,7 +26,7 @@ describe('LandingDemoService', () => {
     localStorage.clear();
   });
 
-  it('saves lead locally and posts to backend', () => {
+  it('posts to the backend without persisting contact data in the browser', () => {
     const payload: DemoLeadPayload = {
       fullName: 'Dr. Test',
       organizationName: 'Clinique Espoir',
@@ -41,10 +41,7 @@ describe('LandingDemoService', () => {
       resultResponse = res;
     });
 
-    // Check offline backup was written immediately
-    const backupRaw = localStorage.getItem('joprelys_demo_leads_backup');
-    expect(backupRaw).toBeTruthy();
-    expect(backupRaw).toContain('Clinique Espoir');
+    expect(localStorage.getItem('joprelys_demo_leads_backup')).toBeNull();
 
     const req = httpTesting.expectOne('/api/public/demo-requests');
     expect(req.request.method).toBe('POST');
@@ -62,13 +59,10 @@ describe('LandingDemoService', () => {
     expect(resultResponse).toBeTruthy();
     expect(resultResponse.id).toBe('UUID-1234');
 
-    // Local status updated to SYNCED
-    const updatedBackup = localStorage.getItem('joprelys_demo_leads_backup');
-    expect(updatedBackup).toContain('SYNCED');
-    expect(updatedBackup).toContain('UUID-1234');
+    expect(localStorage.getItem('joprelys_demo_leads_backup')).toBeNull();
   });
 
-  it('preserves lead in local storage when server fails (zero loss guarantee)', () => {
+  it('propagates network failure instead of returning an apparent success', () => {
     const payload: DemoLeadPayload = {
       fullName: 'Dr. Offline',
       organizationName: 'Hôpital Régional',
@@ -77,22 +71,19 @@ describe('LandingDemoService', () => {
       locale: 'fr'
     };
 
-    let resultResponse: any = 'NOT_SET';
-    service.submitDemo(payload).subscribe((res) => {
-      resultResponse = res;
+    const next = vi.fn();
+    const error = vi.fn();
+    service.submitDemo(payload).subscribe({
+      next,
+      error
     });
 
     const req = httpTesting.expectOne('/api/public/demo-requests');
     req.error(new ProgressEvent('Network error'));
 
-    // Should return null gracefully without throwing
-    expect(resultResponse).toBeNull();
-
-    // Lead is still safely preserved in local storage!
-    const backupRaw = localStorage.getItem('joprelys_demo_leads_backup');
-    expect(backupRaw).toBeTruthy();
-    expect(backupRaw).toContain('Hôpital Régional');
-    expect(backupRaw).toContain('PENDING');
+    expect(next).not.toHaveBeenCalled();
+    expect(error).toHaveBeenCalledOnce();
+    expect(localStorage.getItem('joprelys_demo_leads_backup')).toBeNull();
   });
 
   it('builds pre-filled WhatsApp URLs correctly in French and English', () => {
@@ -105,12 +96,27 @@ describe('LandingDemoService', () => {
     };
 
     const waFr = service.buildWhatsAppUrl(payload, 'fr');
-    expect(waFr).toContain('https://wa.me/237691893198');
+    expect(waFr).toContain('https://wa.me/237691501780');
     expect(decodeURIComponent(waFr)).toContain('Cabinet Médical');
     expect(decodeURIComponent(waFr)).toContain('Dr. Paul');
 
     const waEn = service.buildWhatsAppUrl(payload, 'en');
-    expect(waEn).toContain('https://wa.me/237691893198');
+    expect(waEn).toContain('https://wa.me/237691501780');
     expect(decodeURIComponent(waEn)).toContain('Hello Joprelys Connect');
+  });
+
+  it('bounds a stalled HTTP request and releases it with an error', async () => {
+    vi.useFakeTimers();
+    try {
+      const error = vi.fn();
+      service.submitDemo({ fullName: 'Test', organizationName: 'Clinic', phone: '600000000' })
+        .subscribe({ error });
+      const request = httpTesting.expectOne('/api/public/demo-requests');
+      await vi.advanceTimersByTimeAsync(20_000);
+      expect(error).toHaveBeenCalledOnce();
+      expect(request.cancelled).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

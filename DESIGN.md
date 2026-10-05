@@ -281,6 +281,10 @@ La page « Mes disponibilités » (`clinic/availability`) introduit la grille he
 
 ## Do's and Don'ts
 
+### Landing — formulaire de contact (2026-10-05)
+
+Le formulaire conserve sa saisie et affiche une alerte FR/EN via `--brand-danger-text` si l'enregistrement n'est pas confirmé. Les contacts WhatsApp/mail restent disponibles avant soumission, après succès et en erreur, avec les classes de boutons existantes et leurs rayons centraux sobres. Le succès exige une référence serveur ; chargement et double soumission sont contrôlés. Aucun nouveau token ni thème local ; la recette responsive/light/dark reste à effectuer.
+
 ### Panel administrateur — correction du 2026-10-04
 
 Les champs requis du formulaire d'établissement utilisent `shared/ui/InputComponent` : label lié à un identifiant stable, bordure et message via `--brand-danger`/`--brand-danger-text`, `aria-invalid` et `aria-describedby`. La validation de saisie aide l'utilisateur ; la validation serveur reste maîtresse. Le type d'établissement possède une explication FR/EN indiquant que les autorisations déterminent l'accès aux modules.

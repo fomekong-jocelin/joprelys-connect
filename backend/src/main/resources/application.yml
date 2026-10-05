@@ -33,12 +33,18 @@ spring:
       mail:
         smtp:
           auth: true
+          connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:3000}
+          timeout: ${MAIL_READ_TIMEOUT:3000}
+          writetimeout: ${MAIL_WRITE_TIMEOUT:3000}
           ssl:
             enable: ${MAIL_SSL_ENABLED:true}
           starttls:
             enable: ${MAIL_STARTTLS_ENABLED:false}
 
 joprelys:
+  contact:
+    # Recipient of public demo request notifications (not the SMTP sender).
+    email: ${JOPRELYS_CONTACT_EMAIL:contact@joprelys.com}
   web:
     base-url: ${JOPRELYS_WEB_BASE_URL:https://joprelys.com}
   ai:

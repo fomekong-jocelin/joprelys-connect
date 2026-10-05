@@ -61,7 +61,11 @@ export class LandingPageComponent {
   readonly isSubmittingDemo = signal(false);
   readonly demoSuccess = signal(false);
   readonly demoSubmittedLead = signal<DemoLeadResponse | null>(null);
-  readonly demoWhatsAppUrl = signal<string>('https://wa.me/237691893198');
+  readonly demoError = signal(false);
+
+  demoWhatsAppUrl(): string {
+    return this.demoService.buildWhatsAppUrl(this.demoPayload(), this.i18n.currentLanguage());
+  }
 
   toggleFaq(index: number): void {
     this.activeFaq.update((curr) => (curr === index ? null : index));
@@ -85,13 +89,34 @@ export class LandingPageComponent {
   }
 
   submitDemoRequest(): void {
-    if (!this.demoFullName.trim() || !this.demoPhone.trim() || !this.demoOrgName.trim()) {
+    if (this.isSubmittingDemo() || !this.demoFullName.trim() || !this.demoPhone.trim() || !this.demoOrgName.trim()) {
       return;
     }
 
     this.isSubmittingDemo.set(true);
+    this.demoError.set(false);
+    this.demoSuccess.set(false);
+    this.demoSubmittedLead.set(null);
 
-    const payload: DemoLeadPayload = {
+    this.demoService.submitDemo(this.demoPayload()).subscribe({
+      next: (res) => {
+        this.isSubmittingDemo.set(false);
+        if (!res?.id) {
+          this.demoError.set(true);
+          return;
+        }
+        this.demoSubmittedLead.set(res);
+        this.demoSuccess.set(true);
+      },
+      error: () => {
+        this.isSubmittingDemo.set(false);
+        this.demoError.set(true);
+      }
+    });
+  }
+
+  private demoPayload(): DemoLeadPayload {
+    return {
       fullName: this.demoFullName.trim(),
       organizationName: this.demoOrgName.trim(),
       role: this.demoRole,
@@ -102,22 +127,5 @@ export class LandingPageComponent {
       source: 'landing-page',
       locale: this.i18n.currentLanguage()
     };
-
-    const waUrl = this.demoService.buildWhatsAppUrl(payload, this.i18n.currentLanguage());
-    this.demoWhatsAppUrl.set(waUrl);
-
-    // Call REST endpoint + offline backup
-    this.demoService.submitDemo(payload).subscribe({
-      next: (res) => {
-        this.demoSubmittedLead.set(res);
-        this.isSubmittingDemo.set(false);
-        this.demoSuccess.set(true);
-      },
-      error: () => {
-        // Fallback: request has been stored locally
-        this.isSubmittingDemo.set(false);
-        this.demoSuccess.set(true);
-      }
-    });
   }
 }

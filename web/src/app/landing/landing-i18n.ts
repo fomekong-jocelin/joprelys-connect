@@ -145,6 +145,9 @@ export interface LandingContent {
     successTitle: string;
     successDesc: string;
     whatsappBtn: string;
+    emailBtn: string;
+    errorDesc: string;
+    referenceLabel: string;
   };
   footer: {
     slogan: string;
@@ -396,6 +399,9 @@ export const LANDING_I18N: Record<'fr' | 'en', LandingContent> = {
       successDesc:
         'Notre équipe Joprelys HealthTech prendra contact avec vous sous 24h ouvrées pour planifier votre session de démonstration personnalisée.',
       whatsappBtn: 'Discuter directement sur WhatsApp ↗',
+      emailBtn: 'Nous contacter par e-mail',
+      errorDesc: 'L’enregistrement de votre demande n’a pas pu être confirmé. Réessayez ou contactez-nous par WhatsApp ou e-mail.',
+      referenceLabel: 'Référence de la demande :',
     },
     footer: {
       slogan: '« Parce qu’elle est précieuse, nous innovons pour la protéger. »',
@@ -408,7 +414,7 @@ export const LANDING_I18N: Record<'fr' | 'en', LandingContent> = {
       cgu: "Conditions d'Utilisation (CGU)",
       privacy: 'Politique de Confidentialité',
       consent: 'Gestion des Consentements',
-      support: 'Support : support@joprelys.com',
+      support: 'Contact :',
       location: 'Douala & Yaoundé, Cameroun',
       copyright: '© 2026 JOPRELYS SARL · Fondé par Jocelin Fomekong. Tous droits réservés.',
       subCopyright: 'Plateforme médicale certifiée pour cliniques pilotes.',
@@ -646,6 +652,9 @@ export const LANDING_I18N: Record<'fr' | 'en', LandingContent> = {
       successDesc:
         'Our Joprelys HealthTech team will contact you within 24 business hours to arrange your customized walkthrough.',
       whatsappBtn: 'Chat Directly on WhatsApp ↗',
+      emailBtn: 'Contact us by email',
+      errorDesc: 'Your request could not be confirmed. Please try again or contact us via WhatsApp or email.',
+      referenceLabel: 'Request reference:',
     },
     footer: {
       slogan: '« Because it is precious, we innovate to protect it. »',
@@ -658,7 +667,7 @@ export const LANDING_I18N: Record<'fr' | 'en', LandingContent> = {
       cgu: 'Terms of Service',
       privacy: 'Privacy Policy',
       consent: 'Consent Management',
-      support: 'Support: support@joprelys.com',
+      support: 'Contact:',
       location: 'Douala & Yaoundé, Cameroon',
       copyright: '© 2026 JOPRELYS SARL · Founded by Jocelin Fomekong. All rights reserved.',
       subCopyright: 'Certified medical software for pilot healthcare facilities.',

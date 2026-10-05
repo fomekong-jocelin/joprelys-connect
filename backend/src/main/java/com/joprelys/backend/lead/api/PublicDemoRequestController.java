@@ -2,7 +2,7 @@ package com.joprelys.backend.lead.api;
 
 import com.joprelys.backend.lead.dto.DemoRequestDto;
 import com.joprelys.backend.lead.dto.DemoRequestResponse;
-import com.joprelys.backend.lead.service.DemoRequestService;
+import com.joprelys.backend.lead.service.RegisterDemoRequest;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -16,9 +16,9 @@ import org.springframework.web.bind.annotation.RestController;
 @RequestMapping("/api/public/demo-requests")
 public class PublicDemoRequestController {
 
-    private final DemoRequestService demoRequestService;
+    private final RegisterDemoRequest demoRequestService;
 
-    public PublicDemoRequestController(DemoRequestService demoRequestService) {
+    public PublicDemoRequestController(RegisterDemoRequest demoRequestService) {
         this.demoRequestService = demoRequestService;
     }
 

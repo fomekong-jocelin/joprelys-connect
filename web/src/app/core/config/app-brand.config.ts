@@ -14,6 +14,9 @@ export interface AppBrandConfig {
   readonly supportedLocales: readonly AppLocale[];
   readonly defaultTheme: AppTheme;
   readonly supportEmail: string;
+  readonly contactEmail: string;
+  /** International WhatsApp number, digits only. */
+  readonly contactWhatsAppPhone: string;
   readonly publicLinks: {
     readonly terms: string;
     readonly privacy: string;
@@ -34,6 +37,8 @@ export const APP_BRAND_CONFIG: AppBrandConfig = {
   supportedLocales: ['fr', 'en'],
   defaultTheme: 'light',
   supportEmail: 'support@joprelys.com',
+  contactEmail: 'contact@joprelys.com',
+  contactWhatsAppPhone: '237691501780',
   publicLinks: {
     terms: '/legal/terms',
     privacy: '/legal/privacy',

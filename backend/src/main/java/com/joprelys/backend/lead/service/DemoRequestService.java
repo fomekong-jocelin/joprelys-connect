@@ -9,21 +9,40 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
-public class DemoRequestService {
+public class DemoRequestService implements RegisterDemoRequest {
 
     private static final Logger log = LoggerFactory.getLogger(DemoRequestService.class);
 
     private final DemoRequestRepository repository;
+    private final ApplicationEventPublisher events;
 
-    public DemoRequestService(DemoRequestRepository repository) {
+    public DemoRequestService(DemoRequestRepository repository, ApplicationEventPublisher events) {
         this.repository = repository;
+        this.events = events;
     }
 
+    @Override
     @Transactional
     public DemoRequestResponse registerDemoRequest(DemoRequestDto dto, HttpServletRequest httpRequest) {
+        DemoRequest saved = repository.save(toLead(dto, httpRequest));
+        events.publishEvent(new DemoRequestRegistered(saved.getId(), new DemoRequestDto(
+                saved.getFullName(), saved.getOrganizationName(), saved.getRole(), saved.getPhone(),
+                saved.getEmail(), saved.getCity(), saved.getMessage(), saved.getSource(), saved.getLocale())));
+        log.info("DEMO_REQUEST_RECEIVED [id={}]", saved.getId());
+
+        String confirmation = "fr".equalsIgnoreCase(saved.getLocale())
+                ? "Votre demande de démonstration a été enregistrée avec succès. Notre équipe vous contactera dans les plus brefs délais."
+                : "Your demo request has been successfully registered. Our team will contact you shortly.";
+
+        return new DemoRequestResponse(saved.getId(), saved.getFullName(), saved.getOrganizationName(),
+                saved.getStatus(), saved.getCreatedAt(), confirmation);
+    }
+
+    private DemoRequest toLead(DemoRequestDto dto, HttpServletRequest httpRequest) {
         String ip = null;
         String userAgent = null;
 
@@ -49,22 +68,6 @@ public class DemoRequestService {
         lead.setIpAddress(ip);
         lead.setUserAgent(userAgent);
 
-        DemoRequest saved = repository.save(lead);
-
-        log.info("DEMO_REQUEST_RECEIVED [id={}, name='{}', org='{}', role='{}', phone='{}', city='{}', email='{}']",
-                saved.getId(), saved.getFullName(), saved.getOrganizationName(), saved.getRole(), saved.getPhone(), saved.getCity(), saved.getEmail());
-
-        String confirmation = "fr".equalsIgnoreCase(saved.getLocale())
-                ? "Votre demande de démonstration a été enregistrée avec succès. Notre équipe vous contactera dans les plus brefs délais."
-                : "Your demo request has been successfully registered. Our team will contact you shortly.";
-
-        return new DemoRequestResponse(
-                saved.getId(),
-                saved.getFullName(),
-                saved.getOrganizationName(),
-                saved.getStatus(),
-                saved.getCreatedAt(),
-                confirmation
-        );
+        return lead;
     }
 }
