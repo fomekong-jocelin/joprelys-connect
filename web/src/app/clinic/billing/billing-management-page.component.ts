@@ -343,13 +343,14 @@ export class BillingManagementPageComponent implements OnInit {
 
   saveInvoice(): void {
     const patient = this.selectedPatient();
-    if (!this.canConfigureBilling() || !patient || this.existingInvoiceForSelectedVisit() || this.hasInvalidItems()) return;
+    if (!this.canConfigureBilling() || !patient || (this.hasInvalidItems() && !this.invoiceItems().every(item => (item as { sourceType?: string }).sourceType))) return;
     this.savingInvoice.set(true);
     this.billingApi.createInvoice({
       patientId: patient.id,
       visitId: this.selectedVisitId() || undefined,
       insuranceConventionId: this.selectedConventionId() || undefined,
-      items: this.invoiceItems()
+      // Lignes pré-calculées non modifiées : le backend les reconstruit avec leurs sources (ADR-20261017 D-15).
+      items: this.invoiceItems().every(item => (item as { sourceType?: string }).sourceType) ? undefined : this.invoiceItems()
     }).subscribe({
       next: () => {
         this.savingInvoice.set(false);

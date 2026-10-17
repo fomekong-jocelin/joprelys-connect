@@ -408,6 +408,10 @@ class HospitalizationControllerTest extends HospitalizationControllerTestSupport
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')]").isEmpty());
 
+        // ADR-20261017 D-11 : la valeur de la lettre-clé K vient de la grille de l'établissement.
+        jdbcTemplate.update("INSERT INTO tariff_grid (id, key_letter, unit_value, organization_id, created_at, updated_at) "
+                + "VALUES (?, 'K', 1000, ?, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)", UUID.randomUUID(), organization.getId());
+
         mockMvc.perform(post("/api/hospitalizations/operating-reports/{id}/validate", reportId)
                         .header("Authorization", bearer(doctorToken)))
                 .andExpect(status().isOk())
@@ -418,9 +422,9 @@ class HospitalizationControllerTest extends HospitalizationControllerTestSupport
                         .param("visitId", visit.getId().toString())
                         .header("Authorization", bearer(billingAgentToken)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')].unitPrice").value(50000.0))
-                .andExpect(jsonPath("$.items[?(@.itemType == 'K_ANESTHESIST')].unitPrice").value(20000.0))
-                .andExpect(jsonPath("$.items[?(@.itemType == 'K_BLOC')].unitPrice").value(30000.0))
+                .andExpect(jsonPath("$.items[?(@.itemType == 'K_SURGEON')].totalItemAmount").value(50000.0))
+                .andExpect(jsonPath("$.items[?(@.itemType == 'K_ANESTHESIST')].totalItemAmount").value(20000.0))
+                .andExpect(jsonPath("$.items[?(@.itemType == 'K_BLOC')].totalItemAmount").value(30000.0))
                 .andExpect(jsonPath(
                                 "$.items[?(@.label == 'Implant : Fil de suture résorbable (Lot: LOT12345)')].quantity")
                         .value(2.0));

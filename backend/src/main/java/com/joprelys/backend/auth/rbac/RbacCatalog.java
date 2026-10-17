@@ -73,6 +73,7 @@ public final class RbacCatalog {
                 permission("PATIENT_WRITE", "PATIENT", "Gérer les patients", "Créer et modifier les informations administratives des patients."),
                 permission("PATIENT_MERGE", "PATIENT", "Fusionner les dossiers patients", "Analyser, ignorer et fusionner les doublons patients."),
                 permission("PATIENT_EMERGENCY_ACCESS", "PATIENT", "Déclencher un accès d'urgence", "Ouvrir un accès exceptionnel et traçable au dossier patient."),
+                permission("PATIENT_DEATH_DECLARE", "PATIENT", "Déclarer un décès", "Constater le décès d'un patient, clôturer ses épisodes en cours ou annuler une déclaration erronée."),
                 permission("CLINICAL_READ", "CLINIQUE", "Consulter le dossier clinique", "Consulter les données cliniques autorisées."),
                 permission("CLINICAL_WRITE", "CLINIQUE", "Renseigner le dossier clinique", "Créer et modifier les données cliniques autorisées."),
                 permission("PRESCRIPTION_WRITE", "CLINIQUE", "Rédiger une prescription", "Créer et modifier une ordonnance brouillon sans la signer."),
@@ -120,6 +121,9 @@ public final class RbacCatalog {
                 permission("BILLING_INVOICE_READ", "FACTURATION", "Consulter les factures", "Consulter les factures et leurs soldes."),
                 permission("BILLING_INVOICE_WRITE", "FACTURATION", "Créer et valider les factures", "Créer, modifier et valider les factures."),
                 permission("BILLING_INVOICE_CANCEL", "FACTURATION", "Annuler les factures", "Annuler une facture et gérer les actions exceptionnelles."),
+                permission("BILLING_CREDIT_NOTE_ISSUE", "FACTURATION", "Émettre un avoir", "Émettre un avoir motivé sur une facture validée ; au-delà du seuil, il attend l'approbation de la DAF."),
+                permission("BILLING_CREDIT_NOTE_APPROVE", "FACTURATION", "Approuver un avoir", "Approuver ou refuser un avoir émis par un autre utilisateur au-delà du seuil de l'établissement."),
+                permission("BILLING_SETTINGS_MANAGE", "FACTURATION", "Paramétrer la facturation", "Définir le paiement avant prélèvement et le seuil d'approbation des avoirs."),
                 permission("RECEIVABLE_REMINDER_READ", "FACTURATION", "Consulter les relances", "Consulter l'historique des relances de créances."),
                 permission("RECEIVABLE_REMINDER_WRITE", "FACTURATION", "Consigner les relances", "Ajouter une action de relance sur une créance."),
                 permission("CASH_QUEUE_READ", "CAISSE", "Consulter la file d'encaissement", "Consulter les règlements patient en attente."),
@@ -162,22 +166,24 @@ public final class RbacCatalog {
                 PERMISSION_ORGANIZATION_MANAGE,
                 "AUDIT_CROSS_TENANT_READ",
                 "PRESCRIPTION_WRITE", "PRESCRIPTION_SIGN", "CLINICAL_SIGN", "CONSULTATION_LOCK",
-                "PHARMACY_VALIDATE", "PHARMACY_DISPENSE",
+                "PHARMACY_VALIDATE", "PHARMACY_DISPENSE", "PATIENT_DEATH_DECLARE",
                 PERMISSION_APPOINTMENT_READ_OWN,
                 PERMISSION_PATIENT_PORTAL_ACCESS,
                 PERMISSION_PATIENT_APPOINTMENT_MANAGE,
                 PERMISSION_PATIENT_NOTIFICATION_MANAGE));
         mappings.put("DAF", set(
                 "USER_READ", "RBAC_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "CASH_DISCREPANCY_RESOLVE",
+                "BILLING_INVOICE_CANCEL", "BILLING_CREDIT_NOTE_ISSUE", "BILLING_CREDIT_NOTE_APPROVE", "BILLING_SETTINGS_MANAGE",
                 "INSURANCE_BORDEREAU_READ", "INSURANCE_BORDEREAU_PROGRESS", "INSURANCE_BORDEREAU_SETTLE",
                 "ACCOUNTING_DASHBOARD_READ", "ACCOUNTING_EXPORT", "AUDIT_READ",
                 "RECEIVABLE_REMINDER_READ", "RECEIVABLE_REMINDER_WRITE"));
         mappings.put("SECRETAIRE_COMPTABLE", set(
-                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE", "INSURANCE_BORDEREAU_READ",
+                "BILLING_INVOICE_READ", "BILLING_INVOICE_WRITE", "BILLING_INVOICE_CANCEL", "BILLING_CREDIT_NOTE_ISSUE",
+                "INSURANCE_BORDEREAU_READ",
                 "INSURANCE_BORDEREAU_PROGRESS", "ACCOUNTING_DASHBOARD_READ",
                 "RECEIVABLE_REMINDER_READ", "RECEIVABLE_REMINDER_WRITE"));
         mappings.put("CAISSIER", set(
-                "BILLING_INVOICE_READ", "CASH_QUEUE_READ", "CASH_PAYMENT_COLLECT", "CASH_SESSION_OPEN",
+                "BILLING_INVOICE_READ", "PATIENT_READ", "CASH_QUEUE_READ", "CASH_PAYMENT_COLLECT", "CASH_SESSION_OPEN",
                 "CASH_SESSION_CLOSE", "CASH_MOVEMENT_WRITE", "CASH_HISTORY_READ"));
         mappings.put("AGENT_ACCUEIL", set(
                 "PATIENT_READ", "PATIENT_WRITE", "EMERGENCY_READ",
@@ -186,7 +192,8 @@ public final class RbacCatalog {
                 "RECEPTION_READ", "RECEPTION_WRITE",
                 PERMISSION_APPOINTMENT_READ, PERMISSION_APPOINTMENT_WRITE));
         mappings.put("MEDECIN", set(
-                "USER_READ", "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "CLINICAL_READ", "CLINICAL_WRITE",
+                "USER_READ", "PATIENT_READ", "PATIENT_WRITE", "PATIENT_EMERGENCY_ACCESS", "PATIENT_DEATH_DECLARE",
+                "CLINICAL_READ", "CLINICAL_WRITE",
                 "PRESCRIPTION_WRITE", "PRESCRIPTION_SIGN", "CLINICAL_SIGN", "CONSULTATION_LOCK",
                 "EMERGENCY_READ", "EMERGENCY_WRITE", "EMERGENCY_STABILIZE",
                 PERMISSION_EMERGENCY_MEDICO_LEGAL_READ,

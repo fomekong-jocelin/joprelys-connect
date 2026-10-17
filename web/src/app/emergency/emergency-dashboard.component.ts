@@ -234,6 +234,18 @@ export class EmergencyDashboardComponent implements OnInit {
     return this.t(`emergency.detail.arrival.${mode.toLowerCase()}`, mode);
   }
 
+  orientationLabel(orientation?: string): string {
+    return orientation ? this.t(`emergency.orientation.${orientation.toLowerCase()}`) : '';
+  }
+
+  /** Durée d'attente de l'aval depuis la décision d'orientation, au format « 2 h 10 ». */
+  waitingDuration(record: EmergencyRecord): string {
+    if (!record.orientationDecidedAt) return '';
+    const minutes = Math.max(0, Math.floor((Date.now() - new Date(record.orientationDecidedAt).getTime()) / 60000));
+    const hours = Math.floor(minutes / 60);
+    return hours > 0 ? `${hours} h ${String(minutes % 60).padStart(2, '0')}` : `${minutes} min`;
+  }
+
   triageLabel(level: string): string {
     return this.t(`emergency.detail.triage.${level.toLowerCase()}`, level);
   }

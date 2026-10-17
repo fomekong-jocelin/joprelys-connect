@@ -36,6 +36,10 @@ public class PrescriptionEntity {
 	@Column(name = "status", nullable = false, length = 20)
 	private String status = "DRAFT";
 
+	/** NONE, PARTIAL ou FULL : indépendant du cycle de vie de l'ordonnance (ADR-20261017 D-02). */
+	@Column(name = "dispensation_status", nullable = false, length = 20)
+	private String dispensationStatus = "NONE";
+
 	@Column(name = "expires_at")
 	private Instant expiresAt;
 
@@ -104,6 +108,8 @@ public class PrescriptionEntity {
 	public void setPinCode(String pinCode) { this.pinCode = pinCode; }
 	public String getStatus() { return status; }
 	public void setStatus(String status) { this.status = status; }
+	public String getDispensationStatus() { return dispensationStatus; }
+	public void setDispensationStatus(String dispensationStatus) { this.dispensationStatus = dispensationStatus; }
 	public Instant getExpiresAt() { return expiresAt; }
 	public void setExpiresAt(Instant expiresAt) { this.expiresAt = expiresAt; }
 	public String getPrescriptionNumber() { return prescriptionNumber; }

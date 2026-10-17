@@ -43,6 +43,11 @@ export class VisitApiService {
     return this.http.post<Visit>(`/api/visits/${id}/close`, {});
   }
 
+  /** Patient parti sans être vu, erreur d'enregistrement ou refus : clôt la visite avant toute prise en charge. */
+  abandonVisit(id: string, reason: string, note?: string): Observable<Visit> {
+    return this.http.post<Visit>(`/api/visits/${id}/abandon`, { reason, note: note || null });
+  }
+
   cancelVisit(id: string): Observable<Visit> {
     return this.http.post<Visit>(`/api/visits/${id}/cancel`, {});
   }

@@ -12,7 +12,11 @@ public record InvoiceItemResponse(
         BigDecimal unitPrice,
         BigDecimal quantity,
         BigDecimal coefficient,
-        BigDecimal totalItemAmount
+        BigDecimal totalItemAmount,
+        String sourceType,
+        UUID sourceId,
+        String tariffKey,
+        boolean tariffMissing
 ) {
     public static InvoiceItemResponse fromEntity(InvoiceItemEntity entity) {
         return new InvoiceItemResponse(
@@ -22,7 +26,11 @@ public record InvoiceItemResponse(
                 entity.getUnitPrice(),
                 entity.getQuantity(),
                 entity.getCoefficient(),
-                entity.getTotalItemAmount()
+                entity.getTotalItemAmount(),
+                entity.getSourceType(),
+                entity.getSourceId(),
+                entity.getTariffKey(),
+                entity.isTariffMissing()
         );
     }
 }

@@ -22,21 +22,20 @@ import java.util.UUID;
 public class EstimateService {
 
     private static final String ESTIMATE_PREFIX = "DEV-";
-    private static final String CREDIT_NOTE_PREFIX = "AV-";
 
     private final EstimateRepository estimateRepository;
-    private final CreditNoteRepository creditNoteRepository;
     private final ReceivableRepository receivableRepository;
     private final InvoiceRepository invoiceRepository;
     private final InvoiceFinancialStateService financialStateService;
+    private final LabPaymentReleaseService labPaymentReleaseService;
 
     public EstimateService(EstimateRepository estimateRepository,
-                           CreditNoteRepository creditNoteRepository,
                            ReceivableRepository receivableRepository,
                            InvoiceRepository invoiceRepository,
-                           InvoiceFinancialStateService financialStateService) {
+                           InvoiceFinancialStateService financialStateService,
+                           LabPaymentReleaseService labPaymentReleaseService) {
+        this.labPaymentReleaseService = labPaymentReleaseService;
         this.estimateRepository = estimateRepository;
-        this.creditNoteRepository = creditNoteRepository;
         this.receivableRepository = receivableRepository;
         this.invoiceRepository = invoiceRepository;
         this.financialStateService = financialStateService;
@@ -92,6 +91,17 @@ public class EstimateService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
                 "Seule une facture en attente peut être validée. Statut actuel : " + invoice.getStatus().name() + ".");
         }
+        List<String> missingTariffs = invoice.getItems().stream()
+            .filter(InvoiceItemEntity::isTariffMissing)
+            .map(item -> item.getTariffKey() == null ? item.getLabel() : item.getTariffKey())
+            .distinct()
+            .toList();
+        if (!missingTariffs.isEmpty()) {
+            // ADR-20261017 D-11 : aucun prix inventé ; la facture attend le paramétrage puis un recalcul.
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Tarifs manquants : " + String.join(", ", missingTariffs)
+                    + ". Paramétrez la grille tarifaire puis recalculez la facture.");
+        }
         invoice.setStatus(InvoiceStatus.VALIDATED);
         invoice.setValidatedAt(Instant.now());
         invoice.setValidatedByUserId(validatorUserId);
@@ -99,6 +109,7 @@ public class EstimateService {
 
         financialStateService.initializeReceivables(invoice);
         financialStateService.synchronize(invoice);
+        labPaymentReleaseService.releaseIfPatientShareSettled(invoice);
         return InvoiceResponse.fromEntity(invoice);
     }
 
@@ -125,32 +136,6 @@ public class EstimateService {
         invoice.setDiscountReason(request.discountReason());
         invoiceRepository.save(invoice);
         return InvoiceResponse.fromEntity(invoice);
-    }
-
-    // ─── Avoirs (Credit Notes) ─────────────────────────────────────────────────
-
-    @Transactional
-    public CreditNoteResponse createCreditNote(UUID invoiceId, CreateCreditNoteRequest request) {
-        InvoiceEntity invoice = findInvoiceOrThrow(invoiceId);
-        if (invoice.getStatus() == InvoiceStatus.CANCELLED) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible de créer un avoir sur une facture annulée.");
-        }
-        Long seqVal = creditNoteRepository.getNextCreditNoteNumberSequenceValue();
-        String dateStr = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyyMMdd"));
-        String number = String.format("%s%s-%06d", CREDIT_NOTE_PREFIX, dateStr, seqVal);
-        BigDecimal creditAmount = BigDecimal.valueOf(request.amount());
-        CreditNoteEntity creditNote = new CreditNoteEntity(invoiceId, number, request.amount(), request.reason());
-        creditNoteRepository.save(creditNote);
-
-        adjustReceivablesForCreditNote(invoice, creditAmount);
-        financialStateService.synchronize(invoice);
-        return CreditNoteResponse.fromEntity(creditNote);
-    }
-
-    @Transactional(readOnly = true)
-    public List<CreditNoteResponse> getCreditNotesByInvoice(UUID invoiceId) {
-        return creditNoteRepository.findByInvoiceId(invoiceId)
-            .stream().map(CreditNoteResponse::fromEntity).toList();
     }
 
     // ─── Créances ──────────────────────────────────────────────────────────────
@@ -187,22 +172,5 @@ public class EstimateService {
     private InvoiceEntity findInvoiceOrThrow(UUID id) {
         return invoiceRepository.findById(id)
             .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable: " + id));
-    }
-
-    private void adjustReceivablesForCreditNote(InvoiceEntity invoice, BigDecimal creditAmount) {
-        List<ReceivableEntity> receivables = receivableRepository.findByInvoiceId(invoice.getId());
-        if (receivables.isEmpty()) return;
-
-        BigDecimal remaining = creditAmount;
-        for (ReceivableEntity receivable : receivables) {
-            if (remaining.signum() <= 0) break;
-            BigDecimal reducible = receivable.getTotalAmount()
-                    .subtract(receivable.getPaidAmount())
-                    .max(BigDecimal.ZERO);
-            BigDecimal reduction = remaining.min(reducible);
-            receivable.setPaidAmount(receivable.getPaidAmount().add(reduction));
-            remaining = remaining.subtract(reduction);
-            receivableRepository.save(receivable);
-        }
     }
 }

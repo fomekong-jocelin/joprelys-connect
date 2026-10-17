@@ -4,6 +4,7 @@ import { PatientDetailComponent } from '../patient-detail.component';
 import { PatientMedicalInfoComponent } from '../patient-medical-info.component';
 import { Patient } from '../patient.models';
 import { PatientAdministrativeSummaryComponent } from './patient-administrative-summary.component';
+import { PatientDeathPanelComponent } from './patient-death-panel.component';
 import { PatientEmergencyContextComponent } from './patient-emergency-context.component';
 import { PatientIdentityRegularizationDialogComponent } from './patient-identity-regularization-dialog.component';
 import { PatientProvisionalIdentityCardComponent } from './patient-provisional-identity-card.component';
@@ -13,6 +14,7 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
   standalone: true,
   imports: [
     PatientAdministrativeSummaryComponent,
+    PatientDeathPanelComponent,
     PatientEmergencyContextComponent,
     PatientIdentityRegularizationDialogComponent,
     PatientMedicalInfoComponent,
@@ -21,6 +23,7 @@ import { PatientProvisionalIdentityCardComponent } from './patient-provisional-i
   template: `
     @if (parent.patient(); as patient) {
       <div class="grid gap-6 animate-fade-in">
+        <app-patient-death-panel class="block" [patient]="patient" (changed)="parent.loadPatient(patient.id)" />
         @if (isProvisional()) {
           <app-patient-provisional-identity-card
             class="block"

@@ -68,6 +68,21 @@ public class PatientEntity {
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
+    @Column(name = "deceased_at")
+    private Instant deceasedAt;
+
+    @Column(name = "death_declared_by")
+    private UUID deathDeclaredBy;
+
+    @Column(name = "death_declared_at")
+    private Instant deathDeclaredAt;
+
+    @Column(name = "death_place", length = 200)
+    private String deathPlace;
+
+    @Column(name = "death_circumstances", length = 1000)
+    private String deathCircumstances;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "identity_status", nullable = false, length = 32)
     private PatientIdentityStatus identityStatus;
@@ -328,6 +343,47 @@ public class PatientEntity {
 
     public void setMedicalHistory(String medicalHistory) {
         this.medicalHistory = medicalHistory;
+    }
+
+    public static final String STATUS_DECEASED = "DECEASED";
+
+    public boolean isDeceased() {
+        return STATUS_DECEASED.equals(status);
+    }
+
+    public void declareDeath(Instant deceasedAt, String place, String circumstances, UUID declaredBy, Instant declaredAt) {
+        this.status = STATUS_DECEASED;
+        this.deceasedAt = deceasedAt;
+        this.deathPlace = place;
+        this.deathCircumstances = circumstances;
+        this.deathDeclaredBy = declaredBy;
+        this.deathDeclaredAt = declaredAt;
+    }
+
+    /** Annule une déclaration erronée ; l'historique reste dans le journal d'audit. */
+    public void revokeDeath() {
+        this.status = "ACTIVE";
+        this.deceasedAt = null;
+        this.deathPlace = null;
+        this.deathCircumstances = null;
+        this.deathDeclaredBy = null;
+        this.deathDeclaredAt = null;
+    }
+
+    public Instant getDeceasedAt() {
+        return deceasedAt;
+    }
+
+    public UUID getDeathDeclaredBy() {
+        return deathDeclaredBy;
+    }
+
+    public String getDeathPlace() {
+        return deathPlace;
+    }
+
+    public String getDeathCircumstances() {
+        return deathCircumstances;
     }
 
     public String getStatus() {

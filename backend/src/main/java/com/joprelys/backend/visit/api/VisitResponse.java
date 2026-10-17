@@ -22,7 +22,9 @@ public record VisitResponse(
 		String careStage,
 		UUID consultingPractitionerId,
 		String consultingPractitionerName,
-		Instant consultationStartedAt
+		Instant consultationStartedAt,
+		String cancellationReason,
+		String cancellationNote
 ) {
 	public static VisitResponse fromEntity(VisitEntity entity) {
 		return new VisitResponse(
@@ -43,7 +45,9 @@ public record VisitResponse(
 				entity.getCareStage() != null ? entity.getCareStage().name() : null,
 				entity.getConsultingPractitionerId(),
 				entity.getConsultingPractitionerName(),
-				entity.getConsultationStartedAt()
+				entity.getConsultationStartedAt(),
+				entity.getCancellationReason(),
+				entity.getCancellationNote()
 		);
 	}
 }

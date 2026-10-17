@@ -15,6 +15,11 @@ public interface LabOrderRepository extends JpaRepository<LabOrderEntity, UUID> 
 
 	List<LabOrderEntity> findAllByOrderByCreatedAtDesc();
 
+	List<LabOrderEntity> findByVisitId(UUID visitId);
+
+	@org.springframework.data.jpa.repository.Query("SELECT DISTINCT o FROM LabOrderEntity o JOIN o.items i WHERE i.id IN :itemIds")
+	List<LabOrderEntity> findByItemIds(@org.springframework.data.repository.query.Param("itemIds") java.util.Collection<UUID> itemIds);
+
 	Optional<LabOrderEntity> findFirstByVisitIdAndExamTypeAndStatusNotOrderByCreatedAtDesc(
 			UUID visitId, ExamType examType, LabOrderStatus status);
 

@@ -38,6 +38,12 @@ public class MedicationAdministrationEntity {
     @Column(name = "administered_at", nullable = false)
     private Instant administeredAt;
 
+    @Column(name = "client_request_id")
+    private UUID clientRequestId;
+
+    @Column(name = "override_reason", length = 500)
+    private String overrideReason;
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -79,5 +85,12 @@ public class MedicationAdministrationEntity {
     public String getAdministeredBy() { return administeredBy; }
     public Instant getAdministeredAt() { return administeredAt; }
     public Instant getCreatedAt() { return createdAt; }
+    public UUID getClientRequestId() { return clientRequestId; }
+    public String getOverrideReason() { return overrideReason; }
+
+    public void recordSafetyContext(UUID clientRequestId, String overrideReason) {
+        this.clientRequestId = clientRequestId;
+        this.overrideReason = overrideReason;
+    }
     public Instant getUpdatedAt() { return updatedAt; }
 }

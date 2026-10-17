@@ -261,12 +261,56 @@ public class LabOrderControllerTest {
 				}
 				""";
 
+		// Une demande détaillée ne progresse pas globalement (ADR-20261017 D-04)...
 		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isConflict());
+
+		// ...mais examen par examen.
+		UUID itemId = order.getItems().get(0).getId();
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/items/" + itemId + "/status")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
 				.contentType(MediaType.APPLICATION_JSON)
 				.content(jsonRequest))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("SAMPLE_COLLECTED"));
+	}
+
+	@Test
+	void givenDetailedOrder_whenJumpingOrReopeningGlobalStatus_thenConflictAndCancellationNeedsReason() throws Exception {
+		LabOrderEntity order = new LabOrderEntity(
+				"EXAM-REQ-20260703-000210",
+				patient,
+				visit,
+				doctor,
+				org.getId(),
+				ExamType.LABORATOIRE,
+				List.of("NFS", "CRP"),
+				"Bilan",
+				"NORMALE",
+				org.getId()
+		);
+		order.setOrganizationId(org.getId());
+		order = labOrderRepository.save(order);
+
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"status\": \"VALIDATED\"}"))
+				.andExpect(status().isConflict());
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"status\": \"CANCELLED\"}"))
+				.andExpect(status().isBadRequest());
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"status\": \"CANCELLED\", \"reason\": \"Patient parti avant le prélèvement\"}"))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("CANCELLED"));
 	}
 
 	@Test
@@ -302,7 +346,7 @@ public class LabOrderControllerTest {
 	}
 
 	@Test
-	void givenPaymentWorkflow_whenUpdateStatus_thenSuccess() throws Exception {
+	void givenOrderAwaitingPayment_whenExamStarts_thenConflictUntilPaid() throws Exception {
 		LabOrderEntity order = new LabOrderEntity(
 				"EXAM-REQ-20260703-000202",
 				patient,
@@ -316,32 +360,14 @@ public class LabOrderControllerTest {
 				org.getId()
 		);
 		order.setOrganizationId(org.getId());
+		order.setStatus(com.joprelys.backend.lab.infrastructure.persistence.LabOrderStatus.AWAITING_PAYMENT);
 		order = labOrderRepository.save(order);
+		UUID itemId = order.getItems().get(0).getId();
 
-		// Passer à AWAITING_PAYMENT
-		String jsonRequest = """
-				{
-					"status": "AWAITING_PAYMENT"
-				}
-				""";
-		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/items/" + itemId + "/status")
 				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
 				.contentType(MediaType.APPLICATION_JSON)
-				.content(jsonRequest))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("AWAITING_PAYMENT"));
-
-		// Passer à PAID
-		jsonRequest = """
-				{
-					"status": "PAID"
-				}
-				""";
-		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/status")
-				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(jsonRequest))
-				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("PAID"));
+				.content("{\"status\": \"SAMPLE_COLLECTED\"}"))
+				.andExpect(status().isConflict());
 	}
 }

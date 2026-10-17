@@ -154,7 +154,7 @@ public class PatientPortalController {
     @GetMapping("/results")
     public List<com.joprelys.backend.lab.api.LabResultResponse> getOwnResults(Authentication authentication) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
-        return labResultService.getPatientResults(patient.getId());
+        return labResultService.getPatientPublishedResults(patient.getId());
     }
 
     @GetMapping("/results/{resultId}/pdf")
@@ -162,7 +162,7 @@ public class PatientPortalController {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
         var result = labResultService.getResultById(resultId);
 
-        if (!result.patientId().equals(patient.getId())) {
+        if (!result.patientId().equals(patient.getId()) || !"VALIDATED".equals(result.status())) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Vous n'êtes pas autorisé à accéder à ce résultat.");
         }
 

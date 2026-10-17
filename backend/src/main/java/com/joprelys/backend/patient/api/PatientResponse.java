@@ -36,5 +36,8 @@ public record PatientResponse(
         String estimatedAgeRange,
         String physicalDescription,
         Instant foundAt,
-        String foundLocation) {
+        String foundLocation,
+        Instant deceasedAt,
+        String deathPlace,
+        UUID deathDeclaredBy) {
 }

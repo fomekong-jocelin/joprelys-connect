@@ -157,7 +157,7 @@ public class HospitalizationService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Clinique introuvable."));
 
         boolean againstMedicalAdvice = Boolean.TRUE.equals(request.againstMedicalAdvice());
-        String finalStatus = againstMedicalAdvice ? "SORTI_CONTRE_AVIS" : "SORTI";
+        String finalStatus = patient.isDeceased() ? "DECEDE" : againstMedicalAdvice ? "SORTI_CONTRE_AVIS" : "SORTI";
         hospitalization.discharge(
                 request.dischargeDiagnosis(),
                 request.dischargeInstructions(),

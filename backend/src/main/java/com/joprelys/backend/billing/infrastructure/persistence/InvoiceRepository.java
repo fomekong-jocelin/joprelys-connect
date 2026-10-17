@@ -21,6 +21,8 @@ public interface InvoiceRepository extends JpaRepository<InvoiceEntity, UUID> {
 
     Optional<InvoiceEntity> findByVisitId(UUID visitId);
 
+    List<InvoiceEntity> findAllByVisitId(UUID visitId);
+
     @Query("SELECT i FROM InvoiceEntity i LEFT JOIN FETCH i.insuranceConvention LEFT JOIN FETCH i.items WHERE i.id = :id")
     Optional<InvoiceEntity> findByIdWithDetails(@Param("id") UUID id);
 

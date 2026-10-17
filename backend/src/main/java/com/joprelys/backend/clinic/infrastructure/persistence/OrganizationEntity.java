@@ -49,6 +49,14 @@ public class OrganizationEntity {
 	@Column(name = "api_enabled", nullable = false)
 	private boolean apiEnabled;
 
+	/** Paiement des examens ambulatoires exigé avant le prélèvement (ADR-20261017 D-13). */
+	@Column(name = "lab_payment_before_sampling", nullable = false)
+	private boolean labPaymentBeforeSampling;
+
+	/** Au-delà de ce montant, un avoir attend l'approbation de la DAF (ADR-20261017 D-17). */
+	@Column(name = "credit_note_approval_threshold", nullable = false, precision = 19, scale = 4)
+	private java.math.BigDecimal creditNoteApprovalThreshold = new java.math.BigDecimal("50000");
+
 	@Column(nullable = false)
 	private Instant createdAt;
 
@@ -188,6 +196,19 @@ public class OrganizationEntity {
 
 	public void setResponsibleName(String responsibleName) {
 		this.responsibleName = responsibleName;
+	}
+
+	public boolean isLabPaymentBeforeSampling() {
+		return labPaymentBeforeSampling;
+	}
+
+	public java.math.BigDecimal getCreditNoteApprovalThreshold() {
+		return creditNoteApprovalThreshold;
+	}
+
+	public void updateBillingSettings(boolean labPaymentBeforeSampling, java.math.BigDecimal creditNoteApprovalThreshold) {
+		this.labPaymentBeforeSampling = labPaymentBeforeSampling;
+		this.creditNoteApprovalThreshold = creditNoteApprovalThreshold;
 	}
 
 	public boolean isApiEnabled() {

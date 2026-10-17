@@ -70,6 +70,14 @@ public class LabResultService {
 		this.verificationUrlProvider = verificationUrlProvider;
 	}
 
+	/** Résultats visibles par le patient : uniquement les résultats validés par le laboratoire. */
+	@Transactional(readOnly = true)
+	public List<LabResultResponse> getPatientPublishedResults(UUID patientId) {
+		return getPatientResults(patientId).stream()
+				.filter(result -> LabResultStatus.VALIDATED.name().equals(result.status()))
+				.toList();
+	}
+
 	@Transactional(readOnly = true)
 	public List<LabResultResponse> getPatientResults(UUID patientId) {
 		List<LabResultEntity> allResults = labResultRepository.findByPatientIdOrderByCreatedAtDesc(patientId);
@@ -87,8 +95,33 @@ public class LabResultService {
 				.toList();
 	}
 
+	/** Saisie par un membre du personnel : le validateur est toujours l'utilisateur connecté (ADR-20261017 D-04). */
+	@Transactional
+	public void uploadResultsByStaff(LabResultUploadRequest request, String actorEmail) {
+		var actor = userAccountRepository.findByEmail(actorEmail.trim().toLowerCase())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Utilisateur introuvable."));
+		LabResultUploadRequest attributed = new LabResultUploadRequest(
+				request.examRequestNumber(),
+				actor.getDisplayName(),
+				actor.getId(),
+				request.status(),
+				request.sampleCollectedAt(),
+				request.resultAt(),
+				request.validatedAt(),
+				request.conclusion(),
+				request.results(),
+				request.pdfBase64(),
+				request.labOrderItemId());
+		upload(attributed, actor.getId());
+	}
+
+	/** Intégration partenaire (clé d'API) : pas d'utilisateur connecté. */
 	@Transactional
 	public void uploadResults(LabResultUploadRequest request) {
+		upload(request, null);
+	}
+
+	private void upload(LabResultUploadRequest request, UUID actorId) {
 		LabOrderEntity labOrder = labOrderRepository.findByExamRequestNumber(request.examRequestNumber())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'examen introuvable."));
 
@@ -163,9 +196,11 @@ public class LabResultService {
 
 		applyResultStatus(labOrder, labOrderItem, finalStatus, request);
 		labOrderRepository.save(labOrder);
-		notifyPatient(labOrder, request);
+		if (finalStatus == LabResultStatus.VALIDATED) {
+			notifyPatient(labOrder, request);
+		}
 		auditService.logSuccess(
-				null,
+				actorId,
 				labOrder.getOrganizationId(),
 				labOrder.getPatient().getId(),
 				"LAB_ORDER",

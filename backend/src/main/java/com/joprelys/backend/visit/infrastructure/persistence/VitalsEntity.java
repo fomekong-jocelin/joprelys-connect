@@ -112,8 +112,14 @@ public class VitalsEntity {
 	@PrePersist
 	void prePersist() {
 		Instant now = Instant.now();
-		createdAt = now;
-		updatedAt = now;
+		createdAt = createdAt != null ? createdAt : now;
+		updatedAt = updatedAt != null ? updatedAt : createdAt;
+	}
+
+	/** Conserve l'heure réelle d'une mesure reprise d'une autre source (urgence), au lieu de l'heure de copie. */
+	public void measuredAt(Instant measuredAt) {
+		this.createdAt = measuredAt;
+		this.updatedAt = measuredAt;
 	}
 
 	@PreUpdate

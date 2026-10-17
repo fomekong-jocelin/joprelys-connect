@@ -12,7 +12,7 @@ export interface StructuredHospitalization {
   readonly roomNumber: string;
   readonly bedNumber: string;
   readonly admissionReason: string;
-  readonly status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS';
+  readonly status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS' | 'DECEDE';
   readonly admittedAt: string;
   readonly dischargedAt?: string;
   readonly dischargeDiagnosis?: string;

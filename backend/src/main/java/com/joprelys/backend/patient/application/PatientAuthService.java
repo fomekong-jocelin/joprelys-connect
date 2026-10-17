@@ -34,7 +34,8 @@ public class PatientAuthService {
         PatientEntity patient = patientRepository.findByGlobalPatientNumber(normalizedDpu)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
-        if (!normalizePhone(patient.getPhone()).equals(normalizePhone(phone)) || !patient.getBirthDate().equals(birthDate)) {
+        if (!normalizePhone(patient.getPhone()).equals(normalizePhone(phone)) || !patient.getBirthDate().equals(birthDate)
+                || patient.isDeceased()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Les informations fournies ne correspondent pas.");
         }
 

@@ -170,6 +170,8 @@
             </div>
           }
 
+          <app-billing-tariff-alert [invoice]="selectedInvoice()!" (recalculated)="onInvoiceRecalculated($event)" />
+
           <div class="action-bar" aria-label="Actions sur la facture">
             @if (selectedInvoice()!.status === 'PENDING' || selectedInvoice()!.status === 'PROFORMA') {
               <button type="button" class="ui-button ui-button-primary" (click)="validateCurrentInvoice()">
@@ -182,7 +184,7 @@
                 <app-ui-icon name="x-mark" /> Annuler la facture
               </button>
             }
-            @if (selectedInvoice()!.status === 'VALIDATED' || selectedInvoice()!.status === 'PAID') {
+            @if (['VALIDATED', 'PARTIALLY_PAID', 'PAID', 'SETTLED'].includes(selectedInvoice()!.status)) {
               <button type="button" class="ui-button btn-credit action-button" (click)="showCreditNoteForm.set(!showCreditNoteForm())" [attr.aria-expanded]="showCreditNoteForm()" aria-controls="credit-note-form">
                 <app-ui-icon name="receipt-percent" /> {{ showCreditNoteForm() ? t('billing.creditNote.close', 'Fermer l’avoir') : t('billing.creditNote.action', 'Créer un avoir') }}
               </button>
@@ -225,27 +227,8 @@
             </div>
           }
 
-          <!-- Avoirs de la facture -->
-          @if (creditNotes().length > 0) {
-            <div class="sub-section">
-              <h4 class="sub-section-title">Avoirs</h4>
-              <div class="table-wrapper">
-                <table class="data-table data-table-sm">
-                  <thead><tr><th>N° Avoir</th><th>Montant</th><th>Motif</th><th>Date</th></tr></thead>
-                  <tbody>
-                    @for (cn of creditNotes(); track cn.id) {
-                      <tr>
-                        <td><span class="mono">{{ cn.creditNoteNumber }}</span></td>
-                        <td class="amount text-warning">-{{ cn.amount | number:'1.0-0' }} FCFA</td>
-                        <td>{{ cn.reason }}</td>
-                        <td>{{ cn.createdAt | date:'dd/MM/yyyy' }}</td>
-                      </tr>
-                    }
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          }
+          <!-- Avoirs de la facture : statut, approbation, remboursement -->
+          <app-billing-credit-notes-panel [creditNotes]="creditNotes()" (changed)="reloadSelectedInvoice()" />
 
           <!-- Créances de la facture -->
           @if (receivables().length > 0) {

@@ -134,6 +134,7 @@ public class DefaultPatientAppointmentService implements PatientAppointmentServi
     @Transactional
     public AppointmentResponse book(Authentication authentication, PatientBookAppointmentRequest request) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
+        com.joprelys.backend.patient.application.PatientDeathService.rejectIfDeceased(patient);
         UserAccountEntity doctor = loadDoctor(request.doctorId(), patient.getOrganizationId(), true);
         Instant now = Instant.now();
         validateBookingStart(request.startAt(), now);

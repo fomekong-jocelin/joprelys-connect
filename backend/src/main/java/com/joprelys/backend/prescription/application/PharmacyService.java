@@ -119,6 +119,7 @@ public class PharmacyService {
 				prescription.getId(),
 				prescription.getPrescriptionNumber(),
 				prescription.getStatus(),
+				prescription.getDispensationStatus(),
 				patientName,
 				doctorName,
 				prescription.getCreatedAt(),
@@ -146,8 +147,12 @@ public class PharmacyService {
         String persistedStatus = jdbcTemplate.queryForObject("SELECT status FROM prescriptions WHERE id = ?", String.class, prescription.getId());
         prescription.setStatus(persistedStatus);
 
+		String persistedDispensation = jdbcTemplate.queryForObject(
+				"SELECT dispensation_status FROM prescriptions WHERE id = ?", String.class, prescription.getId());
+		prescription.setDispensationStatus(persistedDispensation);
+
 		// Status verification
-		if ("FULLY_DISPENSED".equals(prescription.getStatus())) {
+		if ("FULL".equals(persistedDispensation)) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette ordonnance a déjà été entièrement dispensée.");
 		}
 		if ("CANCELLED".equals(prescription.getStatus()) || "REVOQUE".equals(prescription.getStatus()) || "ANNULE".equals(prescription.getStatus())) {
@@ -156,7 +161,7 @@ public class PharmacyService {
 		if ("EXPIRED".equals(prescription.getStatus()) || (prescription.getExpiresAt() != null && prescription.getExpiresAt().isBefore(Instant.now()))) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Cette ordonnance a expiré.");
 		}
-        if (!java.util.Set.of("ACTIVE", "PARTIALLY_DISPENSED").contains(persistedStatus)) {
+        if (!"ACTIVE".equals(persistedStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance active peut être délivrée.");
         }
         Boolean validated = jdbcTemplate.queryForObject(
@@ -182,6 +187,8 @@ public class PharmacyService {
 				pharmacyName,
 				pharmacistLicense
 		);
+		dispensation.setDispensingOrganizationId(jdbcTemplate.queryForObject(
+				"SELECT organization_id FROM users WHERE id = ?", UUID.class, currentActorId()));
 
 		boolean allItemsFullyDispensed = true;
 		boolean anyItemDispensed = false;
@@ -232,9 +239,10 @@ public class PharmacyService {
 		dispensationRepository.save(dispensation);
 
 		if (anyItemDispensed) {
-			String newStatus = allItemsFullyDispensed ? "FULLY_DISPENSED" : "PARTIALLY_DISPENSED";
-			prescription.setStatus(newStatus);
-			jdbcTemplate.update("UPDATE prescriptions SET status = ?, updated_at = ? WHERE id = ?", newStatus, Timestamp.from(Instant.now()), prescription.getId());
+			// La délivrance ne change pas le statut de l'ordonnance : elle reste administrable (ADR-20261017 D-02).
+			String newDispensationStatus = allItemsFullyDispensed ? "FULL" : "PARTIAL";
+			prescription.setDispensationStatus(newDispensationStatus);
+			jdbcTemplate.update("UPDATE prescriptions SET dispensation_status = ?, updated_at = ? WHERE id = ?", newDispensationStatus, Timestamp.from(Instant.now()), prescription.getId());
 		}
 
 		// Query patientId globally using raw SQL to bypass TenantId restrictions, handling potential EmptyResultDataAccessException
@@ -354,7 +362,7 @@ public class PharmacyService {
         PharmacyVerifyResponse verified = verifyPrescription(request.prescriptionNumber(), request.pinCode());
         lockPrescription(verified.prescriptionId());
         String status = jdbcTemplate.queryForObject("SELECT status FROM prescriptions WHERE id = ?", String.class, verified.prescriptionId());
-        if (!java.util.Set.of("ACTIVE", "PARTIALLY_DISPENSED").contains(status)) {
+        if (!"ACTIVE".equals(status)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Seule une ordonnance active peut être validée par la pharmacie.");
         }
         UUID actorId = currentActorId();
@@ -378,12 +386,13 @@ public class PharmacyService {
         return jdbcTemplate.queryForObject("SELECT id FROM users WHERE email = ? AND enabled = TRUE", UUID.class, auth.getName());
     }
 
+	/** Quantité prescrite : premier nombre du texte (« 1 boîte de 24 » = 1), jamais la concaténation des chiffres. */
 	private int parseQuantity(String qtyStr) {
 		if (qtyStr == null) return 0;
-		String digits = qtyStr.replaceAll("[^0-9]", "");
-		if (digits.isEmpty()) return 0;
+		java.util.regex.Matcher number = java.util.regex.Pattern.compile("\\d+").matcher(qtyStr);
+		if (!number.find()) return 0;
 		try {
-			return java.lang.Integer.parseInt(digits);
+			return java.lang.Integer.parseInt(number.group());
 		} catch (NumberFormatException e) {
 			return 0;
 		}

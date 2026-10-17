@@ -100,6 +100,20 @@ public class HospitalizationController {
         return hospitalizationDischargeWorkflowService.decideDischarge(id, request);
     }
 
+    @PostMapping("/{id}/discharge/cancel")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_DISCHARGE_DECIDE')")
+    public HospitalizationResponse cancelDischargeDecision(
+            @PathVariable UUID id,
+            @Valid @RequestBody CancelDischargeDecisionRequest request) {
+        return hospitalizationDischargeWorkflowService.cancelDischargeDecision(id, request.reason());
+    }
+
+    public record CancelDischargeDecisionRequest(
+            @jakarta.validation.constraints.NotBlank(message = "Le motif est obligatoire.")
+            @jakarta.validation.constraints.Size(max = 500, message = "Le motif ne peut pas dépasser 500 caractères.")
+            String reason) {
+    }
+
     @PostMapping("/{id}/physical-departure")
     @PreAuthorize("hasAuthority('HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM')")
     public HospitalizationResponse confirmPhysicalDeparture(

@@ -50,6 +50,7 @@ class EmergencyControllerTest {
 
     @BeforeEach
     void setUp() {
+        jdbcTemplate.update("DELETE FROM vitals");
         jdbcTemplate.update("DELETE FROM audit_logs");
         jdbcTemplate.update("DELETE FROM emergency_admission_requests");
         jdbcTemplate.update("DELETE FROM resuscitation_logs");
@@ -215,5 +216,80 @@ class EmergencyControllerTest {
 
     private String bearer(String token) {
         return "Bearer " + token;
+    }
+
+    @Test
+    void closedEmergencyVitalsAreNotCopiedIntoALaterUnrelatedVisit() throws Exception {
+        mockMvc.perform(post("/api/emergencies/" + emergency.getId() + "/stabilize")
+                        .header("Authorization", bearer(doctorToken))
+                        .param("orientation", "DISCHARGE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stabilizedAt").isNotEmpty())
+                .andExpect(jsonPath("$.stabilizedBy").value(doctor.getId().toString()));
+
+        mockMvc.perform(post("/api/visits")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"%s\",\"reason\":\"Suivi diabète\",\"orientation\":\"CONSULTATION\"}"
+                                .formatted(patient.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vitals").value(org.hamcrest.Matchers.nullValue()))
+                .andExpect(jsonPath("$.careStage").value("ATTENTE_CONSTANTES"));
+    }
+
+    @Test
+    void consultationOrientationKeepsTheEmergencyOpenUntilTheVisitAcceptsThePatient() throws Exception {
+        mockMvc.perform(post("/api/emergencies/" + emergency.getId() + "/stabilize")
+                        .header("Authorization", bearer(doctorToken))
+                        .param("orientation", "CONSULTATION"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.awaitingDownstream").value(true))
+                .andExpect(jsonPath("$.stabilizedAt").value(org.hamcrest.Matchers.nullValue()));
+
+        mockMvc.perform(get("/api/emergencies/active").header("Authorization", bearer(doctorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").value(emergency.getId().toString()));
+
+        mockMvc.perform(post("/api/visits")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"%s\",\"reason\":\"Avis spécialisé\",\"orientation\":\"CONSULTATION\"}"
+                                .formatted(patient.getId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.vitals.pulse").value(90));
+
+        mockMvc.perform(get("/api/emergencies/" + emergency.getId()).header("Authorization", bearer(doctorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stabilizedAt").isNotEmpty())
+                .andExpect(jsonPath("$.visitId").isNotEmpty());
+    }
+
+    @Test
+    void deathOrientationDeclaresTheDeathAndBlocksNewEpisodes() throws Exception {
+        mockMvc.perform(post("/api/emergencies/" + emergency.getId() + "/stabilize")
+                        .header("Authorization", bearer(doctorToken))
+                        .param("orientation", "DEATH"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orientation").value("DEATH"))
+                .andExpect(jsonPath("$.stabilizedAt").isNotEmpty());
+
+        mockMvc.perform(get("/api/patients/" + patient.getId()).header("Authorization", bearer(doctorToken)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("DECEASED"))
+                .andExpect(jsonPath("$.deceasedAt").isNotEmpty());
+
+        mockMvc.perform(post("/api/visits")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"patientId\":\"%s\",\"reason\":\"Test\",\"orientation\":\"CONSULTATION\"}"
+                                .formatted(patient.getId())))
+                .andExpect(status().isConflict());
+
+        mockMvc.perform(post("/api/patients/" + patient.getId() + "/death/revoke")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Erreur de dossier : homonyme\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
     }
 }

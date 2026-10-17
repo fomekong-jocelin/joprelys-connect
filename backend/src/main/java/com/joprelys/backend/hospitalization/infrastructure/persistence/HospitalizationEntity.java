@@ -184,6 +184,15 @@ public class HospitalizationEntity {
         this.dischargeDecidedAt = decidedAt;
     }
 
+    /** Annule une décision médicale de sortie tant que le patient n'est pas parti (ADR-20261017 D-09). */
+    public void cancelDischargeDecision() {
+        this.dischargeDiagnosis = null;
+        this.dischargeInstructions = null;
+        this.dischargeAgainstMedicalAdvice = Boolean.FALSE;
+        this.dischargeDecidedBy = null;
+        this.dischargeDecidedAt = null;
+    }
+
     public void confirmPhysicalDeparture(UUID confirmedBy, String note, Instant confirmedAt) {
         this.physicalDepartureBy = confirmedBy;
         this.physicalDepartureNote = note;

@@ -122,6 +122,22 @@ public class InvoiceController {
         return ResponseEntity.ok(invoiceSettlementQueryService.listByPatient(patientId));
     }
 
+    @PostMapping("/{id}/apply-deposit")
+    @PreAuthorize("hasAuthority('CASH_PAYMENT_COLLECT')")
+    @Operation(summary = "Imputer un acompte", description = "Impute un acompte du patient sur la part patient d'une facture validée.")
+    public ResponseEntity<PaymentResponse> applyDeposit(
+            @PathVariable UUID id,
+            @Valid @RequestBody ApplyDepositRequest request) {
+        return ResponseEntity.ok(billingPaymentService.applyDeposit(id, request.depositId(), request.amount()));
+    }
+
+    @PostMapping("/{id}/recalculate")
+    @PreAuthorize("hasAuthority('BILLING_INVOICE_WRITE')")
+    @Operation(summary = "Recalculer une facture en attente", description = "Reconstruit les lignes issues des sources cliniques après paramétrage des tarifs ; les lignes manuelles sont conservées.")
+    public ResponseEntity<InvoiceResponse> recalculateInvoice(@PathVariable UUID id) {
+        return ResponseEntity.ok(invoiceCrudService.recalculatePendingInvoice(id));
+    }
+
     @GetMapping("/{id}")
     @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Détails d'une facture", description = "Récupère les détails d'une facture par son identifiant.")

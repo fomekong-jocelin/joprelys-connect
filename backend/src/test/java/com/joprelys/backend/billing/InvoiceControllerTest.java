@@ -85,6 +85,7 @@ public class InvoiceControllerTest {
     @Autowired private CashRegisterSessionRepository cashRegisterSessionRepository;
     @Autowired private JwtService jwtService;
     @Autowired private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
+    @Autowired private com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionDispensationRepository dispensationRepository;
 
     private final ObjectMapper objectMapper = new ObjectMapper()
             .registerModule(new com.fasterxml.jackson.datatype.jsr310.JavaTimeModule());
@@ -197,6 +198,8 @@ public class InvoiceControllerTest {
         jdbcTemplate.update("DELETE FROM insurance_conventions");
         jdbcTemplate.update("DELETE FROM tariff_grid");
         jdbcTemplate.update("DELETE FROM audit_logs");
+        jdbcTemplate.update("DELETE FROM dispensation_items");
+        jdbcTemplate.update("DELETE FROM prescription_dispensations");
         jdbcTemplate.update("DELETE FROM prescription_items");
         jdbcTemplate.update("DELETE FROM prescriptions");
         jdbcTemplate.update("DELETE FROM consultations");
@@ -250,6 +253,22 @@ public class InvoiceControllerTest {
         TariffGridEntity tDrug = new TariffGridEntity("Artesunate", new java.math.BigDecimal("3000.0000"));
         tDrug.setOrganizationId(org.getId());
         tariffGridRepository.save(tDrug);
+
+        // ADR-20261017 D-11/D-12 : la consultation suit la grille et le médicament est facturé à la délivrance interne.
+        TariffGridEntity tConsultation = new TariffGridEntity("CS", new java.math.BigDecimal("15000.0000"));
+        tConsultation.setOrganizationId(org.getId());
+        tariffGridRepository.save(tConsultation);
+        TenantContext.setTenantId(org.getId());
+        try {
+            var dispensation = new com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionDispensationEntity(
+                    prescription, "Pharmacie interne", "PH-001");
+            dispensation.setDispensingOrganizationId(org.getId());
+            dispensation.getItems().add(new com.joprelys.backend.prescription.infrastructure.persistence.DispensationItemEntity(
+                    dispensation, prescription.getItems().get(0), 3, null));
+            dispensationRepository.save(dispensation);
+        } finally {
+            TenantContext.clear();
+        }
 
         mockMvc.perform(post("/api/invoices/precalculate")
                         .header("Authorization", "Bearer " + tokenReceptionist)

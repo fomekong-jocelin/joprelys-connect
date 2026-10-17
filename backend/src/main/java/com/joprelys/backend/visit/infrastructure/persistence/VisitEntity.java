@@ -59,6 +59,15 @@ public class VisitEntity {
 	@Column(name = "closed_at")
 	private Instant closedAt;
 
+	@Column(name = "cancellation_reason", length = 40)
+	private String cancellationReason;
+
+	@Column(name = "cancellation_note", length = 500)
+	private String cancellationNote;
+
+	@Column(name = "cancelled_by")
+	private UUID cancelledBy;
+
 	@jakarta.persistence.Enumerated(jakarta.persistence.EnumType.STRING)
 	@Column(name = "care_stage", nullable = false, length = 30)
 	private VisitCareStage careStage = VisitCareStage.ATTENTE_CONSTANTES;
@@ -238,6 +247,26 @@ public class VisitEntity {
 		if (careStage == VisitCareStage.ATTENTE_CONSTANTES) {
 			careStage = VisitCareStage.PRET_MEDECIN;
 		}
+	}
+
+	public void cancel(String reason, String note, UUID cancelledBy, Instant cancelledAt) {
+		this.status = "ANNULEE";
+		this.closedAt = cancelledAt;
+		this.cancellationReason = reason;
+		this.cancellationNote = note;
+		this.cancelledBy = cancelledBy;
+	}
+
+	public String getCancellationReason() {
+		return cancellationReason;
+	}
+
+	public String getCancellationNote() {
+		return cancellationNote;
+	}
+
+	public UUID getCancelledBy() {
+		return cancelledBy;
 	}
 
 	public boolean isInConsultationWithAnotherPractitioner(UUID practitionerId) {

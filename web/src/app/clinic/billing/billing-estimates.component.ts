@@ -7,6 +7,8 @@ import { Invoice, Estimate, CreditNote, Receivable, InvoiceSettlementSummary } f
 import { Visit } from '../../visit/visit.models';
 import { ConfirmationDialogComponent } from '../../shared/ui/confirmation-dialog.component';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { BillingCreditNotesPanelComponent } from './billing-credit-notes-panel.component';
+import { BillingTariffAlertComponent } from './billing-tariff-alert.component';
 
 /**
  * Composant dédié aux devis, validation de factures, remises, avoirs et créances.
@@ -15,7 +17,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
 @Component({
   selector: 'app-billing-estimates',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, ConfirmationDialogComponent],
+  imports: [CommonModule, FormsModule, IconComponent, ConfirmationDialogComponent, BillingCreditNotesPanelComponent, BillingTariffAlertComponent],
   templateUrl: './billing-estimates.component.html',
   styleUrl: './billing-estimates.component.css'
 })
@@ -153,8 +155,20 @@ export class BillingEstimatesComponent implements OnInit {
         this.loadInvoiceData(updated.id);
         this.showSuccess(this.t('billing.invoice.success.validated', 'Facture validée avec succès.'));
       },
-      error: (err) => this.showError(err?.error?.message || this.t('billing.invoice.error.validate', 'Erreur lors de la validation.'))
+      error: (err) => this.showError(err?.error?.detail || err?.error?.message || this.t('billing.invoice.error.validate', 'Erreur lors de la validation.'))
     });
+  }
+
+  onInvoiceRecalculated(updated: Invoice): void {
+    this._selectedInvoice.set(updated);
+    this.showSuccess(this.t('billing.tariff.recalculated', 'Facture recalculée.'));
+  }
+
+  reloadSelectedInvoice(): void {
+    const inv = this._selectedInvoice();
+    if (!inv) return;
+    this.billingApi.getInvoice(inv.id).subscribe({ next: (updated) => this._selectedInvoice.set(updated), error: () => undefined });
+    this.loadInvoiceData(inv.id);
   }
 
   requestCancelCurrentInvoice(): void {
@@ -178,7 +192,7 @@ export class BillingEstimatesComponent implements OnInit {
       },
       error: (err) => {
         this.cancellingInvoice.set(false);
-        this.showError(err?.error?.message || this.t('billing.invoice.error.cancel', 'Erreur lors de l\'annulation.'));
+        this.showError(err?.error?.detail || err?.error?.message || this.t('billing.invoice.error.cancel', 'Erreur lors de l\'annulation.'));
       },
     });
   }
@@ -202,7 +216,7 @@ export class BillingEstimatesComponent implements OnInit {
         this.discountReason = '';
         this.showSuccess(this.t('billing.invoice.success.discount', 'Remise appliquée.'));
       },
-      error: (err) => this.showError(err?.error?.message || this.t('billing.invoice.error.discount', 'Erreur lors de l\'application de la remise.'))
+      error: (err) => this.showError(err?.error?.detail || err?.error?.message || this.t('billing.invoice.error.discount', 'Erreur lors de l\'application de la remise.'))
     });
   }
 
@@ -217,7 +231,7 @@ export class BillingEstimatesComponent implements OnInit {
         this.creditNoteReason = '';
         this.showSuccess(this.t('billing.creditNote.success.created', 'Avoir créé avec succès.'));
       },
-      error: (err) => this.showError(err?.error?.message || this.t('billing.creditNote.error.create', 'Erreur lors de la création de l\'avoir.'))
+      error: (err) => this.showError(err?.error?.detail || err?.error?.message || this.t('billing.creditNote.error.create', 'Erreur lors de la création de l\'avoir.'))
     });
   }
 

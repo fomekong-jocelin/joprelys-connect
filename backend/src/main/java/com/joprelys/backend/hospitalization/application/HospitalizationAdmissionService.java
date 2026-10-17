@@ -113,6 +113,7 @@ public class HospitalizationAdmissionService {
         EmergencyEntity emergency = resolveEmergency(request, patientContext);
         VisitEntity visit = resolveVisit(request, patientContext, emergency, placement.serviceNameSnapshot());
 
+        com.joprelys.backend.patient.application.PatientDeathService.rejectIfDeceased(patientContext.canonicalPatient());
         rejectActiveHospitalization(patientContext);
         rejectDuplicateEmergencyHospitalization(emergency);
         validateResponsiblePractitioner(
@@ -129,6 +130,12 @@ public class HospitalizationAdmissionService {
                 placement,
                 occupiedBed));
         activeBedAssignmentService.assign(saved.getId(), occupiedBed, saved.getOrganizationId());
+        if (emergency != null) {
+            // Sortie des urgences dans la même transaction que l'admission (ADR-20261017 D-06).
+            UserAccountEntity actor = currentUser();
+            emergency.acceptByDownstream("ADMISSION", actor == null ? null : actor.getId(), Instant.now());
+            emergencyRepository.save(emergency);
+        }
 
         auditAdmission(saved, emergency);
         return HospitalizationResponse.fromEntity(saved);
@@ -186,7 +193,13 @@ public class HospitalizationAdmissionService {
             CreateHospitalizationRequest request,
             PatientCanonicalResolver.CanonicalPatientContext requestedContext) {
         if (request.emergencyId() == null) {
-            return null;
+            // Patient orienté vers l'hospitalisation depuis les urgences : l'admission reprend cette urgence.
+            return emergencyRepository.findByPatientIdsWithLogs(requestedContext.contributingPatientIds()).stream()
+                    .filter(EmergencyEntity::isAwaitingDownstream)
+                    .filter(candidate -> "ADMISSION".equals(candidate.getOrientation())
+                            || "OR_DIRECT".equals(candidate.getOrientation()))
+                    .findFirst()
+                    .orElse(null);
         }
 
         EmergencyEntity emergency = emergencyRepository.findByIdWithPatientAndLogs(request.emergencyId())

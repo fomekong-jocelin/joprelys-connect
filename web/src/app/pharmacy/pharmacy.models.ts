@@ -19,6 +19,7 @@ export interface PharmacyVerifyResponse {
   prescriptionId: string;
   prescriptionNumber: string;
   status: string;
+  dispensationStatus?: 'NONE' | 'PARTIAL' | 'FULL';
   patientName: string;
   doctorName: string;
   issuedAt: string;
@@ -80,3 +81,16 @@ export interface CreateDrugStockRequest {
   supplier?: string;
 }
 
+
+/** Statut affiché : la délivrance est un état distinct du cycle de vie de l'ordonnance. */
+export function pharmacyDisplayStatus(prescription: Pick<PharmacyVerifyResponse, 'status' | 'dispensationStatus'>): string {
+  if (prescription.status !== 'ACTIVE') return prescription.status;
+  if (prescription.dispensationStatus === 'FULL') return 'FULLY_DISPENSED';
+  if (prescription.dispensationStatus === 'PARTIAL') return 'PARTIALLY_DISPENSED';
+  return 'ACTIVE';
+}
+
+/** Une ordonnance active et non entièrement délivrée peut encore être délivrée. */
+export function isPrescriptionDispensable(prescription: Pick<PharmacyVerifyResponse, 'status' | 'dispensationStatus'> | null | undefined): boolean {
+  return prescription?.status === 'ACTIVE' && prescription.dispensationStatus !== 'FULL';
+}

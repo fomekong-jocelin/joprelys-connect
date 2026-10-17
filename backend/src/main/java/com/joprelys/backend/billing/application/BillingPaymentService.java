@@ -36,6 +36,9 @@ public class BillingPaymentService {
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
     private final InvoiceFinancialStateService financialStateService;
+    private final LabPaymentReleaseService labPaymentReleaseService;
+    private final com.joprelys.backend.billing.infrastructure.persistence.PatientDepositRepository depositRepository;
+    private final com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver canonicalResolver;
 
     public BillingPaymentService(InvoiceRepository invoiceRepository,
                                  PaymentRepository paymentRepository,
@@ -43,7 +46,13 @@ public class BillingPaymentService {
                                  CashRegisterService cashRegisterService,
                                  UserAccountRepository userAccountRepository,
                                  AuditService auditService,
-                                 InvoiceFinancialStateService financialStateService) {
+                                 InvoiceFinancialStateService financialStateService,
+                                 LabPaymentReleaseService labPaymentReleaseService,
+                                 com.joprelys.backend.billing.infrastructure.persistence.PatientDepositRepository depositRepository,
+                                 com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver canonicalResolver) {
+        this.labPaymentReleaseService = labPaymentReleaseService;
+        this.depositRepository = depositRepository;
+        this.canonicalResolver = canonicalResolver;
         this.invoiceRepository = invoiceRepository;
         this.paymentRepository = paymentRepository;
         this.receivableRepository = receivableRepository;
@@ -55,6 +64,10 @@ public class BillingPaymentService {
 
     @Transactional
     public PaymentResponse addPayment(UUID invoiceId, PaymentRequest request) {
+        if (request.method() == com.joprelys.backend.billing.infrastructure.persistence.PaymentMethod.DEPOSIT) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Un acompte s'impute avec l'action dédiée, sans nouvel encaissement.");
+        }
         UserAccountEntity actor = getCurrentUser();
         CashRegisterSessionEntity session = cashRegisterService.findActiveSessionForUser(actor.getId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT,
@@ -81,9 +94,52 @@ public class BillingPaymentService {
                 request.method().name(), request.reference(), false));
         cashRegisterService.createReceiptForPayment(saved);
         financialStateService.synchronize(invoice);
+        labPaymentReleaseService.releaseIfPatientShareSettled(invoice);
         auditService.logSuccess(actor.getId(), actor.getOrganizationId(), invoice.getPatientId(), "BILLING", saved.getId(),
                 "ADD_PAYMENT", "Enregistrement règlement de " + request.amount() + " FCFA via " + request.method()
                         + " pour la facture N° " + invoice.getInvoiceNumber() + ".");
+        return PaymentResponse.fromEntity(saved);
+    }
+
+    /**
+     * Imputation d'un acompte du patient sur une facture validée (ADR-20261017 D-16) : l'argent a déjà été
+     * compté en caisse à l'encaissement de l'acompte, aucun nouveau mouvement n'est créé.
+     */
+    @Transactional
+    public PaymentResponse applyDeposit(UUID invoiceId, UUID depositId, BigDecimal amount) {
+        UserAccountEntity actor = getCurrentUser();
+        InvoiceEntity invoice = findPayableInvoice(invoiceId);
+        var deposit = depositRepository.findByIdForUpdate(depositId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Acompte introuvable"));
+        if (!canonicalResolver.resolve(invoice.getPatientId()).contributingPatientIds().contains(deposit.getPatientId())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cet acompte appartient à un autre patient.");
+        }
+        financialStateService.initializeReceivables(invoice);
+        BigDecimal totalPaid = paymentRepository.findByInvoiceId(invoiceId).stream()
+                .map(PaymentEntity::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal remaining = invoice.getPatientShare().subtract(totalPaid).max(BigDecimal.ZERO);
+        BigDecimal applied = amount == null ? deposit.getRemainingAmount().min(remaining) : amount;
+        if (applied.signum() <= 0 || applied.compareTo(deposit.getRemainingAmount()) > 0
+                || applied.compareTo(remaining.add(new BigDecimal("0.01"))) > 0) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Montant d'imputation invalide : solde de l'acompte " + deposit.getRemainingAmount()
+                            + " FCFA, reste à payer " + remaining + " FCFA.");
+        }
+        deposit.consume(applied);
+        depositRepository.save(deposit);
+        PaymentEntity payment = new PaymentEntity(invoice, applied,
+                com.joprelys.backend.billing.infrastructure.persistence.PaymentMethod.DEPOSIT,
+                deposit.getDepositNumber(), actor.getId());
+        payment.setOrganizationId(actor.getOrganizationId());
+        payment.setDepositId(deposit.getId());
+        PaymentEntity saved = paymentRepository.save(payment);
+        settlePatientReceivables(invoiceId, applied);
+        financialStateService.synchronize(invoice);
+        labPaymentReleaseService.releaseIfPatientShareSettled(invoice);
+        auditService.logSuccess(actor.getId(), actor.getOrganizationId(), invoice.getPatientId(), "BILLING", saved.getId(),
+                "APPLY_DEPOSIT", "Imputation de " + applied + " FCFA de l'acompte " + deposit.getDepositNumber()
+                        + " sur la facture N° " + invoice.getInvoiceNumber() + ".");
         return PaymentResponse.fromEntity(saved);
     }
 

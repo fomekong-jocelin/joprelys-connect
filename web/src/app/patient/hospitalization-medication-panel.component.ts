@@ -12,6 +12,7 @@ interface MedicationAdministration {
   dose: string;
   administeredBy: string;
   administeredAt: string;
+  overrideReason?: string | null;
 }
 
 @Component({
@@ -32,7 +33,7 @@ interface MedicationAdministration {
       @if (showForm()) {
         <form class="grid gap-4 border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4 md:grid-cols-2" (submit)="save($event)">
           <label class="text-xs font-semibold text-[var(--text-secondary)]">{{ t('patients.hospitalization.workflow.prescribedMedication') }}
-            <select class="ui-select mt-1" [ngModel]="prescriptionItemId()" (ngModelChange)="prescriptionItemId.set($event)" name="prescriptionItemId" required [disabled]="optionsLoading() || !!optionsError()">
+            <select class="ui-select mt-1" [ngModel]="prescriptionItemId()" (ngModelChange)="prescriptionItemId.set($event); safetyConflict.set(null); overrideReason.set('')" name="prescriptionItemId" required [disabled]="optionsLoading() || !!optionsError()">
               <option value="">{{ t('patients.hospitalization.workflow.selectMedication') }}</option>
               @for (item of medications(); track item.prescriptionItemId) { <option [value]="item.prescriptionItemId">{{ item.medicationName }} — {{ item.dosage }} ({{ item.prescriptionNumber }})</option> }
             </select>
@@ -41,7 +42,16 @@ interface MedicationAdministration {
           @else if (!optionsLoading() && medications().length === 0) { <p role="status">{{ t('patients.hospitalization.workflow.noPrescription') }}</p> }
 
           <label class="text-xs font-semibold text-[var(--text-secondary)]">{{ t('patients.hospitalization.medication.dose') }}<input class="ui-input mt-1" [ngModel]="dose()" (ngModelChange)="dose.set($event)" name="dose" required /></label>
-          <div class="flex justify-end md:col-span-2"><button type="submit" class="ui-button ui-button-primary" [disabled]="saving() || loading() || optionsLoading() || !!optionsError() || !prescriptionItemId() || !dose().trim()">{{ t('common.save') }}</button></div>
+          @if (safetyConflict()) {
+            <div class="border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] p-3 md:col-span-2" role="alert">
+              <p class="text-sm font-semibold text-[var(--text-primary)]">{{ t('patients.hospitalization.medication.tooCloseTitle') }}</p>
+              <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ safetyConflict() }}</p>
+              <label class="mt-3 block text-xs font-semibold text-[var(--text-secondary)]">{{ t('patients.hospitalization.medication.overrideReason') }}
+                <textarea class="ui-input mt-1" rows="2" maxlength="500" [ngModel]="overrideReason()" (ngModelChange)="overrideReason.set($event)" name="overrideReason"></textarea>
+              </label>
+            </div>
+          }
+          <div class="flex justify-end md:col-span-2"><button type="submit" class="ui-button ui-button-primary" [disabled]="saving() || loading() || optionsLoading() || !!optionsError() || !prescriptionItemId() || !dose().trim() || (!!safetyConflict() && !overrideReason().trim())">{{ safetyConflict() ? t('patients.hospitalization.medication.confirmOverride') : t('common.save') }}</button></div>
           @if (error()) { <p class="text-xs font-semibold text-[var(--brand-danger-text)] md:col-span-2" role="alert">{{ error() }}</p> }
         </form>
       }
@@ -55,7 +65,7 @@ interface MedicationAdministration {
       } @else {
         <ol class="space-y-3 border-l border-[var(--app-border)] pl-5">
           @for (administration of administrations(); track administration.id) {
-            <li class="relative"><span class="absolute -left-[25px] top-1.5 h-2 w-2 border-2 border-[var(--app-surface)] bg-[var(--brand-primary)]"></span><article class="border border-[var(--app-border)] bg-[var(--app-surface)] p-3"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-sm text-[var(--text-primary)]">{{ administration.medicationName }}</strong><time class="text-xs text-[var(--text-muted)]">{{ administration.administeredAt | date:'dd/MM/yyyy HH:mm' }}</time></div><p class="mt-1 text-sm text-[var(--text-secondary)]">{{ administration.dose }}</p><p class="mt-1 text-xs text-[var(--text-muted)]">{{ administration.administeredBy }}</p></article></li>
+            <li class="relative"><span class="absolute -left-[25px] top-1.5 h-2 w-2 border-2 border-[var(--app-surface)] bg-[var(--brand-primary)]"></span><article class="border border-[var(--app-border)] bg-[var(--app-surface)] p-3"><div class="flex flex-wrap items-center justify-between gap-2"><strong class="text-sm text-[var(--text-primary)]">{{ administration.medicationName }}</strong><time class="text-xs text-[var(--text-muted)]">{{ administration.administeredAt | date:'dd/MM/yyyy HH:mm' }}</time></div><p class="mt-1 text-sm text-[var(--text-secondary)]">{{ administration.dose }}</p><p class="mt-1 text-xs text-[var(--text-muted)]">{{ administration.administeredBy }}</p>@if (administration.overrideReason) { <p class="mt-1 text-xs font-semibold text-[var(--brand-warning-text)]">{{ t('patients.hospitalization.medication.overridden') }} : {{ administration.overrideReason }}</p> }</article></li>
           }
         </ol>
       }
@@ -77,6 +87,9 @@ export class HospitalizationMedicationPanelComponent {
   readonly optionsError = signal<string | null>(null);
   private readonly hospitalizationApi = inject(HospitalizationLocationApiService);
   readonly dose = signal('');
+  readonly safetyConflict = signal<string | null>(null);
+  readonly overrideReason = signal('');
+  private clientRequestId = crypto.randomUUID();
 
   private readonly patientApi = inject(PatientApiService);
   private readonly i18n = inject(I18nService);
@@ -90,11 +103,24 @@ export class HospitalizationMedicationPanelComponent {
     const medicationName = item?.medicationName;
     const dose = this.dose().trim();
     if (!this.canModify() || this.saving() || this.loading() || this.historyError() || this.optionsLoading() || this.optionsError() || !item || !medicationName || !dose) return;
+    const overrideReason = this.safetyConflict() ? this.overrideReason().trim() : '';
+    if (this.safetyConflict() && !overrideReason) return;
     this.saving.set(true);
     this.error.set(null);
-    this.patientApi.addMedicationAdministration(this.hospitalizationId(), { medicationName, dose, prescriptionItemId: item.prescriptionItemId, administeredAt: new Date().toISOString() }).subscribe({
-      next: () => { this.saving.set(false); this.showForm.set(false); this.prescriptionItemId.set(''); this.dose.set(''); this.load(this.hospitalizationId()); },
-      error: () => { this.saving.set(false); this.error.set(this.t('patients.hospitalization.workflow.medicationError')); this.loadOptions(); },
+    this.patientApi.addMedicationAdministration(this.hospitalizationId(), {
+      medicationName, dose, prescriptionItemId: item.prescriptionItemId, administeredAt: new Date().toISOString(),
+      clientRequestId: this.clientRequestId, overrideReason: overrideReason || null,
+    }).subscribe({
+      next: () => { this.saving.set(false); this.showForm.set(false); this.resetForm(); this.load(this.hospitalizationId()); },
+      error: (failure: { status?: number; error?: { detail?: string } }) => {
+        this.saving.set(false);
+        if (failure?.status === 409 && failure.error?.detail?.startsWith('Une administration')) {
+          this.safetyConflict.set(failure.error.detail);
+          return;
+        }
+        this.error.set(this.t('patients.hospitalization.workflow.medicationError'));
+        this.loadOptions();
+      },
     });
   }
 
@@ -108,6 +134,14 @@ export class HospitalizationMedicationPanelComponent {
   }
 
   reloadHistory(): void { this.load(this.hospitalizationId()); }
+
+  private resetForm(): void {
+    this.prescriptionItemId.set('');
+    this.dose.set('');
+    this.safetyConflict.set(null);
+    this.overrideReason.set('');
+    this.clientRequestId = crypto.randomUUID();
+  }
 
   private load(hospitalizationId: string): void {
     this.loading.set(true); this.historyError.set(false);

@@ -25,13 +25,15 @@ public class HospitalizationCareService {
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
     private final HospitalizationMedicationUseCase medicationPolicy;
+    private final MedicationAdministrationWindowPolicy administrationWindowPolicy;
 
     public HospitalizationCareService(HospitalizationRepository hospitalizationRepository,
                                       HospitalizationDailyCareRepository dailyCareRepository,
                                       MedicationAdministrationRepository medicationAdministrationRepository,
                                       PatientConsumptionRepository patientConsumptionRepository,
                                       UserAccountRepository userAccountRepository,
-                                      AuditService auditService, HospitalizationMedicationUseCase medicationPolicy) {
+                                      AuditService auditService, HospitalizationMedicationUseCase medicationPolicy,
+                                      MedicationAdministrationWindowPolicy administrationWindowPolicy) {
         this.hospitalizationRepository = hospitalizationRepository;
         this.dailyCareRepository = dailyCareRepository;
         this.medicationAdministrationRepository = medicationAdministrationRepository;
@@ -39,6 +41,7 @@ public class HospitalizationCareService {
         this.userAccountRepository = userAccountRepository;
         this.auditService = auditService;
         this.medicationPolicy = medicationPolicy;
+        this.administrationWindowPolicy = administrationWindowPolicy;
     }
 
     @Transactional
@@ -91,6 +94,30 @@ public class HospitalizationCareService {
                 .toList();
     }
 
+    private void rejectAdministrationInsideSafetyWindow(
+            UUID hospitalizationId,
+            com.joprelys.backend.prescription.infrastructure.persistence.PrescriptionItemEntity item,
+            Instant administeredAt,
+            String overrideReason) {
+        java.time.Duration window = administrationWindowPolicy.window(item.getFrequency(), item.getPosology());
+        var previous = medicationAdministrationRepository
+                .findByHospitalizationIdAndPrescriptionItemIdOrderByAdministeredAtDesc(hospitalizationId, item.getId())
+                .stream()
+                .filter(existing -> java.time.Duration.between(existing.getAdministeredAt(), administeredAt).abs()
+                        .compareTo(window) < 0)
+                .findFirst();
+        if (previous.isPresent() && overrideReason == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Une administration de " + item.getDrugName() + " a déjà été tracée à "
+                            + previous.get().getAdministeredAt() + " (fenêtre de sécurité "
+                            + window.toMinutes() + " min). Indiquez un motif pour administrer à nouveau.");
+        }
+    }
+
+    private static String normalizedReason(String reason) {
+        return reason == null || reason.isBlank() ? null : reason.trim();
+    }
+
     @Transactional
     public MedicationAdministrationResponse addMedicationAdministration(UUID hospitalizationId, CreateMedicationAdministrationRequest request) {
         HospitalizationEntity hosp = hospitalizationRepository.findByIdForUpdate(hospitalizationId)
@@ -100,10 +127,20 @@ public class HospitalizationCareService {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Impossible d'ajouter des administrations à une hospitalisation clôturée");
         }
 
+        if (request.clientRequestId() != null) {
+            var replay = medicationAdministrationRepository.findByHospitalizationIdAndClientRequestId(
+                    hospitalizationId, request.clientRequestId());
+            if (replay.isPresent()) {
+                return MedicationAdministrationResponse.fromEntity(replay.get());
+            }
+        }
+
         UserAccountEntity actor = getCurrentUser();
         String administeredBy = actor != null ? actor.getDisplayName() : "Inconnu";
         Instant administeredAt = request.administeredAt() != null ? request.administeredAt() : Instant.now();
         var prescribedItem = medicationPolicy.validate(hosp, request);
+        String overrideReason = normalizedReason(request.overrideReason());
+        rejectAdministrationInsideSafetyWindow(hospitalizationId, prescribedItem, administeredAt, overrideReason);
 
         MedicationAdministrationEntity admin = new MedicationAdministrationEntity(
                 hospitalizationId,
@@ -114,6 +151,7 @@ public class HospitalizationCareService {
                 administeredAt
         );
 
+        admin.recordSafetyContext(request.clientRequestId(), overrideReason);
         MedicationAdministrationEntity saved = medicationAdministrationRepository.save(admin);
 
         if (actor != null) {
@@ -126,6 +164,16 @@ public class HospitalizationCareService {
                     "ADD_MEDICATION_ADMINISTRATION",
                     "Administration de médicament : " + request.medicationName() + " (" + request.dose() + ")"
             );
+            if (overrideReason != null) {
+                auditService.logSuccess(
+                        actor.getId(),
+                        actor.getOrganizationId(),
+                        hosp.getPatientId(),
+                        "HOSPITALIZATION",
+                        hospitalizationId,
+                        "MEDICATION_ADMINISTRATION_OVERRIDE",
+                        "Administration dans la fenêtre de sécurité : " + overrideReason);
+            }
         }
 
         return MedicationAdministrationResponse.fromEntity(saved);

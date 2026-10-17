@@ -25,8 +25,8 @@ export class LabOrderApiService {
     return this.http.get<LabOrder>(`/api/lab-orders/${id}`);
   }
 
-  updateStatus(id: string, status: string): Observable<LabOrder> {
-    return this.http.patch<LabOrder>(`/api/lab-orders/${id}/status`, { status });
+  updateStatus(id: string, status: string, reason?: string): Observable<LabOrder> {
+    return this.http.patch<LabOrder>(`/api/lab-orders/${id}/status`, { status, reason: reason || null });
   }
 
   updateItemStatus(orderId: string, itemId: string, status: string): Observable<LabOrder> {

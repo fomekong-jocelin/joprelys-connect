@@ -16,6 +16,8 @@ public interface HospitalizationRepository extends JpaRepository<Hospitalization
 
     Optional<HospitalizationEntity> findByVisitId(UUID visitId);
 
+    boolean existsByVisitIdAndStatus(UUID visitId, String status);
+
     Optional<HospitalizationEntity> findByEmergencyId(UUID emergencyId);
 
     List<HospitalizationEntity> findByPatientIdOrderByAdmittedAtDesc(UUID patientId);

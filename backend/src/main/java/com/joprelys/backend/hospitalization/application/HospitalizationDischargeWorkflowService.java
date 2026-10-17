@@ -35,6 +35,7 @@ public class HospitalizationDischargeWorkflowService {
     private final BedStateChangeService bedStateChangeService;
     private final UserAccountRepository userAccountRepository;
     private final AuditService auditService;
+    private final com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository;
 
     public HospitalizationDischargeWorkflowService(
             HospitalizationRepository hospitalizationRepository,
@@ -42,7 +43,9 @@ public class HospitalizationDischargeWorkflowService {
             BedAssignmentRepository bedAssignmentRepository,
             BedStateChangeService bedStateChangeService,
             UserAccountRepository userAccountRepository,
-            AuditService auditService) {
+            AuditService auditService,
+            com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visitRepository) {
+        this.visitRepository = visitRepository;
         this.hospitalizationRepository = hospitalizationRepository;
         this.hospitalizationService = hospitalizationService;
         this.bedAssignmentRepository = bedAssignmentRepository;
@@ -141,12 +144,51 @@ public class HospitalizationDischargeWorkflowService {
         HospitalizationEntity saved = hospitalizationRepository.findById(hospitalizationId)
                 .orElseThrow(() -> new IllegalStateException(
                         "L'hospitalisation a disparu pendant la confirmation du départ physique."));
+        closeLinkedVisit(saved, actor);
         audit(
                 actor,
                 saved,
                 "CONFIRM_PHYSICAL_DEPARTURE",
                 "Départ physique confirmé. L'affectation du lit est clôturée et le nettoyage peut démarrer.");
         return response;
+    }
+
+    /** Annulation motivée de la décision médicale de sortie avant le départ physique (ADR-20261017 D-09). */
+    @Transactional
+    public HospitalizationResponse cancelDischargeDecision(UUID hospitalizationId, String reason) {
+        String normalizedReason = normalizedNote(reason);
+        if (normalizedReason == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le motif d'annulation de la décision de sortie est obligatoire.");
+        }
+        HospitalizationEntity hospitalization = requireActiveHospitalization(hospitalizationId);
+        if (!hospitalization.hasDischargeDecision()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Aucune décision médicale de sortie n'est enregistrée.");
+        }
+        if (hospitalization.hasPhysicalDeparture()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Le départ physique est déjà confirmé.");
+        }
+        String previous = "Décision du " + hospitalization.getDischargeDecidedAt()
+                + " (diagnostic : " + hospitalization.getDischargeDiagnosis() + ")";
+        hospitalization.cancelDischargeDecision();
+        HospitalizationEntity saved = hospitalizationRepository.save(hospitalization);
+        audit(currentUserOrNull(), saved, "CANCEL_DISCHARGE_DECISION", previous + " annulée : " + normalizedReason);
+        return HospitalizationResponse.fromEntity(saved);
+    }
+
+    /** Le départ physique termine aussi la visite rattachée au séjour (ADR-20261017 D-08). */
+    private void closeLinkedVisit(HospitalizationEntity hospitalization, UserAccountEntity actor) {
+        if (hospitalization.getVisitId() == null) {
+            return;
+        }
+        visitRepository.findByIdForUpdate(hospitalization.getVisitId())
+                .filter(visit -> ACTIVE_STATUS.equals(visit.getStatus()))
+                .ifPresent(visit -> {
+                    visit.setStatus("TERMINEE");
+                    visit.setClosedAt(Instant.now());
+                    visitRepository.save(visit);
+                    audit(actor, hospitalization, "CLOSE_VISIT_AT_DEPARTURE",
+                            "Visite " + visit.getVisitNumber() + " clôturée au départ physique du patient.");
+                });
     }
 
     private HospitalizationEntity requireActiveHospitalization(UUID hospitalizationId) {

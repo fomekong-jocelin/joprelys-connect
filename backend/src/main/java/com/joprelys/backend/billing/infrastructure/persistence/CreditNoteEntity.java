@@ -25,7 +25,19 @@ public class CreditNoteEntity {
     private String reason;
 
     @Column(name = "status", nullable = false, length = 50)
-    private String status; // ACTIVE, CANCELLED
+    private String status; // PENDING_APPROVAL, ACTIVE, CANCELLED
+
+    @Column(name = "issued_by")
+    private UUID issuedBy;
+
+    @Column(name = "approved_by")
+    private UUID approvedBy;
+
+    @Column(name = "approved_at")
+    private Instant approvedAt;
+
+    @Column(name = "refunded_amount", nullable = false)
+    private Double refundedAmount = 0.0;
 
     @TenantId
     @Column(name = "organization_id")
@@ -111,4 +123,34 @@ public class CreditNoteEntity {
     public Long getVersion() {
         return version;
     }
+
+    public static final String PENDING_APPROVAL = "PENDING_APPROVAL";
+    public static final String ACTIVE = "ACTIVE";
+    public static final String CANCELLED = "CANCELLED";
+
+    public void markIssued(UUID issuedBy, boolean requiresApproval) {
+        this.issuedBy = issuedBy;
+        this.status = requiresApproval ? PENDING_APPROVAL : ACTIVE;
+    }
+
+    public void approve(UUID approvedBy, Instant approvedAt) {
+        this.status = ACTIVE;
+        this.approvedBy = approvedBy;
+        this.approvedAt = approvedAt;
+    }
+
+    public void reject(UUID rejectedBy, Instant rejectedAt) {
+        this.status = CANCELLED;
+        this.approvedBy = rejectedBy;
+        this.approvedAt = rejectedAt;
+    }
+
+    public void recordRefund(double refundAmount) {
+        this.refundedAmount = (refundedAmount == null ? 0.0 : refundedAmount) + refundAmount;
+    }
+
+    public UUID getIssuedBy() { return issuedBy; }
+    public UUID getApprovedBy() { return approvedBy; }
+    public Instant getApprovedAt() { return approvedAt; }
+    public Double getRefundedAmount() { return refundedAmount == null ? 0.0 : refundedAmount; }
 }

@@ -273,7 +273,8 @@ class HospitalizationAdmissionServiceTest {
 
         assertEquals(emergencyId, response.emergencyId());
         verify(emergency).setVisitId(any(UUID.class));
-        verify(emergencyRepository).save(emergency);
+        verify(emergency).acceptByDownstream(org.mockito.ArgumentMatchers.eq("ADMISSION"), any(), any(Instant.class));
+        verify(emergencyRepository, org.mockito.Mockito.atLeastOnce()).save(emergency);
         ArgumentCaptor<HospitalizationEntity> captor = ArgumentCaptor.forClass(HospitalizationEntity.class);
         verify(hospitalizationRepository).save(captor.capture());
         assertEquals(emergencyId, captor.getValue().getEmergencyId());

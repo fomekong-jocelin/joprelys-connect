@@ -111,6 +111,21 @@ export class PatientApiService {
     return this.http.post<StructuredHospitalization>(`/api/hospitalizations/${id}/discharge`, request);
   }
 
+  /** Annule la décision médicale de sortie, avec motif, tant que le patient est présent. */
+  cancelDischargeDecision(hospitalizationId: string, reason: string): Observable<any> {
+    return this.http.post<any>(`/api/hospitalizations/${hospitalizationId}/discharge/cancel`, { reason });
+  }
+
+  /** Déclare le décès d'un patient (médecin). */
+  declareDeath(patientId: string, request: { deceasedAt?: string; place?: string; circumstances?: string }): Observable<any> {
+    return this.http.post<any>(`/api/patients/${patientId}/death`, request);
+  }
+
+  /** Annule une déclaration de décès erronée, avec motif. */
+  revokeDeath(patientId: string, reason: string): Observable<any> {
+    return this.http.post<any>(`/api/patients/${patientId}/death/revoke`, { reason });
+  }
+
   confirmPhysicalDeparture(
     id: string,
     request: ConfirmPhysicalDepartureRequest,

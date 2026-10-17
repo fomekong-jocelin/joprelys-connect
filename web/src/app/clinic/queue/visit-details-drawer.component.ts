@@ -1,5 +1,5 @@
 import { DatePipe } from '@angular/common';
-import { Component, computed, inject, input, output } from '@angular/core';
+import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { Visit } from '../../visit/visit.models';
@@ -24,6 +24,7 @@ export class VisitDetailsDrawerComponent {
   readonly canEnterVitals = input(false);
   readonly canStartConsultation = input(false);
   readonly canCloseVisit = input(false);
+  readonly canAbandonVisit = input(false);
 
   readonly closed = output<void>();
   readonly enterVitals = output<void>();
@@ -31,6 +32,14 @@ export class VisitDetailsDrawerComponent {
   readonly startConsultation = output<boolean>();
   readonly release = output<void>();
   readonly closeVisit = output<void>();
+  readonly abandonVisit = output<{ reason: string; note: string }>();
+
+  readonly abandonReasons = ['LEFT_WITHOUT_BEING_SEEN', 'REGISTRATION_ERROR', 'PATIENT_REFUSED'] as const;
+  readonly abandonFormOpen = signal(false);
+  readonly abandonReason = signal<string>('LEFT_WITHOUT_BEING_SEEN');
+  readonly abandonNote = signal('');
+  /** L'accueil ne clôt qu'une visite sans prise en charge médicale en cours. */
+  readonly abandonAvailable = computed(() => this.canAbandonVisit() && this.stage() !== 'EN_CONSULTATION');
 
   readonly stage = computed(() => careStageOf(this.visit()));
   readonly heldByMe = computed(() =>
@@ -60,6 +69,12 @@ export class VisitDetailsDrawerComponent {
     if (this.heldByMe()) return this.t('queue.action.resumeConsultation');
     if (this.heldByColleague()) return this.t('queue.action.takeOver');
     return this.t('patient.detail.startConsultation');
+  }
+
+  submitAbandon(): void {
+    this.abandonVisit.emit({ reason: this.abandonReason(), note: this.abandonNote().trim() });
+    this.abandonFormOpen.set(false);
+    this.abandonNote.set('');
   }
 
   requestStart(): void {

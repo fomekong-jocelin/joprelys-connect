@@ -6,4 +6,10 @@ import java.util.UUID;
 
 public interface MedicationAdministrationRepository extends JpaRepository<MedicationAdministrationEntity, UUID> {
     List<MedicationAdministrationEntity> findByHospitalizationIdOrderByAdministeredAtDesc(UUID hospitalizationId);
+
+    java.util.Optional<MedicationAdministrationEntity> findByHospitalizationIdAndClientRequestId(
+            UUID hospitalizationId, UUID clientRequestId);
+
+    List<MedicationAdministrationEntity> findByHospitalizationIdAndPrescriptionItemIdOrderByAdministeredAtDesc(
+            UUID hospitalizationId, UUID prescriptionItemId);
 }

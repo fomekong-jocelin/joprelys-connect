@@ -12,7 +12,8 @@ public record MedicationAdministrationResponse(
     String dose,
     String administeredBy,
     Instant administeredAt,
-    Instant createdAt
+    Instant createdAt,
+    String overrideReason
 ) {
     public static MedicationAdministrationResponse fromEntity(MedicationAdministrationEntity entity) {
         return new MedicationAdministrationResponse(
@@ -23,7 +24,8 @@ public record MedicationAdministrationResponse(
             entity.getDose(),
             entity.getAdministeredBy(),
             entity.getAdministeredAt(),
-            entity.getCreatedAt()
+            entity.getCreatedAt(),
+            entity.getOverrideReason()
         );
     }
 }

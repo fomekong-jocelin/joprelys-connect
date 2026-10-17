@@ -50,6 +50,7 @@ export class ActiveVisitQueueComponent implements OnInit {
 
   readonly canEnterVitals = computed(() => this.rbacApi.hasPermission('VISIT_VITALS_WRITE'));
   readonly canStartConsultation = computed(() => this.rbacApi.hasPermission('CLINICAL_WRITE'));
+  readonly canAbandonVisit = computed(() => this.rbacApi.hasPermission('VISIT_CREATE'));
   readonly canCloseVisit = computed(() => this.rbacApi.hasPermission('VISIT_MANAGE')
     && this.rbacApi.hasPermission('CLINICAL_SIGN') && this.rbacApi.hasPermission('CONSULTATION_LOCK'));
   readonly currentUserId = computed(() => this.rbacApi.access()?.userId ?? null);
@@ -176,6 +177,15 @@ export class ActiveVisitQueueComponent implements OnInit {
         this.actionError.set(err.error?.detail || this.t('queue.error.takeCharge'));
         this.loadQueue();
       },
+    });
+  }
+
+  abandonVisit(visit: Visit, payload: { reason: string; note: string }): void {
+    if (!this.canAbandonVisit()) return;
+    this.actionError.set('');
+    this.visitApi.abandonVisit(visit.id, payload.reason, payload.note).subscribe({
+      next: () => { this.closeVisitDrawer(); this.loadQueue(); },
+      error: (err) => this.actionError.set(err.error?.detail || this.t('queue.abandon.error')),
     });
   }
 

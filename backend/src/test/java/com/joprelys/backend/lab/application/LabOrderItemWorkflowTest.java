@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 class LabOrderItemWorkflowTest {
 
-    private final LabOrderService service = new LabOrderService(null, null, null, null, null);
+    private final LabOrderService service = new LabOrderService(null, null, null, null, null, null);
 
     @Test
     void oneExamCanAdvanceWithoutCompletingTheWholeRequest() {
@@ -89,7 +89,7 @@ class LabOrderItemWorkflowTest {
         assertThatThrownBy(() -> service.validatePaymentGate(
                         LabOrderStatus.AWAITING_PAYMENT,
                         LabOrderStatus.SAMPLE_COLLECTED))
-                .isInstanceOf(IllegalArgumentException.class)
+                .isInstanceOf(org.springframework.web.server.ResponseStatusException.class)
                 .hasMessageContaining("paiement");
     }
 
