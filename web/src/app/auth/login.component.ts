@@ -14,6 +14,9 @@ type LoginMode = 'staff' | 'patient';
 interface ApiErrorPayload {
   detail?: string;
   message?: string;
+  /** Raison du rejet d'un code de connexion du personnel (OTP_INCORRECT, OTP_EXPIRED…). */
+  code?: string;
+  remainingAttempts?: number;
   error?: {
     code?: string;
     message?: string;
@@ -156,14 +159,22 @@ export class LoginComponent {
       },
       error: (err: HttpErrorLike) => {
         this.loading.set(false);
-        this.error.set(
-          err.error?.error?.message
-          ?? err.error?.detail
-          ?? err.error?.message
-          ?? this.t('login.error.invalidOtp')
-        );
+        this.error.set(this.staffOtpError(err));
       }
     });
+  }
+
+  /** Message explicite selon la raison du rejet : un code périmé ne doit pas passer pour un mauvais mot de passe. */
+  private staffOtpError(err: HttpErrorLike): string {
+    const code = err.error?.code;
+    if (code === 'OTP_INCORRECT') {
+      return this.t('login.error.otp.OTP_INCORRECT').replace('{remaining}', String(err.error?.remainingAttempts ?? 0));
+    }
+    if (code === 'OTP_EXPIRED' || code === 'OTP_TOO_MANY_ATTEMPTS' || code === 'OTP_NO_ACTIVE_REQUEST') {
+      this.staffOtpCode.set('');
+      return this.t(`login.error.otp.${code}`);
+    }
+    return err.error?.error?.message ?? err.error?.detail ?? err.error?.message ?? this.t('login.error.invalidOtp');
   }
 
   logout(): void {

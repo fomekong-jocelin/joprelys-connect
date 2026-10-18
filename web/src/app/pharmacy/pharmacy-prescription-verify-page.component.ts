@@ -8,7 +8,7 @@ import { PageHeaderComponent } from '../shared/ui/page-header.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { PharmacyApiService } from './pharmacy-api.service';
 import { PharmacyDispensationPanelComponent } from './pharmacy-dispensation-panel.component';
-import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
+import { PharmacyVerifyItem, PharmacyVerifyResponse, pharmacyDisplayStatus } from './pharmacy.models';
 
 @Component({
   selector: 'app-pharmacy-prescription-verify-page',
@@ -107,7 +107,7 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
                         [style.background]="statusTone().background"
                         [style.color]="statusTone().color"
                         style="border-radius: var(--radius-brand-md);">
-                    {{ statusLabel(currentPrescription.status) }}
+                    {{ statusLabel(displayStatus(currentPrescription)) }}
                   </span>
                 </div>
 
@@ -201,7 +201,7 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse } from './pharmacy.models';
                   </div>
                 </div>
 
-                @if (!currentPrescription.pharmaceuticalValidated && ['ACTIVE', 'PARTIALLY_DISPENSED'].includes(currentPrescription.status)) {
+                @if (!currentPrescription.pharmaceuticalValidated && currentPrescription.status === 'ACTIVE') {
                   <p class="text-sm text-[var(--text-secondary)]">{{ t('pharmacy.validationRequired') }}</p>
                   @if (rbac.hasPermission('PHARMACY_VALIDATE')) {
                     <label class="block"><span class="ui-label">{{ t('pharmacy.validationNotes') }}</span>
@@ -247,7 +247,8 @@ export class PharmacyPrescriptionVerifyPageComponent {
   });
 
   readonly statusTone = computed(() => {
-    const status = this.prescription()?.status;
+    const current = this.prescription();
+    const status = current ? pharmacyDisplayStatus(current) : undefined;
     if (status === 'ACTIVE') {
       return {
         border: 'color-mix(in srgb, var(--brand-success) 42%, transparent)',
@@ -272,7 +273,7 @@ export class PharmacyPrescriptionVerifyPageComponent {
   validatePharmaceuticalReview(): void {
     const prescription = this.prescription();
     if (!prescription || this.validating() || !this.reviewNotes().trim() || !this.rbac.hasPermission('PHARMACY_VALIDATE')
-      || !['ACTIVE', 'PARTIALLY_DISPENSED'].includes(prescription.status)) return;
+      || prescription.status !== 'ACTIVE') return;
     this.validating.set(true);
     this.pharmacyApi.validatePrescription({ prescriptionNumber: prescription.prescriptionNumber,
       pinCode: this.verifiedPin(), reviewNotes: this.reviewNotes().trim() }).subscribe({
@@ -314,6 +315,10 @@ export class PharmacyPrescriptionVerifyPageComponent {
 
   t(key: string): string {
     return this.i18n.t(key);
+  }
+
+  displayStatus(prescription: PharmacyVerifyResponse): string {
+    return pharmacyDisplayStatus(prescription);
   }
 
   statusLabel(status: string): string {

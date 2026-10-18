@@ -311,6 +311,8 @@
     [canEnterVitals]="canEnterVitals()"
     [canStartConsultation]="canStartConsultation()"
     [canCloseVisit]="canCloseVisit()"
+    [canAbandonVisit]="canAbandonVisit()"
+    (abandonVisit)="abandonVisit(drawerVisit, $event)"
     (closed)="closeVisitDrawer()"
     (enterVitals)="openVitalsModal(drawerVisit)"
     (startConsultation)="startConsultation(drawerVisit, $event)"

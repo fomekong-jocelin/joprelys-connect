@@ -80,7 +80,7 @@ describe('LabOrderApiService', () => {
 
     const req = httpTesting.expectOne('/api/lab-orders/order-1/status');
     expect(req.request.method).toBe('PATCH');
-    expect(req.request.body).toEqual({ status: 'IN_PROGRESS' });
+    expect(req.request.body).toEqual({ status: 'IN_PROGRESS', reason: null });
     req.flush({ ...labOrder, status: 'IN_PROGRESS' });
   });
 
@@ -162,7 +162,7 @@ describe('LabOrdersPageComponent', () => {
 
     component.updateStatus(labOrder);
 
-    expect(labApi.updateStatus).toHaveBeenCalledWith('order-1', 'IN_PROGRESS');
+    expect(labApi.updateStatus).toHaveBeenCalledWith('order-1', 'IN_PROGRESS', '');
     expect(component.selectedOrder()?.status).toBe(LabOrderStatus.IN_PROGRESS);
   });
 

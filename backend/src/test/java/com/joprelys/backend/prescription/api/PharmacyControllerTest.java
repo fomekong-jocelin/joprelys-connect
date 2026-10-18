@@ -215,7 +215,8 @@ public class PharmacyControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(verifyBody))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("FULLY_DISPENSED"))
+				.andExpect(jsonPath("$.status").value("ACTIVE"))
+				.andExpect(jsonPath("$.dispensationStatus").value("FULL"))
 				.andExpect(jsonPath("$.items[0].quantityAlreadyDispensed").value(10));
 	}
 
@@ -295,7 +296,8 @@ public class PharmacyControllerTest {
 						.contentType(MediaType.APPLICATION_JSON)
 						.content(verifyBody))
 				.andExpect(status().isOk())
-				.andExpect(jsonPath("$.status").value("PARTIALLY_DISPENSED"))
+				.andExpect(jsonPath("$.status").value("ACTIVE"))
+				.andExpect(jsonPath("$.dispensationStatus").value("PARTIAL"))
 				.andExpect(jsonPath("$.items[0].quantityAlreadyDispensed").value(4));
 	}
 

@@ -157,7 +157,13 @@ import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models'
                           }
                         </select>
                       </label>
-                      <app-ui-button type="button" variant="secondary" [disabled]="isUpdatingStatus()" (pressed)="updateStatus(order)">
+                      @if (statusDraft() === 'CANCELLED') {
+                        <label class="block md:flex-1">
+                          <span class="ui-label">{{ t('lab.cancelReason') }}</span>
+                          <input class="ui-input lab-input mt-1" maxlength="500" [value]="cancelReason()" (input)="cancelReason.set($any($event.target).value)" />
+                        </label>
+                      }
+                      <app-ui-button type="button" variant="secondary" [disabled]="isUpdatingStatus() || (statusDraft() === 'CANCELLED' && !cancelReason().trim())" (pressed)="updateStatus(order)">
                         {{ isUpdatingStatus() ? t('common.saving') : t('lab.updateStatus') }}
                       </app-ui-button>
                     </div>
@@ -444,6 +450,7 @@ export class LabOrdersPageComponent {
   readonly pdfBase64 = signal('');
   readonly patientResults = signal<LabResult[]>([]);
   readonly statusDraft = signal<LabOrderStatus>(LabOrderStatus.REQUESTED);
+  readonly cancelReason = signal('');
   readonly allowedStatuses = [
     'REQUESTED',
     'AWAITING_PAYMENT',
@@ -646,7 +653,7 @@ export class LabOrdersPageComponent {
     this.isUpdatingStatus.set(true);
     this.statusError.set('');
     this.statusSuccess.set('');
-    this.labApi.updateStatus(order.id, this.statusDraft()).subscribe({
+    this.labApi.updateStatus(order.id, this.statusDraft(), this.cancelReason().trim()).subscribe({
       next: (updated) => {
         this.replaceOrder(updated);
         this.selectedOrder.set(updated);

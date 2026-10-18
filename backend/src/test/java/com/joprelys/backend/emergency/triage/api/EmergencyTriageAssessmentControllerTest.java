@@ -126,10 +126,26 @@ class EmergencyTriageAssessmentControllerTest {
                 .andExpect(jsonPath("$.length()").value(2))
                 .andExpect(jsonPath("$[1].sequenceNumber").value(2));
 
+        // Orienté vers l'hospitalisation, le patient reste aux urgences et peut être réévalué (ADR-20261017 D-06).
         mockMvc.perform(post("/api/emergencies/" + emergencyId + "/stabilize")
                         .header("Authorization", bearer(doctorToken))
                         .param("orientation", "HOSPITALIZATION"))
-                .andExpect(status().isOk());
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.orientation").value("ADMISSION"))
+                .andExpect(jsonPath("$.awaitingDownstream").value(true))
+                .andExpect(jsonPath("$.stabilizedAt").value(org.hamcrest.Matchers.nullValue()));
+
+        mockMvc.perform(post(historyUrl(emergencyId))
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reassessmentPayload()))
+                .andExpect(status().isCreated());
+
+        mockMvc.perform(post("/api/emergencies/" + emergencyId + "/stabilize")
+                        .header("Authorization", bearer(doctorToken))
+                        .param("orientation", "DISCHARGE"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.stabilizedAt").exists());
 
         mockMvc.perform(post(historyUrl(emergencyId))
                         .header("Authorization", bearer(doctorToken))

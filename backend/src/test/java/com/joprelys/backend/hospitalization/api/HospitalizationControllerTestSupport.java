@@ -329,6 +329,7 @@ abstract class HospitalizationControllerTestSupport {
 
     protected void clearData() {
         jdbcTemplate.update("DELETE FROM audit_logs");
+        jdbcTemplate.update("DELETE FROM tariff_grid");
         jdbcTemplate.update("DELETE FROM dispensation_items");
         jdbcTemplate.update("DELETE FROM prescription_dispensations");
         jdbcTemplate.update("DELETE FROM prescription_items");

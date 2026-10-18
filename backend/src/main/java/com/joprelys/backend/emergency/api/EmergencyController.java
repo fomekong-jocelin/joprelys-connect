@@ -94,8 +94,13 @@ public class EmergencyController {
     @PreAuthorize("hasAuthority('EMERGENCY_STABILIZE')")
     public EmergencyResponse stabilize(
             @PathVariable UUID id,
-            @RequestParam String orientation) {
-        return EmergencyResponse.fromEntity(emergencyService.stabilizeEmergency(id, orientation));
+            @RequestParam String orientation,
+            Authentication authentication) {
+        var claims = (JwtClaims) authentication.getDetails();
+        UUID organizationId = claims.organizationId() == null || claims.organizationId().isBlank()
+                ? null : UUID.fromString(claims.organizationId());
+        return EmergencyResponse.fromEntity(emergencyService.stabilizeEmergency(
+                id, orientation, authenticatedUserId(authentication), organizationId));
     }
 
     @GetMapping("/patient/{patientId}")

@@ -101,12 +101,12 @@ public class LabOrderController {
 
     @PatchMapping("/{id}/status")
     @PreAuthorize("hasAuthority('LAB_ORDER_WRITE')")
-    @Operation(summary = "Mettre à jour le statut d'une demande", description = "Modifie le statut global d'une demande d'examen médical. Conservé pour compatibilité avec les intégrations existantes.")
+    @Operation(summary = "Mettre à jour le statut d'une demande", description = "Annule une demande (motif obligatoire). Les demandes détaillées progressent examen par examen ; seules les demandes historiques sans examen détaillé progressent globalement, selon les mêmes transitions.")
     public LabOrderResponse updateStatus(
             @Parameter(description = "Identifiant de la demande d'examen") @PathVariable UUID id,
             @Valid @RequestBody UpdateLabOrderStatusRequest request,
             Authentication authentication) {
-        return labOrderService.updateStatus(id, request.status(), authentication.getName());
+        return labOrderService.updateStatus(id, request.status(), request.reason(), authentication.getName());
     }
 
     @PatchMapping("/{orderId}/items/{itemId}/status")
@@ -155,22 +155,7 @@ public class LabOrderController {
     public void uploadResults(
             @Valid @RequestBody LabResultUploadRequest request,
             Authentication authentication) {
-        String validator = (request.validatorName() != null && !request.validatorName().isBlank())
-                ? request.validatorName()
-                : (authentication != null ? authentication.getName() : "Praticien");
-        LabResultUploadRequest finalRequest = new LabResultUploadRequest(
-                request.examRequestNumber(),
-                validator,
-                request.validatorUserId(),
-                request.status(),
-                request.sampleCollectedAt(),
-                request.resultAt(),
-                request.validatedAt(),
-                request.conclusion(),
-                request.results(),
-                request.pdfBase64(),
-                request.labOrderItemId());
-        labResultService.uploadResults(finalRequest);
+        labResultService.uploadResultsByStaff(request, authentication.getName());
     }
 
     private com.joprelys.backend.patient.infrastructure.persistence.PatientEntity resolvePatient(UUID patientId) {

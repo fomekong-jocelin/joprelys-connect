@@ -17,7 +17,18 @@ import { PatientApiService } from './patient-api.service';
         <div class="min-w-0">
           <p class="text-xs font-bold uppercase tracking-widest text-[var(--text-muted)]">{{ t('patients.hospitalization', 'Hospitalisation') }}</p>
           <div class="mt-2 flex flex-wrap items-center gap-2">
-            @if (awaitingPhysicalDeparture()) {
+            @if (cancelDecisionOpen()) {
+        <form class="mt-5 space-y-3 border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4" (submit)="cancelDischargeDecision($event)">
+          <label for="cancel-discharge-reason" class="block text-xs font-semibold text-[var(--text-secondary)]">{{ t('patients.hospitalization.cancelDischargeReason', 'Motif de l’annulation (obligatoire)') }}</label>
+          <textarea id="cancel-discharge-reason" name="cancelDischargeReason" [(ngModel)]="cancelDecisionReason" maxlength="500" rows="2" class="ui-textarea" [disabled]="cancelDecisionSubmitting()"></textarea>
+          @if (cancelDecisionError()) { <p class="text-xs font-semibold text-[var(--brand-danger-text)]" role="alert">{{ cancelDecisionError() }}</p> }
+          <div class="flex justify-end gap-2">
+            <button type="button" class="ui-button ui-button-secondary" (click)="cancelDecisionOpen.set(false)" [disabled]="cancelDecisionSubmitting()">{{ t('common.cancel', 'Annuler') }}</button>
+            <button type="submit" class="ui-button ui-button-primary" [disabled]="!cancelDecisionReason.trim() || cancelDecisionSubmitting()">{{ t('patients.hospitalization.confirmCancelDischarge', 'Annuler la décision') }}</button>
+          </div>
+        </form>
+      }
+      @if (awaitingPhysicalDeparture()) {
               <span class="rounded-md border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] px-2 py-1 text-xs font-bold text-[var(--brand-warning-text)]">
                 {{ t('patients.hospitalization.status.DISCHARGE_DECIDED', 'Sortie médicale décidée') }}
               </span>
@@ -58,6 +69,9 @@ import { PatientApiService } from './patient-api.service';
           }
           @if (canConfirmPhysicalDeparture()) {
             <button type="button" class="ui-button ui-button-danger min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="openPhysicalDepartureDialog()">{{ t('patients.hospitalization.confirmPhysicalDeparture', 'Confirmer le départ physique') }}</button>
+          }
+          @if (canCancelDischargeDecision()) {
+            <button type="button" class="ui-button ui-button-secondary min-w-0 whitespace-normal px-3 text-center sm:col-span-2" (click)="cancelDecisionOpen.set(!cancelDecisionOpen())">{{ t('patients.hospitalization.cancelDischargeDecision', 'Annuler la décision de sortie') }}</button>
           }
         </div>
       </div>
@@ -119,6 +133,10 @@ export class HospitalizationStayHeaderComponent {
   readonly physicalDepartureSubmitting = signal(false);
   physicalDepartureNote = '';
   departureConfirmed = false;
+  readonly cancelDecisionOpen = signal(false);
+  readonly cancelDecisionSubmitting = signal(false);
+  readonly cancelDecisionError = signal<string | null>(null);
+  cancelDecisionReason = '';
 
   private readonly i18n = inject(I18nService);
   private readonly rbacApi = inject(RbacApiService);
@@ -142,6 +160,27 @@ export class HospitalizationStayHeaderComponent {
   canConfirmPhysicalDeparture(): boolean {
     return this.awaitingPhysicalDeparture()
       && this.rbacApi.hasPermission('HOSPITALIZATION_PHYSICAL_DEPARTURE_CONFIRM');
+  }
+
+  canCancelDischargeDecision(): boolean {
+    return this.awaitingPhysicalDeparture()
+      && this.rbacApi.hasPermission('HOSPITALIZATION_DISCHARGE_DECIDE');
+  }
+
+  cancelDischargeDecision(event: Event): void {
+    event.preventDefault();
+    const reason = this.cancelDecisionReason.trim();
+    if (!reason || this.cancelDecisionSubmitting()) return;
+    this.cancelDecisionSubmitting.set(true);
+    this.cancelDecisionError.set(null);
+    this.patientApi.cancelDischargeDecision(this.stay().id, reason).subscribe({
+      next: () => { this.cancelDecisionSubmitting.set(false); window.location.reload(); },
+      error: (err) => {
+        this.cancelDecisionSubmitting.set(false);
+        this.cancelDecisionError.set(err.error?.detail
+          || this.t('patients.hospitalization.cancelDischargeError', 'La décision de sortie n’a pas pu être annulée.'));
+      },
+    });
   }
 
   openPhysicalDepartureDialog(): void {

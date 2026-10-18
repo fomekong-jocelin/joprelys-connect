@@ -6,6 +6,19 @@ spring:
   flyway:
     validate-on-migrate: true
     repair-on-migrate: false
+  mail:
+    host: ${MAIL_HOST:mail.joprelys.com}
+    port: ${MAIL_PORT:465}
+    username: ${MAIL_USERNAME:noreply@joprelys.com}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          ssl:
+            enable: ${MAIL_SSL_ENABLED:true}
+          starttls:
+            enable: ${MAIL_STARTTLS_ENABLED:false}
 
 joprelys:
   medication-reference:

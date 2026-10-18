@@ -85,6 +85,15 @@ public class EmergencyEntity {
     @Column(name = "orientation", length = 50)
     private String orientation;
 
+    @Column(name = "orientation_decided_at")
+    private Instant orientationDecidedAt;
+
+    @Column(name = "orientation_decided_by")
+    private UUID orientationDecidedBy;
+
+    @Column(name = "stabilized_by")
+    private UUID stabilizedBy;
+
     @Column(name = "created_by_user_id")
     private UUID createdByUserId;
 
@@ -340,6 +349,50 @@ public class EmergencyEntity {
 
     public void setOrientation(String orientation) {
         this.orientation = orientation;
+    }
+
+    public Instant getOrientationDecidedAt() {
+        return orientationDecidedAt;
+    }
+
+    public UUID getOrientationDecidedBy() {
+        return orientationDecidedBy;
+    }
+
+    public UUID getStabilizedBy() {
+        return stabilizedBy;
+    }
+
+    public boolean isActive() {
+        return stabilizedAt == null;
+    }
+
+    /** Patient orienté mais toujours sous la responsabilité des urgences, en attente de l'aval. */
+    public boolean isAwaitingDownstream() {
+        return stabilizedAt == null && orientationDecidedAt != null;
+    }
+
+    public void decideOrientation(String decidedOrientation, UUID decidedBy, Instant decidedAt) {
+        this.orientation = decidedOrientation;
+        this.orientationDecidedBy = decidedBy;
+        this.orientationDecidedAt = decidedAt;
+    }
+
+    /** Sortie des urgences : le patient a quitté le service ou a été accepté par l'aval. */
+    public void closeEpisode(UUID closedBy, Instant closedAt) {
+        this.stabilizedBy = closedBy;
+        this.stabilizedAt = closedAt;
+    }
+
+    /** L'aval (hospitalisation, consultation) a accepté le patient : l'épisode d'urgence se termine. */
+    public void acceptByDownstream(String defaultOrientation, UUID acceptedBy, Instant acceptedAt) {
+        if (!isActive()) {
+            return;
+        }
+        if (orientationDecidedAt == null) {
+            decideOrientation(orientation == null ? defaultOrientation : orientation, acceptedBy, acceptedAt);
+        }
+        closeEpisode(acceptedBy, acceptedAt);
     }
 
     public UUID getCreatedByUserId() {

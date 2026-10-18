@@ -167,4 +167,34 @@ class HospitalizationWorkflowControllerTest extends HospitalizationControllerTes
                 .andExpect(jsonPath("$.length()").value(1));
     }
 
+
+    @Test
+    void dispensedPrescriptionStaysAdministrableAndRepeatedAdministrationsAreGuarded() throws Exception {
+        VisitEntity visit = createVisit(patientA, "VIS-MAR", "Admission", "MÉDECINE GÉNÉRALE");
+        String stayId = admit(patientA, visit, PEDIATRICS_SERVICE, PEDIATRICS_SPACE, PEDIATRICS_BED, "Surveillance");
+        UUID item = createPrescription(visit, "ACTIVE", null);
+        jdbcTemplate.update("UPDATE prescriptions SET dispensation_status = 'PARTIAL' WHERE id = (SELECT prescription_id FROM prescription_items WHERE id = ?)", item);
+        mockMvc.perform(get("/api/hospitalizations/{id}/eligible-medications", stayId).header("Authorization", bearer(nurseToken)))
+                .andExpect(status().isOk()).andExpect(jsonPath("$.length()").value(1));
+
+        UUID clientRequestId = UUID.randomUUID();
+        String keyed = "{\"medicationName\":\"Paracétamol Injectable\",\"dose\":\"1g IV\",\"prescriptionItemId\":\"%s\",\"clientRequestId\":\"%s\"}"
+                .formatted(item, clientRequestId);
+        for (int attempt = 0; attempt < 2; attempt++) {
+            mockMvc.perform(post("/api/hospitalizations/{id}/medication-administrations", stayId)
+                    .header("Authorization", bearer(nurseToken)).contentType(MediaType.APPLICATION_JSON).content(keyed))
+                    .andExpect(status().isCreated());
+        }
+        mockMvc.perform(post("/api/hospitalizations/{id}/medication-administrations", stayId)
+                .header("Authorization", bearer(nurseToken)).contentType(MediaType.APPLICATION_JSON)
+                .content(medicationPayload(item, "Paracétamol Injectable")))
+                .andExpect(status().isConflict());
+        mockMvc.perform(post("/api/hospitalizations/{id}/medication-administrations", stayId)
+                .header("Authorization", bearer(nurseToken)).contentType(MediaType.APPLICATION_JSON)
+                .content("{\"medicationName\":\"Paracétamol Injectable\",\"dose\":\"1g IV\",\"prescriptionItemId\":\"%s\",\"overrideReason\":\"Dose de rattrapage prescrite oralement\"}".formatted(item)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.overrideReason").value("Dose de rattrapage prescrite oralement"));
+        mockMvc.perform(get("/api/hospitalizations/{id}/medication-administrations", stayId).header("Authorization", bearer(doctorToken)))
+                .andExpect(jsonPath("$.length()").value(2));
+    }
 }

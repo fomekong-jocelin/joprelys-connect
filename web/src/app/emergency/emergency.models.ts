@@ -73,7 +73,11 @@ export interface EmergencyRecord {
   initialTemp?: number;
   thirdPartyRecorded: boolean;
   stabilizedAt?: string;
+  stabilizedBy?: string;
   orientation?: string;
+  orientationDecidedAt?: string;
+  /** Orienté mais toujours sous la responsabilité des urgences, en attente du service d'aval. */
+  awaitingDownstream?: boolean;
   createdByUserId?: string;
   resuscitationLogs: ResuscitationLog[];
   createdAt: string;

@@ -32,6 +32,10 @@ public class PrescriptionDispensationEntity {
 	@Column(name = "created_at")
 	private Instant createdAt;
 
+	/** Établissement de la pharmacie qui délivre : seule une délivrance interne est facturée (ADR-20261017 D-12). */
+	@Column(name = "dispensing_organization_id")
+	private UUID dispensingOrganizationId;
+
 	protected PrescriptionDispensationEntity() {}
 
 	public PrescriptionDispensationEntity(PrescriptionEntity prescription, String pharmacyName, String pharmacistLicense) {
@@ -56,4 +60,6 @@ public class PrescriptionDispensationEntity {
 	public String getPharmacistLicense() { return pharmacistLicense; }
 	public List<DispensationItemEntity> getItems() { return items; }
 	public Instant getCreatedAt() { return createdAt; }
+	public UUID getDispensingOrganizationId() { return dispensingOrganizationId; }
+	public void setDispensingOrganizationId(UUID dispensingOrganizationId) { this.dispensingOrganizationId = dispensingOrganizationId; }
 }

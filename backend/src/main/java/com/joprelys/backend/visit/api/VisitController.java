@@ -31,10 +31,13 @@ public class VisitController {
 	private final VisitService visitService;
 	private final GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode;
 	private final ActiveVisitQueueUseCase activeVisitQueue;
+	private final com.joprelys.backend.visit.application.VisitAbandonmentService abandonmentService;
 
 	public VisitController(VisitService visitService,
 						   GenerateVisitConsultationQrCodeUseCase generateVisitConsultationQrCode,
-						   ActiveVisitQueueUseCase activeVisitQueue) {
+						   ActiveVisitQueueUseCase activeVisitQueue,
+						   com.joprelys.backend.visit.application.VisitAbandonmentService abandonmentService) {
+		this.abandonmentService = abandonmentService;
 		this.visitService = visitService;
 		this.generateVisitConsultationQrCode = generateVisitConsultationQrCode;
 		this.activeVisitQueue = activeVisitQueue;
@@ -120,8 +123,10 @@ public class VisitController {
 			@ApiResponse(responseCode = "200", description = "Visite clôturée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
 	})
-	public VisitResponse close(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
-		var visit = visitService.closeVisit(id);
+	public VisitResponse close(
+			@Parameter(description = "Identifiant de la visite") @PathVariable UUID id,
+			Authentication authentication) {
+		var visit = visitService.closeVisit(id, authentication.getName());
 		return VisitResponse.fromEntity(visit);
 	}
 
@@ -131,9 +136,28 @@ public class VisitController {
 			@ApiResponse(responseCode = "200", description = "Visite annulée avec succès"),
 			@ApiResponse(responseCode = "404", description = "Introuvable")
 	})
-	public VisitResponse cancel(@Parameter(description = "Identifiant de la visite") @PathVariable UUID id) {
-		var visit = visitService.cancelVisit(id);
+	public VisitResponse cancel(
+			@Parameter(description = "Identifiant de la visite") @PathVariable UUID id,
+			@org.springframework.web.bind.annotation.RequestBody(required = false) @jakarta.validation.Valid CancelVisitRequest request,
+			Authentication authentication) {
+		var visit = abandonmentService.cancelByManager(id,
+				request == null ? null : request.reason(), request == null ? null : request.note(), authentication.getName());
 		return VisitResponse.fromEntity(visit);
+	}
+
+	@PostMapping("/{id}/abandon")
+	@PreAuthorize("hasAuthority('VISIT_CREATE')")
+	@Operation(summary = "Abandonner une visite", description = "Clôt une visite sans prise en charge clinique : patient parti sans être vu, erreur d'enregistrement ou refus. Annule les demandes non commencées et les factures en attente.")
+	public VisitResponse abandon(
+			@PathVariable UUID id,
+			@jakarta.validation.Valid @org.springframework.web.bind.annotation.RequestBody CancelVisitRequest request,
+			Authentication authentication) {
+		return VisitResponse.fromEntity(abandonmentService.abandon(id, request.reason(), request.note(), authentication.getName()));
+	}
+
+	public record CancelVisitRequest(
+			@jakarta.validation.constraints.Size(max = 40) String reason,
+			@jakarta.validation.constraints.Size(max = 500, message = "La note ne peut pas dépasser 500 caractères.") String note) {
 	}
 
 	@GetMapping("/patient/{patientId}")

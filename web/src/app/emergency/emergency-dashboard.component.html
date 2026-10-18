@@ -71,6 +71,11 @@
               >{{ hemodynamicLabel(record.hemodynamicStatus) }}</span>
             </div>
 
+            @if (record.awaitingDownstream) {
+              <p class="mt-4 border border-[var(--brand-warning-border)] bg-[var(--brand-warning-subtle)] px-3 py-2 text-xs font-bold text-[var(--brand-warning-text)]" role="status">
+                {{ t('emergency.awaiting.label') }} : {{ orientationLabel(record.orientation) }} — {{ t('emergency.awaiting.since') }} {{ waitingDuration(record) }}
+              </p>
+            }
             <div class="mt-4 flex-1 border-l-2 border-[var(--brand-primary)] bg-[var(--app-surface-muted)] px-3 py-2.5">
               <p class="line-clamp-3 text-sm font-semibold leading-5 text-[var(--text-secondary)]">{{ record.chiefComplaint }}</p>
             </div>

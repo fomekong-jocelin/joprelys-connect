@@ -9,6 +9,7 @@ import {
   InsuranceBordereauDetails,
 } from './insurance-bordereau.models';
 import {
+  BillingSettings,
   CashMovement,
   CashRegister,
   CashSession,
@@ -19,6 +20,7 @@ import {
   Invoice,
   InvoiceItem,
   InvoiceSettlementSummary,
+  PatientDeposit,
   Payment,
   PaymentReceipt,
   Receivable,
@@ -123,6 +125,43 @@ export class BillingApiService {
 
   listCreditNotes(invoiceId: string): Observable<CreditNote[]> {
     return this.http.get<CreditNote[]>(`/api/invoices/${invoiceId}/credit-notes`);
+  }
+
+  /** Reconstruit les lignes issues des sources cliniques d'une facture en attente (tarifs paramétrés). */
+  recalculateInvoice(invoiceId: string): Observable<Invoice> {
+    return this.http.post<Invoice>(`/api/invoices/${invoiceId}/recalculate`, null);
+  }
+
+  approveCreditNote(creditNoteId: string): Observable<CreditNote> {
+    return this.http.post<CreditNote>(`/api/credit-notes/${creditNoteId}/approve`, null);
+  }
+
+  rejectCreditNote(creditNoteId: string): Observable<CreditNote> {
+    return this.http.post<CreditNote>(`/api/credit-notes/${creditNoteId}/reject`, null);
+  }
+
+  refundCreditNote(creditNoteId: string, amount: number, method: 'CASH' | 'CHECK' | 'BANK_TRANSFER', reference?: string): Observable<CreditNote> {
+    return this.http.post<CreditNote>(`/api/credit-notes/${creditNoteId}/refund`, { amount, method, reference: reference || null });
+  }
+
+  listDeposits(patientId: string): Observable<PatientDeposit[]> {
+    return this.http.get<PatientDeposit[]>('/api/deposits', { params: new HttpParams().set('patientId', patientId) });
+  }
+
+  collectDeposit(request: { patientId: string; visitId?: string; amount: number; method: 'CASH' | 'CHECK' | 'BANK_TRANSFER'; reference?: string; note?: string }): Observable<PatientDeposit> {
+    return this.http.post<PatientDeposit>('/api/deposits', request);
+  }
+
+  applyDeposit(invoiceId: string, depositId: string, amount?: number): Observable<Payment> {
+    return this.http.post<Payment>(`/api/invoices/${invoiceId}/apply-deposit`, { depositId, amount: amount ?? null });
+  }
+
+  getBillingSettings(): Observable<BillingSettings> {
+    return this.http.get<BillingSettings>('/api/billing/settings');
+  }
+
+  updateBillingSettings(settings: BillingSettings): Observable<BillingSettings> {
+    return this.http.put<BillingSettings>('/api/billing/settings', settings);
   }
 
   getReceivablesByDebtor(debtorId: string): Observable<Receivable[]> {

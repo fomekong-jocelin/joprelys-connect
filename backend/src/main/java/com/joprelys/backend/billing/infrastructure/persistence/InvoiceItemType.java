@@ -7,5 +7,7 @@ public enum InvoiceItemType {
     K_BLOC,
     AMI_CARE,
     STAY_FEE,
-    MEDICATION
+    MEDICATION,
+    LAB_EXAM,
+    IMAGING_EXAM
 }

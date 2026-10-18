@@ -6,7 +6,6 @@ import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepositor
 import com.joprelys.backend.billing.api.CreateInvoiceRequest;
 import com.joprelys.backend.billing.api.InsuranceConventionDto;
 import com.joprelys.backend.billing.api.InvoiceItemDto;
-import com.joprelys.backend.billing.api.InvoiceItemResponse;
 import com.joprelys.backend.billing.api.InvoiceResponse;
 import com.joprelys.backend.billing.domain.InvoiceRegularizationStatus;
 import com.joprelys.backend.billing.infrastructure.persistence.InsuranceConventionEntity;
@@ -79,11 +78,6 @@ public class InvoiceCrudService {
         var patientContext = canonicalResolver.resolve(requestedPatient.getId());
         PatientEntity billingPatient = resolveBillingPatient(request, requestedPatient, patientContext);
 
-        if (request.visitId() != null) {
-            invoiceRepository.findByVisitId(request.visitId()).ifPresent(inv -> {
-                throw new ResponseStatusException(HttpStatus.CONFLICT, "Une facture existe déjà pour cette visite.");
-            });
-        }
 
         InsuranceConventionEntity convention = null;
         if (request.insuranceConventionId() != null) {
@@ -117,19 +111,12 @@ public class InvoiceCrudService {
                 invoice.addItem(item);
             }
         } else {
-            InvoiceResponse precalc = precalculationService.precalculate(
-                    billingPatient.getId(),
-                    request.visitId(),
-                    request.insuranceConventionId());
-            for (InvoiceItemResponse itemResp : precalc.items()) {
-                InvoiceItemEntity item = new InvoiceItemEntity(
-                        itemResp.label(),
-                        itemResp.itemType(),
-                        itemResp.unitPrice(),
-                        itemResp.quantity(),
-                        itemResp.coefficient());
-                item.setOrganizationId(orgId);
-                invoice.addItem(item);
+            // Plusieurs factures par épisode : seules les charges non encore facturées sont reprises (ADR-20261017 D-15).
+            copyCharges(precalculationService.draft(billingPatient.getId(), request.visitId(),
+                    request.insuranceConventionId(), null), invoice, orgId);
+            if (invoice.getItems().isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.CONFLICT,
+                        "Aucune charge restant à facturer pour cette visite.");
             }
         }
 
@@ -145,6 +132,46 @@ public class InvoiceCrudService {
         }
 
         return InvoiceResponse.fromEntity(saved);
+    }
+
+    /**
+     * Recalcule une facture en attente après paramétrage des tarifs : les lignes issues des sources cliniques
+     * sont reconstruites, les lignes saisies manuellement sont conservées (ADR-20261017 D-11).
+     */
+    @Transactional
+    public InvoiceResponse recalculatePendingInvoice(UUID invoiceId) {
+        InvoiceEntity invoice = invoiceRepository.findByIdWithDetails(invoiceId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Facture introuvable"));
+        if (invoice.getStatus() != com.joprelys.backend.billing.infrastructure.persistence.InvoiceStatus.PENDING) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Seule une facture en attente peut être recalculée.");
+        }
+        if (invoice.getVisitId() == null) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Cette facture n'est rattachée à aucune visite.");
+        }
+        List<InvoiceItemEntity> generated = invoice.getItems().stream()
+                .filter(item -> item.getSourceType() != null)
+                .toList();
+        generated.forEach(invoice::removeItem);
+        copyCharges(precalculationService.draft(invoice.getPatientId(), invoice.getVisitId(),
+                invoice.getInsuranceConvention() == null ? null : invoice.getInsuranceConvention().getId(),
+                invoice.getId()), invoice, invoice.getOrganizationId());
+        InvoiceEntity saved = invoiceRepository.save(invoice);
+        UserAccountEntity actor = getCurrentUser();
+        if (actor != null) {
+            auditService.logSuccess(actor.getId(), actor.getOrganizationId(), saved.getPatientId(), "BILLING", saved.getId(),
+                    "RECALCULATE_INVOICE", "Recalcul de la facture N° " + saved.getInvoiceNumber() + " : " + saved.getTotalAmount() + " FCFA.");
+        }
+        return InvoiceResponse.fromEntity(saved);
+    }
+
+    private void copyCharges(InvoiceEntity draft, InvoiceEntity invoice, UUID orgId) {
+        for (InvoiceItemEntity charge : draft.getItems()) {
+            InvoiceItemEntity item = new InvoiceItemEntity(
+                    charge.getLabel(), charge.getItemType(), charge.getUnitPrice(), charge.getQuantity(), charge.getCoefficient())
+                    .withSource(charge.getSourceType(), charge.getSourceId(), charge.getTariffKey(), charge.isTariffMissing());
+            item.setOrganizationId(orgId);
+            invoice.addItem(item);
+        }
     }
 
     @Transactional(readOnly = true)

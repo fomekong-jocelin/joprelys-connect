@@ -26,8 +26,11 @@ public class EstimateController {
 
     private final EstimateService estimateService;
     private final UserAccountRepository userAccountRepository;
+    private final com.joprelys.backend.billing.application.CreditNoteService creditNoteService;
 
-    public EstimateController(EstimateService estimateService, UserAccountRepository userAccountRepository) {
+    public EstimateController(EstimateService estimateService, UserAccountRepository userAccountRepository,
+                              com.joprelys.backend.billing.application.CreditNoteService creditNoteService) {
+        this.creditNoteService = creditNoteService;
         this.estimateService = estimateService;
         this.userAccountRepository = userAccountRepository;
     }
@@ -95,19 +98,40 @@ public class EstimateController {
     // ─── Avoirs ────────────────────────────────────────────────────────────────
 
     @PostMapping("/api/invoices/{id}/credit-notes")
-    @PreAuthorize("hasAuthority('BILLING_INVOICE_CANCEL')")
-    @Operation(summary = "Créer un avoir", description = "Crée un avoir (annulation partielle ou totale) sur une facture.")
+    @PreAuthorize("hasAnyAuthority('BILLING_CREDIT_NOTE_ISSUE', 'BILLING_INVOICE_CANCEL')")
+    @Operation(summary = "Émettre un avoir", description = "Émet un avoir sur une facture validée. Au-delà du seuil de l'établissement, l'avoir attend l'approbation de la DAF.")
     public ResponseEntity<CreditNoteResponse> createCreditNote(@PathVariable UUID id,
                                                                 @Valid @RequestBody CreateCreditNoteRequest request) {
-        CreditNoteResponse response = estimateService.createCreditNote(id, request);
-        return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        return ResponseEntity.status(HttpStatus.CREATED).body(creditNoteService.issue(id, request));
+    }
+
+    @PostMapping("/api/credit-notes/{id}/approve")
+    @PreAuthorize("hasAuthority('BILLING_CREDIT_NOTE_APPROVE')")
+    @Operation(summary = "Approuver un avoir", description = "Approuve un avoir en attente ; l'émetteur ne peut pas approuver son propre avoir.")
+    public ResponseEntity<CreditNoteResponse> approveCreditNote(@PathVariable UUID id) {
+        return ResponseEntity.ok(creditNoteService.approve(id));
+    }
+
+    @PostMapping("/api/credit-notes/{id}/reject")
+    @PreAuthorize("hasAuthority('BILLING_CREDIT_NOTE_APPROVE')")
+    @Operation(summary = "Refuser un avoir", description = "Refuse un avoir en attente d'approbation.")
+    public ResponseEntity<CreditNoteResponse> rejectCreditNote(@PathVariable UUID id) {
+        return ResponseEntity.ok(creditNoteService.reject(id));
+    }
+
+    @PostMapping("/api/credit-notes/{id}/refund")
+    @PreAuthorize("hasAuthority('CASH_PAYMENT_COLLECT')")
+    @Operation(summary = "Rembourser un avoir", description = "Rembourse en caisse tout ou partie d'un avoir actif, dans la limite des sommes encaissées.")
+    public ResponseEntity<CreditNoteResponse> refundCreditNote(@PathVariable UUID id,
+                                                                @Valid @RequestBody RefundCreditNoteRequest request) {
+        return ResponseEntity.ok(creditNoteService.refund(id, request));
     }
 
     @GetMapping("/api/invoices/{id}/credit-notes")
     @PreAuthorize("hasAuthority('BILLING_INVOICE_READ')")
     @Operation(summary = "Lister les avoirs d'une facture", description = "Récupère tous les avoirs associés à une facture.")
     public ResponseEntity<List<CreditNoteResponse>> listCreditNotes(@PathVariable UUID id) {
-        return ResponseEntity.ok(estimateService.getCreditNotesByInvoice(id));
+        return ResponseEntity.ok(creditNoteService.listByInvoice(id));
     }
 
     // ─── Créances ──────────────────────────────────────────────────────────────

@@ -20,25 +20,33 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @Transactional(readOnly = true)
 public class LabOrderService {
 
+	private static final java.util.Set<LabOrderStatus> MERGEABLE_STATUSES =
+			java.util.Set.of(LabOrderStatus.REQUESTED, LabOrderStatus.AWAITING_PAYMENT);
+
 	private final LabOrderRepository labOrderRepository;
 	private final PatientRepository patientRepository;
 	private final VisitRepository visitRepository;
 	private final UserAccountRepository userAccountRepository;
 	private final AuditService auditService;
+	private final LabPaymentGatePolicy paymentGatePolicy;
 
 	public LabOrderService(
 			LabOrderRepository labOrderRepository,
 			PatientRepository patientRepository,
 			VisitRepository visitRepository,
 			UserAccountRepository userAccountRepository,
-			AuditService auditService) {
+			AuditService auditService,
+			LabPaymentGatePolicy paymentGatePolicy) {
+		this.paymentGatePolicy = paymentGatePolicy;
 		this.labOrderRepository = labOrderRepository;
 		this.patientRepository = patientRepository;
 		this.visitRepository = visitRepository;
@@ -66,7 +74,8 @@ public class LabOrderService {
 		if (visit != null) {
 			var existingOrder = labOrderRepository.findFirstByVisitIdAndExamTypeAndStatusNotOrderByCreatedAtDesc(
 					visit.getId(), request.examType(), LabOrderStatus.CANCELLED);
-			if (existingOrder.isPresent()) {
+			// Seule une demande non commencée est complétée : un examen de contrôle crée une nouvelle demande.
+			if (existingOrder.isPresent() && MERGEABLE_STATUSES.contains(existingOrder.get().getStatus())) {
 				LabOrderEntity order = existingOrder.get();
 				mergeMissingExams(order, request.exams());
 				return mapToResponse(labOrderRepository.save(order));
@@ -91,6 +100,9 @@ public class LabOrderService {
 				request.priority(),
 				organizationId);
 		entity.setOrganizationId(organizationId);
+		if (paymentGatePolicy.requiresPaymentBeforeSampling(organizationId, visit)) {
+			entity.setStatus(LabOrderStatus.AWAITING_PAYMENT);
+		}
 
 		return mapToResponse(labOrderRepository.save(entity));
 	}
@@ -116,7 +128,7 @@ public class LabOrderService {
 	}
 
 	@Transactional
-	public LabOrderResponse updateStatus(UUID orderId, LabOrderStatus status, String practitionerEmail) {
+	public LabOrderResponse updateStatus(UUID orderId, LabOrderStatus status, String reason, String practitionerEmail) {
 		LabOrderEntity entity = findGlobal(orderId);
 		UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();
 		try {
@@ -124,13 +136,46 @@ public class LabOrderService {
 			UserAccountEntity operator = resolveOperator(practitionerEmail);
 			validateTargetOrganization(entity, operator);
 
-			entity.setStatus(status);
-			propagateLegacyOrderStatus(entity, status);
+			String details;
+			if (status == LabOrderStatus.CANCELLED) {
+				String normalizedReason = reason == null ? "" : reason.trim();
+				if (normalizedReason.isEmpty()) {
+					throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le motif d'annulation de la demande est obligatoire.");
+				}
+				cancelOrder(entity);
+				details = "Annulation de la demande : " + normalizedReason;
+			} else if (!entity.getItems().isEmpty()) {
+				// ADR-20261017 D-04 : une demande détaillée progresse examen par examen.
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"Faites progresser chaque examen de la demande ; le statut global est calculé automatiquement.");
+			} else {
+				validatePaymentGate(entity.getStatus(), status);
+				validateItemTransition(entity.getStatus(), status);
+				entity.setStatus(status);
+				details = "Changement de statut laboratoire : " + status.name();
+			}
 			LabOrderEntity saved = labOrderRepository.save(entity);
-			logStatusChange(saved, "UPDATE_LAB_ORDER_STATUS", "Changement de statut laboratoire : " + status.name());
+			logStatusChange(saved, "UPDATE_LAB_ORDER_STATUS", details);
 			return mapToResponse(saved);
 		} finally {
 			com.joprelys.backend.auth.security.TenantContext.setTenantId(originalTenantId);
+		}
+	}
+
+	private void cancelOrder(LabOrderEntity entity) {
+		if (entity.getStatus() == LabOrderStatus.VALIDATED || entity.getStatus() == LabOrderStatus.CANCELLED) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Une demande validée ou déjà annulée ne peut pas être annulée.");
+		}
+		Instant now = Instant.now();
+		for (LabOrderItemEntity item : entity.getItems()) {
+			if (item.getStatus() != LabOrderStatus.VALIDATED && item.getStatus() != LabOrderStatus.CANCELLED) {
+				item.applyStatus(LabOrderStatus.CANCELLED, now);
+			}
+		}
+		if (entity.getItems().isEmpty()) {
+			entity.setStatus(LabOrderStatus.CANCELLED);
+		} else {
+			recalculateOrderStatus(entity);
 		}
 	}
 
@@ -229,7 +274,7 @@ public class LabOrderService {
 
 	void validatePaymentGate(LabOrderStatus orderStatus, LabOrderStatus next) {
 		if (orderStatus == LabOrderStatus.AWAITING_PAYMENT && next != LabOrderStatus.CANCELLED) {
-			throw new IllegalArgumentException("Le paiement doit être confirmé avant de traiter les examens");
+			throw new ResponseStatusException(HttpStatus.CONFLICT, "Le paiement doit être confirmé avant de traiter les examens.");
 		}
 	}
 
@@ -246,21 +291,8 @@ public class LabOrderService {
 			case AWAITING_PAYMENT, PAID -> next == LabOrderStatus.SAMPLE_COLLECTED || next == LabOrderStatus.CANCELLED;
 		};
 		if (!allowed) {
-			throw new IllegalArgumentException(
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"Transition de statut examen invalide : " + current.name() + " -> " + next.name());
-		}
-	}
-
-	private void propagateLegacyOrderStatus(LabOrderEntity entity, LabOrderStatus status) {
-		if (status == LabOrderStatus.AWAITING_PAYMENT || status == LabOrderStatus.PAID) {
-			return;
-		}
-		Instant now = Instant.now();
-		for (LabOrderItemEntity item : entity.getItems()) {
-			if (item.getStatus() == LabOrderStatus.CANCELLED && status != LabOrderStatus.CANCELLED) {
-				continue;
-			}
-			item.applyStatus(status, now);
 		}
 	}
 

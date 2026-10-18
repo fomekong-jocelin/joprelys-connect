@@ -252,6 +252,30 @@ public class VisitControllerTest {
 	}
 
 	@Test
+	void givenVisitInConsultationWithColleague_whenAnotherDoctorCloses_thenConflictWithoutSigning() throws Exception {
+		UserAccountEntity otherDoctor = new UserAccountEntity("medecin.b@joprelys.local", "Médecin B", "MEDECIN", "passhash");
+		otherDoctor.setOrganizationId(orgA.getId());
+		otherDoctor = userAccountRepository.save(otherDoctor);
+		String tokenOtherDoctor = jwtService.createToken(otherDoctor).value();
+
+		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());
+		VisitEntity visit = new VisitEntity(patientA, "VIS-OWNER", "Motif", "Tri");
+		visit.startConsultation(userMedecinA.getId(), userMedecinA.getDisplayName(), java.time.Instant.now());
+		visit = visitRepository.save(visit);
+		com.joprelys.backend.auth.security.TenantContext.clear();
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/close")
+				.header("Authorization", "Bearer " + tokenOtherDoctor))
+				.andExpect(status().isConflict())
+				.andExpect(jsonPath("$.detail").value(org.hamcrest.Matchers.containsString("Médecin A")));
+
+		mockMvc.perform(post("/api/visits/" + visit.getId() + "/close")
+				.header("Authorization", "Bearer " + tokenMedecinA))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.status").value("TERMINEE"));
+	}
+
+	@Test
 	void givenActiveVisit_whenAgentACloses_thenForbidden() throws Exception {
 		// Create visit in Tenant A
 		com.joprelys.backend.auth.security.TenantContext.setTenantId(orgA.getId());

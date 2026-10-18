@@ -194,7 +194,10 @@ public class PatientController {
                 entity.getEstimatedAgeRange(),
                 entity.getPhysicalDescription(),
                 entity.getFoundAt(),
-                entity.getFoundLocation());
+                entity.getFoundLocation(),
+                entity.getDeceasedAt(),
+                entity.getDeathPlace(),
+                entity.getDeathDeclaredBy());
     }
 }
 

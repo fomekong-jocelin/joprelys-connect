@@ -45,6 +45,7 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
     private final OrganizationRepository organizationRepository;
     private final AuditService auditService;
     private final TransactionTemplate transactionTemplate;
+    private final com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitUsageQuery unitUsageQuery;
 
     public DefaultHospitalOrganizationService(
             HospitalServiceCatalogRepository serviceCatalogRepository,
@@ -53,7 +54,9 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
             UserAccountRepository userAccountRepository,
             OrganizationRepository organizationRepository,
             AuditService auditService,
-            PlatformTransactionManager transactionManager) {
+            PlatformTransactionManager transactionManager,
+            com.joprelys.backend.hospitalorganization.infrastructure.persistence.OrganizationalUnitUsageQuery unitUsageQuery) {
+        this.unitUsageQuery = unitUsageQuery;
         this.serviceCatalogRepository = serviceCatalogRepository;
         this.specialtyCatalogRepository = specialtyCatalogRepository;
         this.unitRepository = unitRepository;
@@ -160,6 +163,11 @@ public class DefaultHospitalOrganizationService implements HospitalOrganizationU
                         unitRepository.existsByOrganizationIdAndParentIdAndActiveTrue(
                                 scope.organizationId(), unitId),
                         "Désactivez d'abord les unités enfants actives.");
+                var usage = unitUsageQuery.usageAt(scope.organizationId(), unitId, java.time.Instant.now());
+                rejectConflict(usage.inUse(), "Unité encore utilisée : " + usage.activeStays() + " séjour(s) en cours, "
+                        + usage.activeStaffAssignments() + " affectation(s) de personnel et "
+                        + usage.activeSpaceAssignments() + " affectation(s) d'espace actives. Transférez les patients "
+                        + "et clôturez les affectations avant de désactiver l'unité.");
                 unit.deactivate();
             }
             OrganizationalUnitEntity saved = unitRepository.saveAndFlush(unit);

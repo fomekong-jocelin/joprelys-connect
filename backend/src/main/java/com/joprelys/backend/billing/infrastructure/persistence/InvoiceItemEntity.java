@@ -42,6 +42,20 @@ public class InvoiceItemEntity {
     @Column(name = "organization_id")
     private UUID organizationId;
 
+    /** Origine clinique de la charge : une source n'est facturée qu'une fois (ADR-20261017 D-15). */
+    @Column(name = "source_type", length = 40)
+    private String sourceType;
+
+    @Column(name = "source_id")
+    private UUID sourceId;
+
+    @Column(name = "tariff_key", length = 100)
+    private String tariffKey;
+
+    /** Ligne sans tarif paramétré : la facture ne peut pas être validée (ADR-20261017 D-11). */
+    @Column(name = "tariff_missing", nullable = false)
+    private boolean tariffMissing;
+
     protected InvoiceItemEntity() {
     }
 
@@ -83,5 +97,17 @@ public class InvoiceItemEntity {
     public void setCoefficient(BigDecimal coefficient) { this.coefficient = normalizeNullable(coefficient); recalculateTotal(); }
     public BigDecimal getTotalItemAmount() { return totalItemAmount; }
     public UUID getOrganizationId() { return organizationId; }
+    public String getSourceType() { return sourceType; }
+    public UUID getSourceId() { return sourceId; }
+    public String getTariffKey() { return tariffKey; }
+    public boolean isTariffMissing() { return tariffMissing; }
+
+    public InvoiceItemEntity withSource(String sourceType, UUID sourceId, String tariffKey, boolean tariffMissing) {
+        this.sourceType = sourceType;
+        this.sourceId = sourceId;
+        this.tariffKey = tariffKey;
+        this.tariffMissing = tariffMissing;
+        return this;
+    }
     public void setOrganizationId(UUID organizationId) { this.organizationId = organizationId; }
 }

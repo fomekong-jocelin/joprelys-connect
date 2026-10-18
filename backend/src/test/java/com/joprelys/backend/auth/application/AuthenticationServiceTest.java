@@ -205,6 +205,32 @@ class AuthenticationServiceTest {
     }
 
     @Test
+    void shouldExplainWhyAnOtpIsRejectedAndInvalidateItAfterThreeFailures() {
+        UserAccountEntity user = user("cashier@example.com", "Caissier Test", "CAISSIER");
+        AuthenticationService service = service();
+        when(userAccountRepository.findByEmail("cashier@example.com")).thenReturn(Optional.of(user));
+        when(passwordEncoder.matches("Password123!", "hash")).thenReturn(true);
+        service.login(new LoginRequest("cashier@example.com", "Password123!"), "127.0.0.1", METADATA);
+        String validCode = service.getStaffOtpCodeForTesting("cashier@example.com");
+        String wrongCode = "000000".equals(validCode) ? "111111" : "000000";
+
+        StaffOtpRejectedException first = assertThrows(StaffOtpRejectedException.class,
+                () -> service.verifyStaffOtp(new VerifyStaffOtpRequest("cashier@example.com", wrongCode), "127.0.0.1", METADATA));
+        assertEquals(StaffOtpRejectedException.Reason.OTP_INCORRECT, first.getReason());
+        assertEquals(2, first.getRemainingAttempts());
+        assertThrows(StaffOtpRejectedException.class,
+                () -> service.verifyStaffOtp(new VerifyStaffOtpRequest("cashier@example.com", wrongCode), "127.0.0.1", METADATA));
+        StaffOtpRejectedException third = assertThrows(StaffOtpRejectedException.class,
+                () -> service.verifyStaffOtp(new VerifyStaffOtpRequest("cashier@example.com", wrongCode), "127.0.0.1", METADATA));
+        assertEquals(StaffOtpRejectedException.Reason.OTP_TOO_MANY_ATTEMPTS, third.getReason());
+
+        // Même le bon code est désormais refusé : il faut redemander un code, et la raison le dit.
+        StaffOtpRejectedException afterLock = assertThrows(StaffOtpRejectedException.class,
+                () -> service.verifyStaffOtp(new VerifyStaffOtpRequest("cashier@example.com", validCode), "127.0.0.1", METADATA));
+        assertEquals(StaffOtpRejectedException.Reason.OTP_NO_ACTIVE_REQUEST, afterLock.getReason());
+    }
+
+    @Test
     void shouldInvalidatePreviousOtpWhenAReplacementCodeCannotBeDelivered() {
         UserAccountEntity user = user("cashier@example.com", "Caissier Test", "CAISSIER");
         AuthenticationService service = service();

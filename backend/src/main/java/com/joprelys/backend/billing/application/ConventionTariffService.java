@@ -37,12 +37,15 @@ public class ConventionTariffService {
     }
 
     /**
-     * Retourne la valeur unitaire d'une lettre-clé tarifaire, ou la valeur par défaut si absente.
+     * Valeur unitaire d'une clé tarifaire de l'établissement. Aucune valeur par défaut n'est inventée :
+     * une clé absente produit une ligne « à tarifer » (ADR-20261017 D-11).
      */
-    public BigDecimal getTariff(String keyLetter, BigDecimal defaultValue) {
-        return tariffGridRepository.findByKeyLetter(keyLetter)
-                .map(TariffGridEntity::getUnitValue)
-                .orElse(defaultValue);
+    public java.util.Optional<BigDecimal> findTariff(String keyLetter) {
+        if (keyLetter == null || keyLetter.isBlank()) {
+            return java.util.Optional.empty();
+        }
+        return tariffGridRepository.findByKeyLetter(keyLetter.trim())
+                .map(TariffGridEntity::getUnitValue);
     }
 
     @Transactional(readOnly = true)

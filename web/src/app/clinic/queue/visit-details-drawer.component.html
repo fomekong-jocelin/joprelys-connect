@@ -286,6 +286,31 @@
             {{ t('dashboard.close.title') }}
           </app-ui-button>
         }
+        @if (abandonAvailable()) {
+          @if (!abandonFormOpen()) {
+            <app-ui-button variant="secondary" class="min-h-11 w-full" (pressed)="abandonFormOpen.set(true)">
+              {{ t('queue.abandon.action') }}
+            </app-ui-button>
+          } @else {
+            <div class="space-y-3 border border-[var(--app-border)] bg-[var(--app-surface)] p-3" role="group" [attr.aria-label]="t('queue.abandon.action')">
+              <p class="text-xs text-[var(--text-muted)]">{{ t('queue.abandon.hint') }}</p>
+              <label class="ui-label block">{{ t('queue.abandon.reason') }}
+                <select class="ui-select mt-1" [value]="abandonReason()" (change)="abandonReason.set($any($event.target).value)">
+                  @for (reason of abandonReasons; track reason) {
+                    <option [value]="reason">{{ t('queue.abandon.reason.' + reason) }}</option>
+                  }
+                </select>
+              </label>
+              <label class="ui-label block">{{ t('queue.abandon.note') }}
+                <input class="ui-input mt-1" maxlength="500" [value]="abandonNote()" (input)="abandonNote.set($any($event.target).value)" />
+              </label>
+              <div class="flex gap-2">
+                <app-ui-button variant="secondary" class="min-h-11 flex-1" (pressed)="abandonFormOpen.set(false)">{{ t('common.cancel') }}</app-ui-button>
+                <app-ui-button variant="danger" class="min-h-11 flex-1" (pressed)="submitAbandon()">{{ t('queue.abandon.confirm') }}</app-ui-button>
+              </div>
+            </div>
+          }
+        }
         <div class="border-t border-[var(--app-border)] pt-3">
           <app-ui-button variant="link" class="min-h-11 w-full inline-flex items-center justify-center" (pressed)="closed.emit()">
             {{ t('dashboard.drawer.closeButton') }}

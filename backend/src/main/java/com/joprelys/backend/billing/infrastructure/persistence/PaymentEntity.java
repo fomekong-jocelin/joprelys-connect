@@ -33,6 +33,9 @@ public class PaymentEntity {
     @Column(name = "cash_session_id")
     private UUID cashSessionId;
 
+    @Column(name = "deposit_id")
+    private UUID depositId;
+
     @TenantId
     @Column(name = "organization_id")
     private UUID organizationId;
@@ -66,6 +69,8 @@ public class PaymentEntity {
     public void setReferenceNumber(String referenceNumber) { this.referenceNumber = referenceNumber; }
     public UUID getReceivedByUserId() { return receivedByUserId; }
     public void setReceivedByUserId(UUID receivedByUserId) { this.receivedByUserId = receivedByUserId; }
+    public UUID getDepositId() { return depositId; }
+    public void setDepositId(UUID depositId) { this.depositId = depositId; }
     public UUID getCashSessionId() { return cashSessionId; }
     public void setCashSessionId(UUID cashSessionId) { this.cashSessionId = cashSessionId; }
     public UUID getOrganizationId() { return organizationId; }

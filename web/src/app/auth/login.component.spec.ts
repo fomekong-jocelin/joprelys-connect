@@ -312,6 +312,41 @@ describe('LoginComponent', () => {
     expect(component.error()).toBe('Code de sécurité incorrect.');
   });
 
+  it('explique qu’un code annulé après trop de tentatives doit être redemandé', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.staffOtpCode.set('180511');
+    component.verifyStaffOtp();
+
+    httpTesting.expectOne('/api/auth/verify-otp').flush(
+      { detail: 'Aucune demande de connexion active pour cet e-mail.', code: 'OTP_NO_ACTIVE_REQUEST', remainingAttempts: 0 },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(component.error()).toBe('login.error.otp.OTP_NO_ACTIVE_REQUEST');
+    expect(component.staffOtpCode()).toBe('');
+  });
+
+  it('indique les tentatives restantes pour un code incorrect', () => {
+    const fixture = TestBed.createComponent(LoginComponent);
+    const component = fixture.componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.email.set('cashier@example.com');
+    component.staffOtpCode.set('000000');
+    component.verifyStaffOtp();
+
+    httpTesting.expectOne('/api/auth/verify-otp').flush(
+      { detail: 'Code de sécurité incorrect.', code: 'OTP_INCORRECT', remainingAttempts: 2 },
+      { status: 401, statusText: 'Unauthorized' },
+    );
+
+    expect(component.error()).toBe('login.error.otp.OTP_INCORRECT');
+  });
+
   it('should toggle password visibility when clicking the eye button', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;

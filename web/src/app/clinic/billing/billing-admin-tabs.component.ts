@@ -3,11 +3,12 @@ import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { InsuranceConvention, TariffGrid } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { BillingSettingsPanelComponent } from './billing-settings-panel.component';
 
 @Component({
   selector: 'app-billing-admin-tabs',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [CommonModule, FormsModule, IconComponent, BillingSettingsPanelComponent],
   template: `
     @if (activeTab === 'conventions') {
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -73,6 +74,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
     }
 
     @if (activeTab === 'tariffs') {
+      <app-billing-settings-panel />
       <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div class="ui-card-subtle p-4 space-y-4">
           <h3 class="font-bold text-xs text-[var(--text-primary)] uppercase tracking-wider border-b border-[var(--app-border)]/40 pb-2">

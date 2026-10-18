@@ -8,6 +8,7 @@ public record PharmacyVerifyResponse(
 		UUID prescriptionId,
 		String prescriptionNumber,
 		String status,
+		String dispensationStatus,
 		String patientName,
 		String doctorName,
 		Instant issuedAt,

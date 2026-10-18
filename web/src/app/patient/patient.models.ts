@@ -31,6 +31,9 @@ export interface Patient {
   physicalDescription?: string;
   foundAt?: string;
   foundLocation?: string;
+  deceasedAt?: string | null;
+  deathPlace?: string | null;
+  deathDeclaredBy?: string | null;
 }
 
 export interface CreatePatientDto {
@@ -137,7 +140,7 @@ export interface Hospitalization {
   roomNumber: string;
   bedNumber: string;
   admissionReason: string;
-  status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS';
+  status: 'EN_COURS' | 'SORTI' | 'SORTI_CONTRE_AVIS' | 'DECEDE';
   admittedAt: string;
   dischargedAt?: string;
   dischargeDiagnosis?: string;
@@ -342,7 +345,10 @@ export interface TariffGrid {
 export interface InvoiceItem {
   id?: string;
   label: string;
-  itemType: 'CONSULTATION' | 'K_SURGEON' | 'K_ANESTHESIST' | 'K_BLOC' | 'AMI_CARE' | 'STAY_FEE' | 'MEDICATION';
+  itemType: 'CONSULTATION' | 'K_SURGEON' | 'K_ANESTHESIST' | 'K_BLOC' | 'AMI_CARE' | 'STAY_FEE' | 'MEDICATION' | 'LAB_EXAM' | 'IMAGING_EXAM';
+  sourceType?: string | null;
+  tariffKey?: string | null;
+  tariffMissing?: boolean;
   unitPrice: number;
   quantity: number;
   coefficient?: number;
@@ -396,8 +402,9 @@ export interface CreditNote {
   creditNoteNumber: string;
   amount: number;
   reason: string;
-  status: 'ACTIVE' | 'CANCELLED';
+  status: 'PENDING_APPROVAL' | 'ACTIVE' | 'CANCELLED';
   createdAt: string;
+  refundedAmount?: number;
 }
 
 export interface Receivable {
@@ -531,4 +538,24 @@ export interface CashSessionSummary {
   cashExpenses: number;
   bankDeposits: number;
   expectedCash: number;
+}
+
+/** Acompte patient encaissé avant facturation (ADR-20261017 D-16). */
+export interface PatientDeposit {
+  id: string;
+  depositNumber: string;
+  patientId: string;
+  visitId?: string | null;
+  amount: number;
+  remainingAmount: number;
+  method: string;
+  reference?: string | null;
+  note?: string | null;
+  createdAt: string;
+}
+
+/** Paramètres financiers de l'établissement (ADR-20261017 D-13, D-17). */
+export interface BillingSettings {
+  labPaymentBeforeSampling: boolean;
+  creditNoteApprovalThreshold: number;
 }

@@ -9,6 +9,7 @@ import {
   PharmacyDispensationHistoryEntry,
   PharmacyVerifyItem,
   PharmacyVerifyResponse,
+  isPrescriptionDispensable,
 } from './pharmacy.models';
 
 interface DispensationLineDraft {
@@ -241,7 +242,7 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
 
   canDispenseStatus(): boolean {
     return this.rbac.hasPermission('PHARMACY_DISPENSE') && this.prescription?.pharmaceuticalValidated === true
-      && ['ACTIVE', 'PARTIALLY_DISPENSED'].includes(this.prescription?.status);
+      && isPrescriptionDispensable(this.prescription);
   }
 
   isQuantityFlexible(item: PharmacyVerifyItem): boolean {

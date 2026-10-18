@@ -4,6 +4,9 @@ import tools.jackson.databind.ObjectMapper;
 import com.joprelys.backend.ai.realtime.application.RealtimeClinicalIntakeService;
 import com.joprelys.backend.ai.realtime.application.RealtimeIntakeSource;
 import com.joprelys.backend.audit.application.AuditService;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
+import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.hospitalization.infrastructure.persistence.HospitalizationRepository;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.visit.api.CorrectVisitRequest;
@@ -40,6 +43,8 @@ public class VisitService {
     private final VisitClinicalClosureService clinicalClosure;
 	private final EmergencyRepository emergencyRepository;
 	private final EmergencyTriageAssessmentRepository triageAssessmentRepository;
+	private final UserAccountRepository userAccountRepository;
+	private final HospitalizationRepository hospitalizationRepository;
 
 	@SuppressWarnings("checkstyle:ParameterNumber")
 	public VisitService(
@@ -53,7 +58,9 @@ public class VisitService {
 			RealtimeClinicalIntakeService realtimeClinicalIntakeService,
             VisitClinicalClosureService clinicalClosure,
 			@org.springframework.beans.factory.annotation.Autowired(required = false) EmergencyRepository emergencyRepository,
-			@org.springframework.beans.factory.annotation.Autowired(required = false) EmergencyTriageAssessmentRepository triageAssessmentRepository) {
+			@org.springframework.beans.factory.annotation.Autowired(required = false) EmergencyTriageAssessmentRepository triageAssessmentRepository,
+			UserAccountRepository userAccountRepository,
+			HospitalizationRepository hospitalizationRepository) {
 		this.visitRepository = visitRepository;
 		this.patientRepository = patientRepository;
 		this.visitNumberGenerator = visitNumberGenerator;
@@ -65,6 +72,8 @@ public class VisitService {
         this.clinicalClosure = clinicalClosure;
 		this.emergencyRepository = emergencyRepository;
 		this.triageAssessmentRepository = triageAssessmentRepository;
+		this.userAccountRepository = userAccountRepository;
+		this.hospitalizationRepository = hospitalizationRepository;
 	}
 
 	@Transactional
@@ -72,6 +81,7 @@ public class VisitService {
 		PatientEntity patient = patientRepository.findById(request.patientId())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
+		com.joprelys.backend.patient.application.PatientDeathService.rejectIfDeceased(patient);
 		if (visitRepository.existsByPatientIdAndStatus(request.patientId(), "EN_COURS")) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ce patient possède déjà une visite active en cours.");
 		}
@@ -93,13 +103,26 @@ public class VisitService {
 	}
 
 	@Transactional
-	public VisitEntity closeVisit(UUID visitId) {
+	public VisitEntity closeVisit(UUID visitId, String closerEmail) {
 		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
 
 		if (!"EN_COURS".equals(visit.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une visite active peut être clôturée.");
 		}
+		if (hospitalizationRepository.existsByVisitIdAndStatus(visitId, "EN_COURS")) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Cette visite est liée à une hospitalisation en cours ; elle sera clôturée au départ du patient.");
+		}
+		// Seul le praticien qui a le patient en charge signe la consultation (ADR-20261017 D-01).
+		UserAccountEntity closer = userAccountRepository.findByEmail(closerEmail.trim().toLowerCase())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Praticien introuvable."));
+		if (visit.isInConsultationWithAnotherPractitioner(closer.getId())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Patient en consultation chez " + visit.getConsultingPractitionerName()
+							+ ". Reprenez la prise en charge depuis la file avant de clôturer.");
+		}
+		visit.startConsultation(closer.getId(), closer.getDisplayName(), Instant.now());
 
 		visit.setStatus("TERMINEE");
 		visit.setClosedAt(Instant.now());
@@ -128,25 +151,6 @@ public class VisitService {
 		}
 
 		return savedVisit;
-	}
-
-	@Transactional
-	public VisitEntity cancelVisit(UUID visitId) {
-		VisitEntity visit = visitRepository.findByIdForUpdate(visitId)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
-
-		if (!"EN_COURS".equals(visit.getStatus())) {
-			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une visite active peut être annulée.");
-		}
-
-		visit.setStatus("ANNULEE");
-		visit.setClosedAt(Instant.now());
-
-		if (visit.getPatient() != null) {
-			visit.getPatient().getFullName();
-		}
-
-		return visitRepository.save(visit);
 	}
 
 	@Transactional
@@ -239,23 +243,37 @@ public class VisitService {
 		return visitRepository.findByPatientIdWithPatientAndVitals(patientId);
 	}
 
+	private UUID currentUserId() {
+		var authentication = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+		if (authentication == null || authentication.getName() == null) {
+			return null;
+		}
+		return userAccountRepository.findByEmail(authentication.getName().trim().toLowerCase())
+				.map(UserAccountEntity::getId)
+				.orElse(null);
+	}
+
 	private void propagateEmergencyVitalsIfApplicable(VisitEntity visit, PatientEntity patient) {
 		if (emergencyRepository == null) return;
 		List<EmergencyEntity> emergencies = emergencyRepository.findByPatientIdWithLogs(patient.getId());
 		if (emergencies.isEmpty()) return;
 
-		Instant threshold = Instant.now().minus(java.time.Duration.ofHours(24));
+		// Seule une urgence encore en cours, non rattachée à une autre visite, alimente la visite (ADR-20261017 D-05).
 		EmergencyEntity latest = emergencies.stream()
-				.filter(e -> e.getCreatedAt().isAfter(threshold) || e.getStabilizedAt() == null || e.getVisitId() == null)
-				.findFirst()
+				.filter(e -> e.getStabilizedAt() == null && e.getVisitId() == null)
+				.max(java.util.Comparator.comparing(EmergencyEntity::getCreatedAt))
 				.orElse(null);
 
 		if (latest == null) return;
 
 		if (latest.getVisitId() == null) {
 			latest.setVisitId(visit.getId());
-			emergencyRepository.save(latest);
 		}
+		if (latest.isAwaitingDownstream() && "CONSULTATION".equals(latest.getOrientation())) {
+			// La consultation accepte le patient orienté par les urgences (ADR-20261017 D-06).
+			latest.acceptByDownstream("CONSULTATION", currentUserId(), Instant.now());
+		}
+		emergencyRepository.save(latest);
 
 		EmergencyTriageAssessmentEntity triage = null;
 		if (triageAssessmentRepository != null) {
@@ -289,6 +307,7 @@ public class VisitService {
 					rr,
 					pain,
 					null);
+			vitals.measuredAt(triage != null ? triage.getAssessedAt() : latest.getCreatedAt());
 			visit.setVitals(vitals);
 			visit.markVitalsRecorded();
 		}
