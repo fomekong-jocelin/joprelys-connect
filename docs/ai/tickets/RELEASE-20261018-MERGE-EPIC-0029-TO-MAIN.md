@@ -22,8 +22,9 @@ Consolider les commits et modifications d'EPIC-0029 (lots 1 à 3 — sécurité 
 - [x] Valider les tests ciblés et non-régression backend (22 tests `AuthenticationServiceTest`, `*Mail*Test` verts).
 - [x] Valider les tests Angular web (120 fichiers, 665 tests verts).
 - [x] Valider le build de production Angular (`ng build` vert).
-- [ ] Commiter les modifications d'outillage mail, gestion d'erreurs OTP et recette E2E sur `feature/epic-0029-journey-coherence`.
-- [ ] Mettre à jour `docs/ai/tickets/STORY-20261017-EPIC-0029-LOTS-1-3.md` (statuts des actions).
-- [ ] Mettre à jour `docs/ai/PROJECT-TRACKING.md` et `docs/ai/CHANGELOG.md`.
-- [ ] Basculer sur `main` et fusionner `feature/epic-0029-journey-coherence`.
-- [ ] Vérifier l'état final de `main` (historique, statut git, tests).
+- [x] Commiter les modifications d'outillage mail, gestion d'erreurs OTP et recette E2E sur `feature/epic-0029-journey-coherence` (commit `c864407c`).
+- [x] Mettre à jour `docs/ai/tickets/STORY-20261017-EPIC-0029-LOTS-1-3.md` (statuts des actions).
+- [x] Mettre à jour `docs/ai/PROJECT-TRACKING.md` et `docs/ai/CHANGELOG.md`.
+- [x] Basculer sur `main` et fusionner `feature/epic-0029-journey-coherence` (commit de merge `3ebe76a6`).
+- [x] Vérifier l'état final de `main` (arbre de travail propre, 0 conflit, tests exécutés).
+
