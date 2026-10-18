@@ -25,3 +25,13 @@ Pour un serveur SMTP STARTTLS, utiliser généralement le port 587, désactiver 
 - Aucun mot de passe/OTP dans les DTO de réponse ou logs.
 - Échec d'envoi propagé : le parcours n'annonce pas faussement un envoi réussi.
 - SMTP de production à valider avec TLS et rotation du secret communiqué hors dépôt.
+
+## Environnement de développement local (MailDev)
+
+En environnement local, un serveur SMTP fictif avec interface Web (MailDev) est mis à disposition :
+- **SMTP Port** : 1025 (`localhost`)
+- **Web UI** : `http://localhost:1080/`
+- **Script de démarrage / arrêt / redémarrage** : `scripts/start-local-mail-server.ps1` (paramètres `-Restart`, `-Stop`)
+- **Script d'extraction OTP console** : `scripts/get-latest-otp.ps1`
+- **Identifiants SMTP dev** : `noreply@joprelys.com` / `localdev` (sans SSL direct).
+

@@ -28,6 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class AuthenticationService {
 
     private static final String GENERIC_LOGIN_FAILURE = "Invalid email or password";
+    private static final int MAX_OTP_ATTEMPTS = 3;
     private static final String PATIENT_ROLE = "PATIENT";
 
     private final UserAccountRepository userAccountRepository;
@@ -150,11 +151,13 @@ public class AuthenticationService {
     private void validateOtp(String email, String submittedCode) {
         StaffOtpData otpData = staffOtpMap.get(email);
         if (otpData == null) {
-            throw new BadCredentialsException("Aucune demande de connexion active pour cet e-mail.");
+            throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_NO_ACTIVE_REQUEST,
+                    "Aucune demande de connexion active pour cet e-mail.", 0);
         }
         if (otpData.isExpired(clock.instant())) {
             staffOtpMap.remove(email);
-            throw new BadCredentialsException("Le code de sécurité a expiré.");
+            throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_EXPIRED,
+                    "Le code de sécurité a expiré.", 0);
         }
         if (otpData.code().equals(submittedCode)) {
             staffOtpMap.remove(email);
@@ -165,12 +168,14 @@ public class AuthenticationService {
 
     private void registerFailedOtpAttempt(String email, StaffOtpData otpData) {
         int newAttempts = otpData.attempts() + 1;
-        if (newAttempts >= 3) {
+        if (newAttempts >= MAX_OTP_ATTEMPTS) {
             staffOtpMap.remove(email);
-            throw new BadCredentialsException("Trop de tentatives infructueuses. Veuillez régénérer un code.");
+            throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_TOO_MANY_ATTEMPTS,
+                    "Trop de tentatives infructueuses. Veuillez régénérer un code.", 0);
         }
         staffOtpMap.put(email, new StaffOtpData(otpData.code(), otpData.createdAt(), newAttempts));
-        throw new BadCredentialsException("Code de sécurité incorrect.");
+        throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_INCORRECT,
+                "Code de sécurité incorrect.", MAX_OTP_ATTEMPTS - newAttempts);
     }
 
     private static boolean hasRole(UserAccountEntity user, String roleCode) {

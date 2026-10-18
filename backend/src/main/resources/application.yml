@@ -25,19 +25,19 @@ spring:
     validate-on-migrate: false
     repair-on-migrate: true
   mail:
-    host: ${MAIL_HOST:mail.joprelys.com}
-    port: ${MAIL_PORT:465}
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
     username: ${MAIL_USERNAME:noreply@joprelys.com}
-    password: ${MAIL_PASSWORD:}
+    password: ${MAIL_PASSWORD:localdev}
     properties:
       mail:
         smtp:
-          auth: true
+          auth: ${MAIL_SMTP_AUTH:true}
           connectiontimeout: ${MAIL_CONNECTION_TIMEOUT:3000}
           timeout: ${MAIL_READ_TIMEOUT:3000}
           writetimeout: ${MAIL_WRITE_TIMEOUT:3000}
           ssl:
-            enable: ${MAIL_SSL_ENABLED:true}
+            enable: ${MAIL_SSL_ENABLED:false}
           starttls:
             enable: ${MAIL_STARTTLS_ENABLED:false}
 

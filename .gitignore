@@ -184,3 +184,10 @@ doc_reel_trauma_center/extracted/
 # Brand Kit
 joprelys_brand_kit_final_nouveau_logo_complet/
 
+# Testing & Media generation artifacts
+.playwright-mcp/
+video_build/
+*.mp4
+login_success_dashboard.png
+
+

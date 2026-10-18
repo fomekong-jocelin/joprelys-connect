@@ -23,6 +23,17 @@ public class AuthExceptionHandler {
         return problem;
     }
 
+    /** Rejet du code de connexion : la raison et les tentatives restantes guident l'utilisateur. */
+    @ExceptionHandler(com.joprelys.backend.auth.application.StaffOtpRejectedException.class)
+    ProblemDetail staffOtpRejected(com.joprelys.backend.auth.application.StaffOtpRejectedException exception) {
+        ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
+        problem.setTitle("Authentication failed");
+        problem.setDetail(exception.getMessage());
+        problem.setProperty("code", exception.getReason().name());
+        problem.setProperty("remainingAttempts", exception.getRemainingAttempts());
+        return problem;
+    }
+
     @ExceptionHandler({InvalidTokenException.class, MissingBearerTokenException.class})
     ProblemDetail invalidToken() {
         ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.UNAUTHORIZED);
