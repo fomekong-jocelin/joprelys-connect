@@ -3,6 +3,7 @@ import { AppShellComponent } from '../../../shared/layout/app-shell.component';
 import { PatientVisitsListComponent } from '../components/patient-visits-list.component';
 import { PatientPortalMeResponse, PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-patient-prescriptions-page',
@@ -35,6 +36,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 export class PatientPrescriptionsPageComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   readonly patientData = signal<PatientPortalMeResponse | null>(null);
   readonly isLoading = signal(false);
@@ -76,7 +78,7 @@ export class PatientPrescriptionsPageComponent implements OnInit {
       },
       error: () => {
         this.downloadingId.set('');
-        alert(this.i18n.t('patients.downloadPdfError'));
+        this.toasts.error(this.i18n.t('patients.downloadPdfError'));
       }
     });
   }
@@ -97,7 +99,7 @@ export class PatientPrescriptionsPageComponent implements OnInit {
       },
       error: () => {
         this.downloadingId.set('');
-        alert(this.i18n.t('patients.downloadPdfError'));
+        this.toasts.error(this.i18n.t('patients.downloadPdfError'));
       }
     });
   }
@@ -116,7 +118,7 @@ export class PatientPrescriptionsPageComponent implements OnInit {
         if (consult) {
           consult.prescriptionTransmissionStatus = 'FAILED';
         }
-        alert(err.error?.detail || this.i18n.t('patient.prescription.transmitError'));
+        this.toasts.error(err.error?.detail || this.i18n.t('patient.prescription.transmitError'));
       }
     });
   }

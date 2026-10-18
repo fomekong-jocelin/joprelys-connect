@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { AppShellComponent } from '../../../shared/layout/app-shell.component';
 import { PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-patient-summary-page',
@@ -357,6 +358,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 export class PatientSummaryPageComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   readonly summary = signal<any | null>(null);
   readonly isLoading = signal(false);
@@ -398,7 +400,7 @@ export class PatientSummaryPageComponent implements OnInit {
       },
       error: () => {
         this.isDownloading.set(false);
-        alert(this.i18n.t('patient.summary.downloadError'));
+        this.toasts.error(this.i18n.t('patient.summary.downloadError'));
       }
     });
   }

@@ -8,6 +8,7 @@ import { EmptyStateComponent } from '../../shared/ui/empty-state.component';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { PatientApiService } from '../patient-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { PatientPreRegistrationResponse, PreRegistrationValidationRequest } from '../patient.models';
 
 @Component({
@@ -27,6 +28,7 @@ import { PatientPreRegistrationResponse, PreRegistrationValidationRequest } from
 })
 export class PreRegistrationsListComponent implements OnInit, OnDestroy {
   private readonly patientApiService = inject(PatientApiService);
+  private readonly dialog = inject(DialogService);
   readonly i18n = inject(I18nService);
 
   showQrCodeModal = signal(false);
@@ -198,9 +200,16 @@ export class PreRegistrationsListComponent implements OnInit, OnDestroy {
     this.reconcileOption.set(option);
   }
 
-  rejectRequest(id: string): void {
+  async rejectRequest(id: string): Promise<void> {
     if (this.actionLoading()) return;
-    if (!confirm(this.t('preRegistrations.rejectConfirm'))) return;
+    const confirmed = await this.dialog.confirm({
+      title: this.t('preRegistrations.rejectConfirm'),
+      message: this.t('preRegistrations.rejectConfirm'),
+      confirmLabel: this.t('common.reject'),
+      cancelLabel: this.t('common.cancel'),
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     this.actionLoading.set(true);
     this.error.set(null);

@@ -6,6 +6,7 @@ import { of, throwError } from 'rxjs';
 import { signal } from '@angular/core';
 import { provideRouter } from '@angular/router';
 import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
+import { DialogService } from '../../shared/ui/dialog.service';
 
 describe('PreRegistrationsListComponent', () => {
   let component: PreRegistrationsListComponent;
@@ -117,11 +118,11 @@ describe('PreRegistrationsListComponent', () => {
     expect(component.selectedPreRegistration()).toBeNull();
   });
 
-  it('should reject a pre-registration request with confirm dialog', () => {
-    // Spy on window.confirm
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('should reject a pre-registration request with confirm dialog', async () => {
+    const dialog = TestBed.inject(DialogService);
+    const confirmSpy = vi.spyOn(dialog, 'confirm').mockResolvedValue(true);
 
-    component.rejectRequest('prereg-2');
+    await component.rejectRequest('prereg-2');
 
     expect(confirmSpy).toHaveBeenCalled();
     expect(mockPatientApi.rejectPreRegistration).toHaveBeenCalledWith('prereg-2');

@@ -4,6 +4,7 @@ import { FormArray, FormBuilder, Validators } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { ConsultationApiService } from './consultation-api.service';
 import { ConsultationFeedbackStore } from './consultation-feedback.store';
+import { DialogService } from '../shared/ui/dialog.service';
 import { Prescription } from './consultation.models';
 
 @Injectable()
@@ -14,6 +15,7 @@ export class ConsultationPrescriptionFacade {
   canSign(): boolean { return this.rbac.hasPermission('PRESCRIPTION_SIGN'); }
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly i18n = inject(I18nService);
+  private readonly dialog = inject(DialogService);
   private readonly feedback = inject(ConsultationFeedbackStore);
 
   readonly current = signal<Prescription | null>(null);
@@ -107,11 +109,18 @@ export class ConsultationPrescriptionFacade {
     });
   }
 
-  confirmAndCancel(): void {
+  async confirmAndCancel(): Promise<void> {
     if (!this.canSign()) return;
     const prescription = this.current();
     if (!prescription) return;
-    if (!confirm(this.i18n.t('consultation.prescription.confirmCancel'))) return;
+    const confirmed = await this.dialog.confirm({
+      title: this.i18n.t('consultation.prescription.cancelBtn', 'Annuler l\'ordonnance'),
+      message: this.i18n.t('consultation.prescription.confirmCancel'),
+      confirmLabel: this.i18n.t('consultation.prescription.cancelBtn', 'Annuler l\'ordonnance'),
+      cancelLabel: this.i18n.t('common.cancel', 'Retour'),
+      tone: 'danger',
+    });
+    if (!confirmed) return;
 
     this.feedback.isLoading.set(true);
     this.consultationApi.cancelPrescription(prescription.id).subscribe({

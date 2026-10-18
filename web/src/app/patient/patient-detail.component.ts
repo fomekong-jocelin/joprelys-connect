@@ -291,7 +291,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
       },
       error: err => {
         console.error('Error downloading summary pdf', err);
-        alert(this.i18n.t('patient.detail.downloadPdfError'));
+        this.toasts.error(this.i18n.t('patient.detail.downloadPdfError'));
       },
     });
   }

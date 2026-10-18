@@ -6,6 +6,7 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { EmptyStateComponent } from '../../../shared/ui/empty-state.component';
 import { PatientPortalConsultation, PatientPortalMeResponse, PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-patient-documents-page',
@@ -79,6 +80,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 export class PatientDocumentsPageComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   readonly patient = signal<PatientPortalMeResponse | null>(null);
   readonly isLoading = signal(false);
@@ -128,7 +130,7 @@ export class PatientDocumentsPageComponent implements OnInit {
       },
       error: () => {
         this.downloadingId.set('');
-        alert(this.t('patient.documents.downloadError'));
+        this.toasts.error(this.t('patient.documents.downloadError'));
       },
     });
   }

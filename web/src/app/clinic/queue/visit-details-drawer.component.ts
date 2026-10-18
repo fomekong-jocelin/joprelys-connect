@@ -1,6 +1,7 @@
 import { DatePipe } from '@angular/common';
 import { Component, computed, inject, input, output, signal } from '@angular/core';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { Visit } from '../../visit/visit.models';
 import { VitalAlertsComponent } from '../../visit/vital-alerts.component';
@@ -18,6 +19,7 @@ import { orientationLabel } from '../../visit/visit-orientation.util';
 })
 export class VisitDetailsDrawerComponent {
   private readonly i18n = inject(I18nService);
+  private readonly dialog = inject(DialogService);
 
   readonly visit = input.required<Visit>();
   readonly currentUserId = input<string | null>(null);
@@ -77,11 +79,16 @@ export class VisitDetailsDrawerComponent {
     this.abandonNote.set('');
   }
 
-  requestStart(): void {
+  async requestStart(): Promise<void> {
     if (this.heldByColleague()) {
-      const confirmed = confirm(
-        `${this.t('queue.takeOver.confirm')} ${this.visit().consultingPractitionerName ?? ''}`.trim(),
-      );
+      const practitioner = this.visit().consultingPractitionerName ?? '';
+      const confirmed = await this.dialog.confirm({
+        title: this.t('queue.takeOver.title'),
+        message: `${this.t('queue.takeOver.confirm')} ${practitioner}`.trim(),
+        confirmLabel: this.t('queue.action.takeOver'),
+        cancelLabel: this.t('common.cancel'),
+        tone: 'warning',
+      });
       if (!confirmed) return;
     }
     this.startConsultation.emit(this.heldByColleague());

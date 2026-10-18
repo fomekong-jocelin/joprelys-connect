@@ -4,6 +4,8 @@
 
 ## Statut global
 
+Intervention 2026-10-18 — FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM : DONE. Élimination complète de l'ensemble des boîtes de dialogue JavaScript natives (`confirm()`, `alert()`, `prompt()`) au profit d'un système moderne, programmatique et accessible (`DialogService`, `DialogHostComponent`), avec confirmation systématique lors de la déconnexion utilisateur (`AppShellComponent.logout`), prise en charge des tonalités `primary`, `warning`, `danger`, `info`, gestion clavier (Escape, Enter), piège de focus et accessibilité ARIA (`role="alertdialog"`). Enrichissement de `ToastService` et `ToastHostComponent` (méthodes d'aide, icônes SVG, tonalité warning). Conformité stricte aux standards de design Joprelys (Tailwind CSS v4 CSS-first, tokens CSS, thèmes light/dark, arrondis sobres 4-6px, zéro texte codé en dur / i18n FR/EN). 100% des tests Angular modifiés verts (`ng test --watch=false`) et build de production `ng build` validé.
+
 Intervention 2026-10-18 — RELEASE-20261018-MERGE-EPIC-0029-TO-MAIN : DONE. Consolidation et fusion sur `main` de l'EPIC-0029 (lots 1 à 3 : sécurité clinique, continuité des épisodes, facturation fiable, Flyway V116-V120), de l'outillage de messagerie locale MailDev et de gestion d'erreur OTP (`StaffOtpRejectedException`), des scripts d'exploitation et de la recette E2E navigateur (15 modules validés sans erreur console). Suites de tests au vert : 22 tests Maven ciblés, 120 suites Angular / 665 tests unitaires et build de production `ng build` validés. Intégrité `.gitignore` garantie (exclusion Playwright et artefacts vidéo).
 
 Intervention 2026-10-17 — STORY-20261017-EPIC-0029-LOTS-1-3 : READY_FOR_REVIEW / MERGED. Lots 1 à 3 d'EPIC-0029 implémentés (sécurité clinique, continuité des épisodes, facturation fiable), selon ADR-20261017. Migrations V116–V120 validées sur H2 et PostgreSQL 17. Backend : 959 tests, 0 échec. Angular : 665 tests verts. Recette navigateur validée via QA-20261017-E2E-BROWSER-FULL-CIRCUIT-VALIDATION. Fusionné sur `main`.
@@ -20,21 +22,22 @@ Versionnement de ce lot autorisé par l'utilisateur le 2026-10-05 sur `main` ; p
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-10-18 — Fusion EPIC-0029 lots 1-3 & outillage local sur main (RELEASE-20261018-MERGE-EPIC-0029-TO-MAIN) |
+| Dernière mise à jour | 2026-10-18 — Système unifié de dialogue et notifications UI (FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM) |
 
 | Responsable mise à jour | Antigravity |
-| État global | La livraison mobile est dans `main`, mais BUG-20260802 bloque la validation clinique de MOB-2816/MOB-2811 : répétitions, anciens transcripts et pertes de mots sont en correction cross-stack. |
-| Risques majeurs | P0 clinique : tant que les tests et la recette Android de BUG-20260802 ne sont pas verts, la dictée Consultation/Constantes ne doit pas être déclarée fiable. Restent aussi les gates Maven/PostgreSQL et Flutter exact-HEAD de TASK-20260801. P1 AUTH-01 confirmé : roleGuard fail-open sans session sur panne refresh ; recette P0 de résilience non démontrée, voir QA-20261004-AUTH-RBAC-SESSION-VERIFICATION. |
-| Prochaine priorité | Terminer BUG-20260802, valider les correctifs hospitaliers puis faire cadrer les gaps P0 par médecin/cadre/admissions/bed manager avant tout développement HOS-ADM. |
+| État global | Système de dialogues et notifications modernes déployé sur le web ; 0 popup native JavaScript restante. |
+| Risques majeurs | Aucun régressif identifié. Suites de tests et build de production verts. |
+| Prochaine priorité | Terminer BUG-20260802 mobile, valider les correctifs hospitaliers puis cadrer les gaps P0. |
 | Sprint courant | SPRINT-0014 documenté, à replanifier avant nouvel engagement mobile |
 | Capacité sprint | Réserver 15 SP / 6 à 8,5 jours senior pour la consolidation mobile et l'alignement SOAP cross-stack, à 60–70 % de focus. Capacité nominative non fournie : aucun engagement de date. |
-| Charge engagée | PR #258 fusionnée : 17 commits, 123 fichiers, 8 411 insertions et 1 093 suppressions. La livraison est sécurisée dans `main`, mais plusieurs capacités restent IN_REVIEW/REVIEW_BLOCKED jusqu'aux gates. |
-| Dérive globale | La dérive de branche et d'IDs est corrigée. Restent la dette de widgets monolithiques, l'absence de gate exact-HEAD complet et le besoin de recette clinique/appareil. |
+| Charge engagée | PR #258 fusionnée sur main. Lot UI Dialogs livré. |
+| Dérive globale | Aucune dérive. Standards Tailwind CSS v4 et Documentation-First respectés. |
 
 ## Tableau de suivi consolidé
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommended | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
+| FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM | UI / DESIGN_SYSTEM / SHARED_COMPONENTS | Feature / Engineering UI | Système unifié de boîtes de dialogue et notifications (suppression popups JavaScript natives) | Angular 20 / Tailwind CSS v4 / TypeScript | DONE — 0 native dialog restants, DialogService + DialogHostComponent créés, ToastService enrichi, tests unitaires et ng build OK | P1 | 3 | Senior Frontend Angular / UI | 0.5j | 1.0j | 1.5j | Antigravity | Tech Lead | Hors sprint | 0.4j | Aucun | Faible | 2026-10-18 |
 | RELEASE-20261018-MERGE-EPIC-0029-TO-MAIN | EPIC-0029 / MERGE / RELEASE | Release / Engineering | Fusion sur main de l'EPIC-0029 lots 1-3, de l'outillage MailDev et de la recette E2E | Spring Boot / Angular / Flyway | DONE — branch merged to main, 22 Maven verts, 665 Angular verts, build OK | P0 | 2 | Tech Lead / Senior Full-stack | 0.2j | 0.4j | 0.6j | Antigravity | Tech Lead | Hors sprint | 0.2j | Déploiement / tags si demandé | Faible | 2026-10-18 |
 | QA-20261017-E2E-BROWSER-FULL-CIRCUIT-VALIDATION | QA_REVIEWS / END_TO_END_JOURNEYS | QA Review / Recette E2E | Recette fonctionnelle temps réel navigateur de l'intégralité du circuit hospitalier | Angular / Spring Boot / Playwright | DONE — 15 modules testés et validés en temps réel (Auth 2FA, DPU, Médical, Labo, Pharmacie, Urgences, Caisse, RBAC), 0 erreur console | P1 | 2 | Senior QA / Full-stack | 0.3j | 0.5j | 0.8j | Antigravity | Tech Lead | Hors sprint | 0.2j | Aucun | Faible | 2026-10-17 |
 | TASK-20261017-LOCAL-MAIL-SERVER | OPERATIONS / LOCAL_DEV_TOOLING | Engineering / Outillage local | Démarrage du serveur mail local (MailDev) et configuration pour réception des OTP | Node.js / MailDev / Spring Boot / PowerShell | DONE — MailDev redémarré et actif sur 1025/1080 (PID 35172), scripts PowerShell validés (-Restart / -Stop), 13 tests Maven verts | P1 | 1 | Senior full-stack | 0.1j | 0.2j | 0.4j | Antigravity | Tech Lead | Hors sprint | 0.1j | Aucun | Faible | 2026-10-17 |

@@ -629,6 +629,16 @@ body {
     background: var(--brand-danger-muted);
   }
 
+  .ui-button-warning {
+    background: var(--brand-warning-subtle);
+    border: 1px solid var(--brand-warning-border);
+    color: var(--brand-warning-text);
+  }
+
+  .ui-button-warning:hover:not(:disabled) {
+    background: var(--brand-warning-muted);
+  }
+
   /* ---- Links ---- */
   .ui-link {
     color: var(--brand-primary);

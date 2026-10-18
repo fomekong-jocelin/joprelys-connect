@@ -9,6 +9,7 @@ import { AppLogoComponent } from '../ui/app-logo.component';
 import { BreadcrumbComponent } from '../ui/breadcrumb.component';
 import { PatientPortalService } from '../../patient/portal/services/patient-portal.service';
 import { AppShellNavComponent } from './app-shell-nav.component';
+import { DialogService } from '../ui/dialog.service';
 
 @Component({
   selector: 'app-shell',
@@ -293,6 +294,7 @@ export class AppShellComponent {
   readonly i18n = inject(I18nService);
   private readonly themeService = inject(ThemeService);
   private readonly patientPortalService = inject(PatientPortalService);
+  private readonly dialog = inject(DialogService);
 
   readonly unreadNotificationCount = signal<number>(0);
 
@@ -386,7 +388,18 @@ export class AppShellComponent {
     return value.split(',').map((role) => role.trim()).includes('PATIENT');
   }
 
-  logout(): void {
+  async logout(): Promise<void> {
+    const confirmed = await this.dialog.confirm({
+      title: this.i18n.t('shell.logout.confirmTitle'),
+      message: this.i18n.t('shell.logout.confirmMessage'),
+      confirmLabel: this.i18n.t('shell.logout.confirmAction'),
+      cancelLabel: this.i18n.t('common.cancel'),
+      tone: 'warning',
+    });
+    if (!confirmed) {
+      return;
+    }
+
     this.authApi.logout().subscribe({
       next: () => this.router.navigate(['/']),
       error: () => this.router.navigate(['/']),

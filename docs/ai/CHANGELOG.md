@@ -8,6 +8,22 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM — Système unifié de dialogues et notifications (suppression des fenêtres JavaScript natives)** :
+  - Éradication de la totalité des boîtes de dialogue et popups natives du navigateur (`window.confirm()`, `window.alert()`, `window.prompt()`) dans l'application web Angular.
+  - Création de `DialogService` (`providedIn: 'root'`) fournissant les méthodes programmatiques `confirm(options): Promise<boolean>` et `alert(options): Promise<void>`, avec gestion des tonalités (`primary`, `warning`, `danger`, `info`), titres et libellés de boutons personnalisables.
+  - Création du composant global `DialogHostComponent` monté dans `App` (`app.html`), respectant l'accessibilité ARIA (`role="alertdialog"`), le piège de focus et la navigation clavier (fermeture sur `Escape`, validation sur `Enter`).
+  - Enrichissement de `ToastService` et `ToastHostComponent` : ajout de la tonalité `warning`, icônes SVG d'état (`check-circle`, `exclamation-circle`, `exclamation-triangle`, `info-circle`), et méthodes d'aide directes (`success()`, `error()`, `warning()`, `info()`).
+  - Ajout du style de bouton `.ui-button-warning` dans `styles.css`.
+  - Refactorisation de l'ensemble des appels natifs vers `DialogService` ou `ToastService` :
+    - Confirmation de reprise de patient en consultation dans la file d'attente (`visit-details-drawer.component.ts`) avec tonalité d'avertissement et message explicatif (résolution directe de la capture d'écran utilisateur).
+    - Confirmation de révocation d'ordonnance (`consultation-prescription.facade.ts`).
+    - Confirmation de rejet de pré-enregistrement (`pre-registrations-list.component.ts`).
+    - Suppression d'allergie et d'antécédent médical (`patient-medical-info.component.ts`).
+    - Confirmation systématique lors de la déconnexion utilisateur (`AppShellComponent.logout`) avec tonalité d'avertissement (`warning`) et libellés i18n FR/EN, prévenant toute clôture involontaire de session.
+    - Remplacement des 19 occurrences de `alert()` dans les onglets et pages portail patient par des notifications `ToastService.error(...)`.
+  - Conformité stricte aux standards de design Joprelys : Tailwind CSS v4 CSS-first, tokens CSS, thèmes light/dark, arrondis sobres 4-6px, zéro texte codé en dur (clés i18n FR/EN).
+  - Tests unitaires Vitest ajoutés et mis à jour (`app-shell.component.spec.ts`, `dialog.service.spec.ts`... 100% verts), build de production `ng build` validé.
+
 - **RELEASE-20261018-MERGE-EPIC-0029-TO-MAIN — Fusion d'EPIC-0029, outillage local et validation E2E sur main** :
   - Consolidation des modifications d'authentification OTP explicite (`StaffOtpRejectedException`), de la configuration de développement local MailDev (`application.yml` / `application-dev.yml` sur `localhost:1025`) et de production (`application-prod.yml`), des scripts d'exploitation PowerShell (`scripts/start-local-mail-server.ps1`, `scripts/get-latest-otp.ps1`) et de la recette E2E navigateur (15 modules validés avec 0 erreur console).
   - Fusion de la branche `feature/epic-0029-journey-coherence` (lots 1 à 3 d'EPIC-0029, migrations Flyway V116 à V120) dans la branche principale `main`.

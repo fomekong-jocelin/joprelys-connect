@@ -7,6 +7,7 @@ import { PatientAllergy, PatientMedicalHistory, PatientVaccination } from './pat
 import { EmergencyApiService } from '../emergency/emergency-api.service';
 import { EmergencyRecord } from '../emergency/emergency.models';
 import { IconComponent } from '../shared/ui/icon.component';
+import { DialogService } from '../shared/ui/dialog.service';
 
 @Component({
   selector: 'app-patient-medical-info',
@@ -464,6 +465,7 @@ export class PatientMedicalInfoComponent implements OnInit {
   private readonly patientApi = inject(PatientApiService);
   private readonly emergencyApi = inject(EmergencyApiService);
   private readonly i18n = inject(I18nService);
+  private readonly dialog = inject(DialogService);
 
   readonly t = (key: string) => this.i18n.t(key);
 
@@ -607,9 +609,16 @@ export class PatientMedicalInfoComponent implements OnInit {
     });
   }
 
-  deleteAllergy(allergy: PatientAllergy): void {
+  async deleteAllergy(allergy: PatientAllergy): Promise<void> {
     if (!allergy.id) return;
-    if (confirm(this.i18n.t('patients.medicalInfo.allergies.deleteConfirm'))) {
+    const confirmed = await this.dialog.confirm({
+      title: this.i18n.t('patients.medicalInfo.allergies.deleteConfirm'),
+      message: this.i18n.t('patients.medicalInfo.allergies.deleteConfirm'),
+      confirmLabel: this.i18n.t('common.delete', 'Supprimer'),
+      cancelLabel: this.i18n.t('common.cancel', 'Annuler'),
+      tone: 'danger',
+    });
+    if (confirmed) {
       this.patientApi.deleteAllergy(this.patientId, allergy.id).subscribe({
         next: () => this.loadAllergies()
       });
@@ -649,9 +658,16 @@ export class PatientMedicalInfoComponent implements OnInit {
     });
   }
 
-  deleteHistory(item: PatientMedicalHistory): void {
+  async deleteHistory(item: PatientMedicalHistory): Promise<void> {
     if (!item.id) return;
-    if (confirm(this.i18n.t('patients.medicalInfo.history.deleteConfirm'))) {
+    const confirmed = await this.dialog.confirm({
+      title: this.i18n.t('patients.medicalInfo.history.deleteConfirm'),
+      message: this.i18n.t('patients.medicalInfo.history.deleteConfirm'),
+      confirmLabel: this.i18n.t('common.delete', 'Supprimer'),
+      cancelLabel: this.i18n.t('common.cancel', 'Annuler'),
+      tone: 'danger',
+    });
+    if (confirmed) {
       this.patientApi.deleteMedicalHistory(this.patientId, item.id).subscribe({
         next: () => this.loadHistory()
       });

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ExternalAccessResponse, PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 const ACCESS_SCOPES = [
   { key: 'medical_records' },
@@ -169,6 +170,7 @@ const ACCESS_SCOPES = [
 export class PatientRequestsListComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   readonly requests = signal<ExternalAccessResponse[]>([]);
   readonly isLoading = signal<boolean>(true);
@@ -219,7 +221,7 @@ export class PatientRequestsListComponent implements OnInit {
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.access.requests.approveError'));
+        this.toasts.error(this.i18n.t('patient.access.requests.approveError'));
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       }
     });
@@ -246,7 +248,7 @@ export class PatientRequestsListComponent implements OnInit {
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.access.requests.rejectError'));
+        this.toasts.error(this.i18n.t('patient.access.requests.rejectError'));
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       }
     });
@@ -261,7 +263,7 @@ export class PatientRequestsListComponent implements OnInit {
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.access.requests.revokeError'));
+        this.toasts.error(this.i18n.t('patient.access.requests.revokeError'));
         this.loadingActions.update(prev => ({ ...prev, [id]: false }));
       }
     });

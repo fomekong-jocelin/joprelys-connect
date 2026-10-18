@@ -5,6 +5,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { of } from 'rxjs';
 import { signal } from '@angular/core';
 import { EmergencyApiService } from '../emergency/emergency-api.service';
+import { DialogService } from '../shared/ui/dialog.service';
 
 describe('PatientMedicalInfoComponent', () => {
   let component: PatientMedicalInfoComponent;
@@ -89,11 +90,12 @@ describe('PatientMedicalInfoComponent', () => {
     expect(component.showAllergyModal()).toBe(false);
   });
 
-  it('should soft-delete allergy when confirmed', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('should soft-delete allergy when confirmed', async () => {
+    const dialog = TestBed.inject(DialogService);
+    vi.spyOn(dialog, 'confirm').mockResolvedValue(true);
 
     const mockAllergy = { id: 'all-1', substance: 'Pénicilline', severity: 'HIGH' as const, status: 'ACTIVE' as const, patientId: 'patient-123' };
-    component.deleteAllergy(mockAllergy);
+    await component.deleteAllergy(mockAllergy);
 
     expect(mockApi.deleteAllergy).toHaveBeenCalledWith('patient-123', 'all-1');
   });
@@ -139,11 +141,12 @@ describe('PatientMedicalInfoComponent', () => {
     expect(component.showHistoryModal()).toBe(false);
   });
 
-  it('should soft-delete medical history when confirmed', () => {
-    vi.spyOn(window, 'confirm').mockReturnValue(true);
+  it('should soft-delete medical history when confirmed', async () => {
+    const dialog = TestBed.inject(DialogService);
+    vi.spyOn(dialog, 'confirm').mockResolvedValue(true);
 
     const mockHistory = { id: 'hist-1', patientId: 'patient-123', category: 'MEDICAL' as const, description: 'Diabète', isOngoing: true, important: true };
-    component.deleteHistory(mockHistory);
+    await component.deleteHistory(mockHistory);
 
     expect(mockApi.deleteMedicalHistory).toHaveBeenCalledWith('patient-123', 'hist-1');
   });

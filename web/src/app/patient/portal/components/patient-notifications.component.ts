@@ -2,6 +2,7 @@ import { Component, inject, OnInit, signal, Output, EventEmitter } from '@angula
 import { CommonModule } from '@angular/common';
 import { PatientNotification, PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-patient-notifications',
@@ -94,6 +95,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 export class PatientNotificationsComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   @Output() countUpdated = new EventEmitter<number>();
 
@@ -131,7 +133,7 @@ export class PatientNotificationsComponent implements OnInit {
         this.countUpdated.emit(this.unreadCount());
       },
       error: () => {
-        alert(this.i18n.t('patient.notifications.updateError'));
+        this.toasts.error(this.i18n.t('patient.notifications.updateError'));
       }
     });
   }
@@ -143,7 +145,7 @@ export class PatientNotificationsComponent implements OnInit {
         this.countUpdated.emit(0);
       },
       error: () => {
-        alert(this.i18n.t('patient.notifications.updateError'));
+        this.toasts.error(this.i18n.t('patient.notifications.updateError'));
       }
     });
   }

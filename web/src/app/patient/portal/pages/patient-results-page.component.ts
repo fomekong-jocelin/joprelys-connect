@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { AppShellComponent } from '../../../shared/layout/app-shell.component';
 import { PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 interface GroupedResult {
   resultNumber: string;
@@ -162,6 +163,7 @@ interface GroupedResult {
 export class PatientResultsPageComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   readonly isLoading = signal(false);
   readonly error = signal('');
@@ -242,7 +244,7 @@ export class PatientResultsPageComponent implements OnInit {
         a.click();
         window.URL.revokeObjectURL(url);
       },
-      error: () => alert(this.t('patient.results.downloadError'))
+      error: () => this.toasts.error(this.t('patient.results.downloadError'))
     });
   }
 
@@ -257,7 +259,7 @@ export class PatientResultsPageComponent implements OnInit {
         a.click();
         window.URL.revokeObjectURL(url);
       },
-      error: () => alert(this.t('patient.results.exportError'))
+      error: () => this.toasts.error(this.t('patient.results.exportError'))
     });
   }
 

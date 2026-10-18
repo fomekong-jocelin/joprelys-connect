@@ -7,6 +7,7 @@ import {
   PatientPortalService
 } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
+import { ToastService } from '../../../shared/ui/toast.service';
 
 const ALL_SCOPES = [
   { key: 'medical_records' },
@@ -306,6 +307,7 @@ const CONSENT_STATUSES = ['REQUESTED', 'APPROVED', 'ACTIVE', 'REJECTED', 'EXPIRE
 export class PatientConsentsListComponent implements OnInit {
   private readonly portalService = inject(PatientPortalService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
   // Onglet actif
   readonly activeTab = signal<'active' | 'history'>('active');
@@ -359,7 +361,7 @@ export class PatientConsentsListComponent implements OnInit {
         );
       },
       error: () => {
-        alert(this.i18n.t('patient.consent.toggleError'));
+        this.toasts.error(this.i18n.t('patient.consent.toggleError'));
       }
     });
   }
@@ -411,7 +413,7 @@ export class PatientConsentsListComponent implements OnInit {
       },
       error: () => {
         this.savingScopes.update(prev => ({ ...prev, [consent.organizationId]: false }));
-        alert(this.i18n.t('patient.consent.saveScopesError'));
+        this.toasts.error(this.i18n.t('patient.consent.saveScopesError'));
       }
     });
   }
@@ -445,7 +447,7 @@ export class PatientConsentsListComponent implements OnInit {
         this.revokingMap.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.consent.revokeError'));
+        this.toasts.error(this.i18n.t('patient.consent.revokeError'));
         this.revokingMap.update(prev => ({ ...prev, [id]: false }));
       }
     });
@@ -459,7 +461,7 @@ export class PatientConsentsListComponent implements OnInit {
         this.revokingMap.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.consent.approveError'));
+        this.toasts.error(this.i18n.t('patient.consent.approveError'));
         this.revokingMap.update(prev => ({ ...prev, [id]: false }));
       }
     });
@@ -473,7 +475,7 @@ export class PatientConsentsListComponent implements OnInit {
         this.revokingMap.update(prev => ({ ...prev, [id]: false }));
       },
       error: () => {
-        alert(this.i18n.t('patient.consent.rejectError'));
+        this.toasts.error(this.i18n.t('patient.consent.rejectError'));
         this.revokingMap.update(prev => ({ ...prev, [id]: false }));
       }
     });

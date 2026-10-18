@@ -7,6 +7,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { Consultation } from '../../consultation/consultation.models';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
+import { ToastService } from '../../shared/ui/toast.service';
 
 @Component({
   selector: 'app-patient-consultations-tab',
@@ -385,6 +386,7 @@ export class PatientConsultationsTabComponent implements OnInit {
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly rbacApi = inject(RbacApiService);
   readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
 
 
   readonly consultationHistory = signal<Consultation[]>([]);
@@ -481,7 +483,7 @@ export class PatientConsultationsTabComponent implements OnInit {
       },
       error: (err) => {
         consultation.prescriptionTransmissionStatus = 'FAILED';
-        alert(err.error?.detail || this.i18n.t('patient.prescription.transmitError'));
+        this.toasts.error(err.error?.detail || this.i18n.t('patient.prescription.transmitError'));
       }
     });
   }

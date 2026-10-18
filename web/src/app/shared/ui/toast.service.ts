@@ -1,6 +1,6 @@
 import { Injectable, signal } from '@angular/core';
 
-export type ToastTone = 'success' | 'info' | 'error';
+export type ToastTone = 'success' | 'info' | 'warning' | 'error';
 
 export interface Toast {
   id: number;
@@ -8,9 +8,9 @@ export interface Toast {
   message: string;
 }
 
-const DEFAULT_DURATION_MS = 6000;
+const DEFAULT_DURATION_MS = 5000;
 
-/** Messages de confirmation éphémères, visibles même après une navigation. */
+/** Messages de notification et confirmation éphémères, visibles même après une navigation. */
 @Injectable({ providedIn: 'root' })
 export class ToastService {
   private nextId = 1;
@@ -20,6 +20,22 @@ export class ToastService {
     const toast: Toast = { id: this.nextId++, tone, message };
     this.toasts.update((items) => [...items, toast]);
     if (durationMs > 0) setTimeout(() => this.dismiss(toast.id), durationMs);
+  }
+
+  success(message: string, durationMs = DEFAULT_DURATION_MS): void {
+    this.show(message, 'success', durationMs);
+  }
+
+  error(message: string, durationMs = DEFAULT_DURATION_MS): void {
+    this.show(message, 'error', durationMs);
+  }
+
+  warning(message: string, durationMs = DEFAULT_DURATION_MS): void {
+    this.show(message, 'warning', durationMs);
+  }
+
+  info(message: string, durationMs = DEFAULT_DURATION_MS): void {
+    this.show(message, 'info', durationMs);
   }
 
   dismiss(id: number): void {

@@ -3,11 +3,13 @@ import { of } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { Visit } from '../../visit/visit.models';
 import { VisitApiService } from '../../visit/visit-api.service';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { VisitDetailsDrawerComponent } from './visit-details-drawer.component';
 
 describe('VisitDetailsDrawerComponent', () => {
   let fixture: ComponentFixture<VisitDetailsDrawerComponent>;
   let component: VisitDetailsDrawerComponent;
+  let dialogSpy: { confirm: ReturnType<typeof vi.fn> };
 
   const base: Visit = {
     id: 'visit-1',
@@ -22,11 +24,13 @@ describe('VisitDetailsDrawerComponent', () => {
   };
 
   beforeEach(async () => {
+    dialogSpy = { confirm: vi.fn().mockResolvedValue(true) };
     await TestBed.configureTestingModule({
       imports: [VisitDetailsDrawerComponent],
       providers: [
         { provide: I18nService, useValue: { t: (key: string) => key } },
         { provide: VisitApiService, useValue: { getVitalsHistory: vi.fn().mockReturnValue(of([])) } },
+        { provide: DialogService, useValue: dialogSpy },
       ],
     }).compileComponents();
     fixture = TestBed.createComponent(VisitDetailsDrawerComponent);
@@ -55,18 +59,22 @@ describe('VisitDetailsDrawerComponent', () => {
     expect(fixture.nativeElement.textContent).toContain('queue.action.release');
   });
 
-  it('asks for confirmation before taking over a colleague patient', () => {
+  it('asks for confirmation before taking over a colleague patient', async () => {
     fixture.componentRef.setInput('visit', {
       ...base, careStage: 'EN_CONSULTATION', consultingPractitionerId: 'doctor-2', consultingPractitionerName: 'Dr Beta',
     });
     fixture.detectChanges();
     const emitted: boolean[] = [];
     component.startConsultation.subscribe((takeOver) => emitted.push(takeOver));
-    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true);
 
-    component.requestStart();
+    await component.requestStart();
 
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(dialogSpy.confirm).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tone: 'warning',
+        confirmLabel: 'queue.action.takeOver',
+      }),
+    );
     expect(emitted).toEqual([true]);
     expect(component.startLabel()).toBe('queue.action.takeOver');
   });
