@@ -48,6 +48,16 @@ describe('application route role boundaries', () => {
     expect(interopRoute?.canActivate).toContain(roleGuard);
     expect(interopRoute?.data?.['expectedPermissions']).toContain('ORGANIZATION_MANAGE');
   });
+
+  it('should end with an unguarded wildcard 404 route and expose the server unavailable state publicly', () => {
+    const wildcard = routes[routes.length - 1];
+    expect(wildcard.path).toBe('**');
+    expect(wildcard.loadComponent).toBeDefined();
+    expect(wildcard.canActivate).toBeUndefined();
+    const serverUnavailable = routes.find((route) => route.path === 'server-unavailable');
+    expect(serverUnavailable?.loadComponent).toBeDefined();
+    expect(serverUnavailable?.canActivate).toBeUndefined();
+  });
 });
 
 function flatten(source: Route[]): Route[] {

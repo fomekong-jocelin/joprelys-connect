@@ -1,0 +1,72 @@
+{
+  "clinicalSafety.allergies.unverified": "Allergies non vérifiées : le chargement a échoué.",
+  "clinicalSafety.allergies.unverifiedShort": "Allergies non vérifiées",
+  "clinicalSafety.allergies.loading": "Vérification des allergies…",
+  "clinicalSafety.history.unverified": "Antécédents non vérifiés : le chargement a échoué.",
+  "clinicalSafety.history.unverifiedShort": "Antécédents non vérifiés",
+  "clinicalSafety.patient.unverified": "Identité du patient non chargée : le chargement a échoué.",
+
+  "consultation.safety.signBlocked": "La clôture est indisponible tant que les allergies du patient n'ont pas été vérifiées. Relancez le chargement ci-dessus.",
+  "consultation.safety.prescriptionBlocked": "Ordonnance verrouillée tant que les allergies du patient n'ont pas été vérifiées.",
+  "consultation.closeConfirm.title": "Valider et clôturer la visite ?",
+  "consultation.closeConfirm.message": "Patient : {patient}\nDiagnostic : {diagnosis}\nLignes d'ordonnance : {prescriptionCount}\nExamens demandés : {examCount}\n\nLa consultation sera verrouillée et la visite clôturée.",
+  "consultation.closeConfirm.action": "Valider et clôturer",
+
+  "notFound.code": "Erreur 404",
+  "notFound.title": "Page introuvable",
+  "notFound.message": "Cette adresse n'existe pas ou n'est plus disponible. Vérifiez le lien ou revenez à votre espace.",
+  "notFound.backToDashboard": "Retour au tableau de bord",
+  "notFound.backToHome": "Retour à l'accueil",
+
+  "serverUnavailable.title": "Connexion au serveur impossible",
+  "serverUnavailable.message": "Le serveur ne répond pas pour le moment. Vérifiez votre connexion réseau puis réessayez : vos droits d'accès n'ont pas été modifiés.",
+  "serverUnavailable.retrying": "Nouvelle tentative…",
+
+  "patient.detail.activeVisitLoadError": "Impossible de vérifier les visites en cours de ce patient. Rechargez la page avant d'ouvrir une nouvelle visite.",
+  "patient.consultations.title": "Historique médical et consultations",
+  "patient.consultations.loading": "Chargement de l'historique…",
+  "patient.consultations.empty": "Aucun antécédent de consultation enregistré.",
+  "patient.consultations.loadError": "Historique des consultations non chargé : le chargement a échoué.",
+  "patient.labOrders.loading": "Chargement des données de laboratoire…",
+  "patient.labOrders.empty": "Aucune demande d'examen enregistrée.",
+  "patient.labOrders.loadError": "Données de laboratoire incomplètes : le chargement a échoué.",
+
+  "spatial.loadError.spaces": "Impossible de charger les espaces d'hospitalisation.",
+  "spatial.loadError.occupancy": "Impossible de charger l'occupation de cet espace.",
+  "spatial.bedAction.error": "L'action sur le lit a échoué. Son état n'a pas été modifié.",
+  "spatial.closeBed.confirmTitle": "Fermer le lit {bed} ?",
+  "spatial.closeBed.confirmMessage": "Espace : {space}\nLe lit {bed} ne pourra plus recevoir de patient.\nLits disponibles après fermeture : {available}",
+  "spatial.closeBed.confirmAction": "Fermer le lit",
+
+  "admission.selectPlaceholder": "Sélectionner…",
+  "admission.requiredTriage": "Choisissez le niveau de tri et l'état hémodynamique du patient.",
+
+  "pharmacy.dispenseConfirm.title": "Confirmer la délivrance ?",
+  "pharmacy.dispenseConfirm.message": "Ordonnance : {number}\nPatient : {patient}\nPharmacie : {pharmacy}\n\n{lines}\n\nLa délivrance est définitive.",
+  "pharmacy.dispenseConfirm.line": "• {drug} : {quantity}",
+  "pharmacy.dispenseConfirm.substitution": "(substitué par {substitute})",
+  "pharmacy.dispenseConfirm.action": "Confirmer la délivrance",
+
+  "lab.validateConfirm.title": "Valider et transmettre les résultats ?",
+  "lab.validateConfirm.message": "Demande : {number}\nPatient : {patient}\nExamen : {exam}\nStatut : {status}\nValidé par : {validator}\n\n{lines}\n\nLes résultats seront transmis au dossier du patient.",
+  "lab.validateConfirm.line": "• {analyte} : {value} {unit} ({interpretation})",
+  "lab.validateConfirm.action": "Valider et transmettre",
+
+  "emergency.stabilize.submit": "Enregistrer l'orientation",
+
+  "billing.creditNotes.loadError": "Impossible de charger les avoirs de cette facture.",
+  "billing.receivables.loadError": "Impossible de charger les créances de cette facture.",
+  "billing.deposit.loadError": "Impossible de charger les acomptes du patient.",
+  "billing.deposit.queueLoadError": "Impossible de charger les factures à encaisser.",
+
+  "reception.error.loadReferences": "Impossible de charger les listes de patients ou de personnel : le formulaire peut être incomplet.",
+
+  "shell.nav.accessLoadError": "Vos droits d'accès n'ont pas pu être chargés : le menu peut être incomplet.",
+
+  "patients.medicalInfo.history.editStatus": "Modifier le statut (en cours / terminé)",
+  "common.reject": "Rejeter",
+  "common.delete": "Supprimer",
+  "preRegistrations.rejectTitle": "Rejeter la demande ?",
+  "duplicates.primarySelection": "Dossier à conserver comme principal",
+  "rbac.users.selfReadOnly": "Vous ne pouvez pas modifier vos propres rôles : un autre administrateur de l’établissement doit le faire."
+}

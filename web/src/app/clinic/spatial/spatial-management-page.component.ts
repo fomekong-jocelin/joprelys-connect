@@ -2,10 +2,14 @@ import { CommonModule } from '@angular/common';
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { RouterLink } from '@angular/router';
+import { Observable, finalize } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { interpolate } from '../../core/i18n/interpolate';
 import { SpatialApiService } from '../../patient/spatial-api.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { IconComponent } from '../../shared/ui/icon.component';
+import { LoadErrorComponent } from '../../shared/ui/load-error.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { BedConfiguration, FacilitySpace, SpaceOccupancyView } from './spatial-configuration.models';
@@ -13,7 +17,7 @@ import { BedConfiguration, FacilitySpace, SpaceOccupancyView } from './spatial-c
 @Component({
   selector: 'app-spatial-management-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, IconComponent, AppShellComponent, PageHeaderComponent],
+  imports: [CommonModule, FormsModule, RouterLink, IconComponent, AppShellComponent, PageHeaderComponent, LoadErrorComponent],
   template: `
     <app-shell>
       <app-page-header
@@ -45,6 +49,8 @@ import { BedConfiguration, FacilitySpace, SpaceOccupancyView } from './spatial-c
       <main class="app-container min-w-0 overflow-x-hidden pb-12">
         @if (loading()) {
           <div class="flex items-center justify-center py-12"><div class="h-8 w-8 animate-spin rounded-full border-b-2 border-brand-cyan"></div></div>
+        } @else if (loadError(); as errorKey) {
+          <app-ui-load-error [message]="t(errorKey)" [testId]="'spatial-load-error'" (retry)="retryLoad()" />
         } @else if (spaces().length === 0) {
           <div class="ui-card-muted p-12 text-center">
             <app-ui-icon name="bed" class="mb-4 text-4xl text-brand-cyan" />
@@ -77,6 +83,9 @@ import { BedConfiguration, FacilitySpace, SpaceOccupancyView } from './spatial-c
                 <p class="text-[10px] font-bold uppercase tracking-wider text-brand-cyan">{{ t('spatial.beds.title', 'Lits') }}</p>
                 <h3 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ t('spatial.capacity.operationalStatus', 'État opérationnel') }}</h3>
               </div>
+              @if (bedActionError(); as actionError) {
+                <p class="ui-alert-danger mb-4 text-xs" role="alert" data-testid="bed-action-error">{{ actionError }}</p>
+              }
               <div class="grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                 @for (bed of current.beds; track bed.id) {
                   <article class="min-w-0 rounded-[var(--radius-brand-md)] border p-3 transition-all" [ngStyle]="getBedStyle(bed)">
@@ -92,18 +101,18 @@ import { BedConfiguration, FacilitySpace, SpaceOccupancyView } from './spatial-c
                     @if (bed.usageStatus !== 'OCCUPIED' && canOperateBed()) {
                       <div class="mt-3 flex flex-wrap justify-end gap-1 border-t border-[var(--app-border)]/40 pt-2">
                         @if (canManageCapacity()) {
-                          <button type="button" class="ui-button ui-button-secondary px-2 py-1 text-[10px]" (click)="changeBedCapacityStatus(bed.id, bed.capacityStatus === 'OPEN' ? 'CLOSED' : 'OPEN')">
+                          <button type="button" class="ui-button ui-button-secondary min-h-9 px-2 py-1 text-[10px]" [disabled]="pendingBedId() !== null" (click)="changeBedCapacityStatus(bed.id, bed.capacityStatus === 'OPEN' ? 'CLOSED' : 'OPEN')">
                             <app-ui-icon [name]="bed.capacityStatus === 'OPEN' ? 'x-mark' : 'check'" />
                             {{ t(bed.capacityStatus === 'OPEN' ? 'spatial.action.closeCapacity' : 'spatial.action.openCapacity', bed.capacityStatus === 'OPEN' ? 'Fermer' : 'Ouvrir') }}
                           </button>
                         }
                         @if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'READY') {
-                          @if (canManageCleaning()) { <button type="button" class="ui-button ui-button-secondary px-2 py-1 text-[10px]" (click)="changeBedCleaningStatus(bed.id, 'CLEANING')"><app-ui-icon name="arrow-path" /> {{ t('spatial.action.cleaning', 'Nettoyage') }}</button> }
-                          @if (canManageMaintenance()) { <button type="button" class="ui-button ui-button-secondary px-2 py-1 text-[10px]" (click)="changeBedMaintenanceStatus(bed.id, 'MAINTENANCE')"><app-ui-icon name="wrench" /> {{ t('spatial.action.maintenance', 'Maintenance') }}</button> }
+                          @if (canManageCleaning()) { <button type="button" class="ui-button ui-button-secondary min-h-9 px-2 py-1 text-[10px]" [disabled]="pendingBedId() !== null" (click)="changeBedCleaningStatus(bed.id, 'CLEANING')"><app-ui-icon name="arrow-path" /> {{ t('spatial.action.cleaning', 'Nettoyage') }}</button> }
+                          @if (canManageMaintenance()) { <button type="button" class="ui-button ui-button-secondary min-h-9 px-2 py-1 text-[10px]" [disabled]="pendingBedId() !== null" (click)="changeBedMaintenanceStatus(bed.id, 'MAINTENANCE')"><app-ui-icon name="wrench" /> {{ t('spatial.action.maintenance', 'Maintenance') }}</button> }
                         } @else if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'CLEANING' && canManageCleaning()) {
-                          <button type="button" class="ui-button ui-button-secondary px-2 py-1 text-[10px]" (click)="changeBedCleaningStatus(bed.id, 'READY')"><app-ui-icon name="check" /> {{ t('spatial.action.cleaningComplete', 'Nettoyage terminé') }}</button>
+                          <button type="button" class="ui-button ui-button-secondary min-h-9 px-2 py-1 text-[10px]" [disabled]="pendingBedId() !== null" (click)="changeBedCleaningStatus(bed.id, 'READY')"><app-ui-icon name="check" /> {{ t('spatial.action.cleaningComplete', 'Nettoyage terminé') }}</button>
                         } @else if (bed.capacityStatus === 'OPEN' && bed.readinessStatus === 'MAINTENANCE' && canManageMaintenance()) {
-                          <button type="button" class="ui-button ui-button-secondary px-2 py-1 text-[10px]" (click)="changeBedMaintenanceStatus(bed.id, 'READY')"><app-ui-icon name="check" /> {{ t('spatial.action.maintenanceComplete', 'Maintenance terminée') }}</button>
+                          <button type="button" class="ui-button ui-button-secondary min-h-9 px-2 py-1 text-[10px]" [disabled]="pendingBedId() !== null" (click)="changeBedMaintenanceStatus(bed.id, 'READY')"><app-ui-icon name="check" /> {{ t('spatial.action.maintenanceComplete', 'Maintenance terminée') }}</button>
                         }
                       </div>
                     }
@@ -121,12 +130,18 @@ export class SpatialManagementPageComponent implements OnInit {
   private readonly spatialApi = inject(SpatialApiService);
   private readonly i18n = inject(I18nService);
   private readonly rbacApi = inject(RbacApiService);
+  private readonly dialog = inject(DialogService);
 
   readonly t = (key: string, fallback?: string) => this.i18n.t(key, fallback);
   readonly spaces = signal<FacilitySpace[]>([]);
   readonly selectedSpaceId = signal('');
   readonly occupancy = signal<SpaceOccupancyView | null>(null);
   readonly loading = signal(false);
+  /** Clé i18n de l'échec de chargement : distinct de « aucun espace configuré ». */
+  readonly loadError = signal<string | null>(null);
+  /** Lit dont une action est en cours : empêche les doubles clics et les actions concurrentes. */
+  readonly pendingBedId = signal<string | null>(null);
+  readonly bedActionError = signal<string | null>(null);
 
   readonly occupancyRate = computed(() => {
     const current = this.occupancy();
@@ -140,6 +155,7 @@ export class SpatialManagementPageComponent implements OnInit {
 
   loadSpaces(): void {
     this.loading.set(true);
+    this.loadError.set(null);
     this.spatialApi.listInpatientSpaces().subscribe({
       next: (data) => {
         const inpatientSpaces = data.filter((space) => space.inpatientProfile && space.active);
@@ -152,12 +168,16 @@ export class SpatialManagementPageComponent implements OnInit {
           this.loading.set(false);
         }
       },
-      error: () => this.loading.set(false),
+      error: () => {
+        this.loadError.set('spatial.loadError.spaces');
+        this.loading.set(false);
+      },
     });
   }
 
   loadOccupancy(spaceId: string): void {
     this.loading.set(true);
+    this.loadError.set(null);
     this.spatialApi.getSpaceOccupancy(spaceId).subscribe({
       next: (data) => {
         this.occupancy.set(data);
@@ -165,9 +185,15 @@ export class SpatialManagementPageComponent implements OnInit {
       },
       error: () => {
         this.occupancy.set(null);
+        this.loadError.set('spatial.loadError.occupancy');
         this.loading.set(false);
       },
     });
+  }
+
+  retryLoad(): void {
+    if (this.spaces().length === 0) this.loadSpaces();
+    else this.onSpaceChange();
   }
 
   onSpaceChange(): void {
@@ -177,15 +203,18 @@ export class SpatialManagementPageComponent implements OnInit {
   }
 
   changeBedCleaningStatus(bedId: string, newStatus: 'CLEANING' | 'READY'): void {
-    this.spatialApi.updateBedCleaningStatus(bedId, newStatus).subscribe({ next: () => this.reloadSelectedSpace() });
+    this.runBedAction(bedId, () => this.spatialApi.updateBedCleaningStatus(bedId, newStatus));
   }
 
   changeBedMaintenanceStatus(bedId: string, newStatus: 'MAINTENANCE' | 'READY'): void {
-    this.spatialApi.updateBedMaintenanceStatus(bedId, newStatus).subscribe({ next: () => this.reloadSelectedSpace() });
+    this.runBedAction(bedId, () => this.spatialApi.updateBedMaintenanceStatus(bedId, newStatus));
   }
 
-  changeBedCapacityStatus(bedId: string, newStatus: 'OPEN' | 'CLOSED'): void {
-    this.spatialApi.updateBedCapacityStatus(bedId, newStatus).subscribe({ next: () => this.reloadSelectedSpace() });
+  /** La fermeture retire un lit de la capacité d'accueil : elle est confirmée avec un récapitulatif. */
+  async changeBedCapacityStatus(bedId: string, newStatus: 'OPEN' | 'CLOSED'): Promise<void> {
+    if (this.pendingBedId()) return;
+    if (newStatus === 'CLOSED' && !(await this.confirmBedClosure(bedId))) return;
+    this.runBedAction(bedId, () => this.spatialApi.updateBedCapacityStatus(bedId, newStatus));
   }
 
   canManageCapacity(): boolean { return this.rbacApi.hasPermission('BED_OPERATIONAL_STATUS_MANAGE'); }
@@ -218,6 +247,36 @@ export class SpatialManagementPageComponent implements OnInit {
     return status === 'OCCUPIED'
       ? { background: 'var(--brand-danger-muted)', color: 'var(--brand-danger-text)' }
       : { background: 'var(--app-surface-muted)', color: 'var(--text-secondary)' };
+  }
+
+  private confirmBedClosure(bedId: string): Promise<boolean> {
+    const current = this.occupancy();
+    const bed = current?.beds.find((candidate) => candidate.id === bedId);
+    const closesAvailableBed = bed?.usageStatus !== 'OCCUPIED' && bed?.readinessStatus === 'READY';
+    const params = {
+      bed: bed?.bedNumber ?? bedId,
+      space: current?.spaceName ?? '',
+      available: Math.max((current?.availableBeds ?? 0) - (closesAvailableBed ? 1 : 0), 0),
+    };
+    return this.dialog.confirm({
+      title: interpolate(this.t('spatial.closeBed.confirmTitle'), params),
+      message: interpolate(this.t('spatial.closeBed.confirmMessage'), params),
+      confirmLabel: this.t('spatial.closeBed.confirmAction'),
+      cancelLabel: this.t('common.cancel'),
+      tone: 'danger',
+      icon: 'bed',
+    });
+  }
+
+  private runBedAction(bedId: string, request: () => Observable<unknown>): void {
+    if (this.pendingBedId()) return;
+    this.pendingBedId.set(bedId);
+    this.bedActionError.set(null);
+    request().pipe(finalize(() => this.pendingBedId.set(null))).subscribe({
+      next: () => this.reloadSelectedSpace(),
+      error: (error: { error?: { detail?: string } }) =>
+        this.bedActionError.set(error?.error?.detail || this.t('spatial.bedAction.error')),
+    });
   }
 
   private reloadSelectedSpace(): void {

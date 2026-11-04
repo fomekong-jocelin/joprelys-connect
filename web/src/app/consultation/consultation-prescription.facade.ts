@@ -1,9 +1,10 @@
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
-import { Injectable, inject, signal } from '@angular/core';
+import { Injectable, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, Validators } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { ConsultationApiService } from './consultation-api.service';
 import { ConsultationFeedbackStore } from './consultation-feedback.store';
+import { ConsultationPatientContextStore } from './consultation-patient-context.store';
 import { DialogService } from '../shared/ui/dialog.service';
 import { Prescription } from './consultation.models';
 
@@ -17,6 +18,10 @@ export class ConsultationPrescriptionFacade {
   private readonly i18n = inject(I18nService);
   private readonly dialog = inject(DialogService);
   private readonly feedback = inject(ConsultationFeedbackStore);
+  private readonly patientContext = inject(ConsultationPatientContextStore);
+
+  /** Aucune ligne ni signature d'ordonnance sans allergies vérifiées (sécurité patient). */
+  readonly allergiesVerified = computed(() => this.patientContext.allergiesVerified());
 
   readonly current = signal<Prescription | null>(null);
   readonly items: FormArray = this.formBuilder.array([]);
@@ -65,7 +70,7 @@ export class ConsultationPrescriptionFacade {
   }
 
   addLine(): void {
-    if (!this.canWrite()) return;
+    if (!this.canWrite() || !this.allergiesVerified()) return;
     if (this.current()?.status !== undefined && this.current()?.status !== 'DRAFT') return;
     this.items.push(
       this.formBuilder.group({
@@ -90,7 +95,7 @@ export class ConsultationPrescriptionFacade {
   }
 
   finalize(): void {
-    if (!this.canSign()) return;
+    if (!this.canSign() || !this.allergiesVerified()) return;
     const prescription = this.current();
     if (!prescription) return;
     this.feedback.isLoading.set(true);

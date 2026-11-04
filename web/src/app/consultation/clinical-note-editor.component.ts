@@ -2,6 +2,7 @@ import { CommonModule } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { FormGroup, ReactiveFormsModule } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
+import { ClinicalDataLoadStatus } from '../patient/clinical-data-load-status';
 import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patient.models';
 
 @Component({
@@ -120,10 +121,16 @@ import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patie
                   </span>
                 }
               </div>
-            } @else {
+            } @else if (allergiesStatus === 'error') {
+              <p class="mt-1 text-xs font-bold leading-5 text-[var(--brand-danger-text)]" data-testid="note-allergies-unverified">
+                {{ i18n.t('clinicalSafety.allergies.unverifiedShort') }}
+              </p>
+            } @else if (allergiesStatus === 'loaded') {
               <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
                 {{ i18n.t('consultation.clinicalNote.noKnownAllergy') }}
               </p>
+            } @else {
+              <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">{{ i18n.t('clinicalSafety.allergies.loading') }}</p>
             }
           </div>
 
@@ -143,6 +150,10 @@ import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patie
             } @else if (patient?.medicalHistory) {
               <p class="mt-1 text-xs leading-5 text-[var(--text-secondary)]">
                 {{ patient?.medicalHistory }}
+              </p>
+            } @else if (historyStatus === 'error') {
+              <p class="mt-1 text-xs font-bold leading-5 text-[var(--brand-danger-text)]">
+                {{ i18n.t('clinicalSafety.history.unverifiedShort') }}
               </p>
             } @else {
               <p class="mt-1 text-xs leading-5 text-[var(--text-muted)]">
@@ -285,6 +296,9 @@ export class ClinicalNoteEditorComponent {
   @Input() visitReason = '';
   @Input() allergies: PatientAllergy[] = [];
   @Input() medicalHistory: PatientMedicalHistory[] = [];
+  /** Par défaut « chargé » pour les usages hors consultation qui fournissent déjà des listes vérifiées. */
+  @Input() allergiesStatus: ClinicalDataLoadStatus = 'loaded';
+  @Input() historyStatus: ClinicalDataLoadStatus = 'loaded';
 
   ageLabel(): string {
     const birthDate = this.patient?.birthDate;

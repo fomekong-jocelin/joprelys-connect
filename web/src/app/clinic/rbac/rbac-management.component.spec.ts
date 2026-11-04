@@ -148,29 +148,32 @@ describe('RbacManagementComponent', () => {
     expect(api.listUsers).toHaveBeenCalledWith(organization.id);
   });
 
-  it('should lock admin role for current user while allowing role expansion', () => {
-    api.replaceUserRoles.mockReturnValue(of({
-      ...users[0],
-      roles: ['ADMIN_CLINIQUE', 'CAISSIER'],
-    }));
-
+  it('should keep the current user roles read-only (no self-escalation)', () => {
     component.roles.set(roles);
     component.users.set(users);
     component.selectUser(users[0]);
     const before = component.selectedUserRoleIds();
 
-    // Admin role is disabled and cannot be removed
     expect(component.isRoleDisabled(users[0], roles[0])).toBe(true);
-    expect(component.isRoleDisabled(users[0], roles[1])).toBe(false);
-    component.toggleUserRole('role-admin');
+    expect(component.isRoleDisabled(users[0], roles[1])).toBe(true);
+    component.toggleUserRole('role-cashier');
     expect(component.selectedUserRoleIds()).toEqual(before);
 
-    // Can add additional roles
-    component.toggleUserRole('role-cashier');
-    expect(component.selectedUserRoleIds()).toEqual(['role-admin', 'role-cashier']);
-
     component.saveUserRoles();
-    expect(api.replaceUserRoles).toHaveBeenCalledWith('user-admin', ['role-admin', 'role-cashier'], undefined);
+    expect(api.replaceUserRoles).not.toHaveBeenCalled();
+  });
+
+  it('should let an administrator change the roles of another user', () => {
+    api.replaceUserRoles.mockReturnValue(of({ ...users[1], roles: ['CAISSIER', 'ADMIN_CLINIQUE'] }));
+    component.roles.set(roles);
+    component.users.set(users);
+    component.selectUser(users[1]);
+
+    expect(component.isRoleDisabled(users[1], roles[0])).toBe(false);
+    component.toggleUserRole('role-admin');
+    component.saveUserRoles();
+
+    expect(api.replaceUserRoles).toHaveBeenCalledWith(users[1].id, ['role-cashier', 'role-admin'], undefined);
   });
 
   it('should prepare an editable custom copy of a system role', () => {

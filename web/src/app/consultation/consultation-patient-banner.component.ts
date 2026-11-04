@@ -46,6 +46,11 @@ import { VitalAlertsComponent } from '../visit/vital-alerts.component';
             </ul>
           } @else if (allergiesLoaded()) {
             <span class="text-xs text-[var(--text-muted)]">{{ i18n.t('consultation.clinicalNote.noKnownAllergy') }}</span>
+          } @else if (allergiesFailed()) {
+            <span
+              class="rounded-[4px] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] px-1.5 py-0.5 text-[11px] font-bold text-[var(--brand-danger-text)]"
+              data-testid="banner-allergies-unverified"
+            >{{ i18n.t('clinicalSafety.allergies.unverifiedShort') }}</span>
           }
           <app-vital-alerts [alerts]="vitals()?.alerts ?? []" />
         </div>
@@ -59,6 +64,8 @@ export class ConsultationPatientBannerComponent {
   readonly patient = input<Patient | null>(null);
   readonly allergies = input<readonly PatientAllergy[]>([]);
   readonly allergiesLoaded = input(true);
+  /** Chargement en échec : « non vérifiées », jamais « aucune allergie connue ». */
+  readonly allergiesFailed = input(false);
   readonly vitals = input<Vitals | null>(null);
   readonly visitReason = input('');
 

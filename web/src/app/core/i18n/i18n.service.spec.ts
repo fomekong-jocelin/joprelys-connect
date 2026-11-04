@@ -51,4 +51,19 @@ describe('I18nService', () => {
     expect(service.t('admission.orientationOption.CONSULTATION')).toBe('Consultation générale / Examen');
     expect(service.t('admission.serviceSelectPlaceholder')).toBe('-- Sélectionner un service --');
   });
+
+  it("met à jour l'attribut lang du document au démarrage et au changement de langue", async () => {
+    const service = TestBed.inject(I18nService);
+    const http = TestBed.inject(HttpTestingController);
+
+    const initialization = service.init();
+    expect(document.documentElement.lang).toBe('fr');
+    http.match((request) => request.url.startsWith('/assets/i18n/')).forEach((request) => request.flush({}));
+    await initialization;
+
+    const switching = service.setLocale('en');
+    expect(document.documentElement.lang).toBe('en');
+    http.match((request) => request.url.startsWith('/assets/i18n/')).forEach((request) => request.flush({}));
+    await switching;
+  });
 });

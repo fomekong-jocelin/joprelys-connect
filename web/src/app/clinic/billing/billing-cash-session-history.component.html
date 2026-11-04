@@ -138,33 +138,33 @@
               <dl class="cash-session-card__metrics">
                 <div>
                   <dt>{{ t('billing.cashHistory.openingBalance', 'Fond initial') }}</dt>
-                  <dd>{{ session.openingBalance | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ session.openingBalance | xaf }}</dd>
                 </div>
                 <div>
                   <dt>{{ t('billing.cashHistory.cashReceipts', 'Espèces encaissées') }}</dt>
-                  <dd>{{ session.cashReceipts | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ session.cashReceipts | xaf }}</dd>
                 </div>
                 <div>
                   <dt>{{ t('billing.cashHistory.expectedCash', 'Solde théorique') }}</dt>
-                  <dd>{{ session.expectedCash | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ session.expectedCash | xaf }}</dd>
                 </div>
                 <div>
                   <dt>{{ t('billing.cashHistory.declaredBalance', 'Montant déclaré') }}</dt>
-                  <dd>{{ (session.declaredBalance ?? 0) | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ (session.declaredBalance ?? 0) | xaf }}</dd>
                 </div>
                 <div class="cash-session-card__metric--discrepancy" [class.cash-session-card__metric--alert]="(session.discrepancyAmount ?? 0) !== 0">
                   <dt>{{ t('billing.cashHistory.discrepancy', 'Écart') }}</dt>
-                  <dd>{{ (session.discrepancyAmount ?? 0) | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ (session.discrepancyAmount ?? 0) | xaf }}</dd>
                 </div>
               </dl>
 
               @if (expandedSessionId() === session.id) {
                 <div [id]="'cash-session-details-' + session.id" class="cash-session-card__details">
                   <div class="cash-session-card__secondary-metrics">
-                    <div><span>{{ t('billing.cashHistory.cheques', 'Chèques') }}</span><strong>{{ session.chequeReceipts | number:'1.0-0' }} FCFA</strong></div>
-                    <div><span>{{ t('billing.cashHistory.transfers', 'Virements') }}</span><strong>{{ session.transferReceipts | number:'1.0-0' }} FCFA</strong></div>
-                    <div><span>{{ t('billing.cashHistory.expenses', 'Dépenses espèces') }}</span><strong>{{ session.cashExpenses | number:'1.0-0' }} FCFA</strong></div>
-                    <div><span>{{ t('billing.cashHistory.bankDeposits', 'Versements banque') }}</span><strong>{{ session.bankDeposits | number:'1.0-0' }} FCFA</strong></div>
+                    <div><span>{{ t('billing.cashHistory.cheques', 'Chèques') }}</span><strong>{{ session.chequeReceipts | xaf }}</strong></div>
+                    <div><span>{{ t('billing.cashHistory.transfers', 'Virements') }}</span><strong>{{ session.transferReceipts | xaf }}</strong></div>
+                    <div><span>{{ t('billing.cashHistory.expenses', 'Dépenses espèces') }}</span><strong>{{ session.cashExpenses | xaf }}</strong></div>
+                    <div><span>{{ t('billing.cashHistory.bankDeposits', 'Versements banque') }}</span><strong>{{ session.bankDeposits | xaf }}</strong></div>
                   </div>
 
                   @if (session.discrepancyReason) {
@@ -197,7 +197,7 @@
                               <td>{{ movement.movementType }}</td>
                               <td>{{ movement.description }}</td>
                               <td>{{ movement.paymentMethod }}</td>
-                              <td class="text-right font-semibold">{{ movement.amount | number:'1.0-0' }} FCFA</td>
+                              <td class="text-right font-semibold">{{ movement.amount | xaf }}</td>
                             </tr>
                           }
                         </tbody>

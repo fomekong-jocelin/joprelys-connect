@@ -10,6 +10,7 @@ import { IconComponent } from '../../shared/ui/icon.component';
 import { BillingCreditNotesPanelComponent } from './billing-credit-notes-panel.component';
 import { BillingTariffAlertComponent } from './billing-tariff-alert.component';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 /**
  * Composant dédié aux devis, validation de factures, remises, avoirs et créances.
  * Respecte SOLID — séparé de BillingManagementPageComponent.
@@ -17,7 +18,7 @@ import { BillingTariffAlertComponent } from './billing-tariff-alert.component';
 @Component({
   selector: 'app-billing-estimates',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, ConfirmationDialogComponent, BillingCreditNotesPanelComponent, BillingTariffAlertComponent],
+  imports: [XafPipe, CommonModule, FormsModule, IconComponent, ConfirmationDialogComponent, BillingCreditNotesPanelComponent, BillingTariffAlertComponent],
   templateUrl: './billing-estimates.component.html',
   styleUrl: './billing-estimates.component.css'
 })
@@ -87,11 +88,11 @@ export class BillingEstimatesComponent implements OnInit {
   loadInvoiceData(invoiceId: string): void {
     this.billingApi.listCreditNotes(invoiceId).subscribe({
       next: (res) => this.creditNotes.set(res),
-      error: () => {}
+      error: () => this.showError(this.t('billing.creditNotes.loadError', 'Impossible de charger les avoirs de cette facture.'))
     });
     this.billingApi.getReceivablesByInvoice(invoiceId).subscribe({
       next: (res) => this.receivables.set(res),
-      error: () => {}
+      error: () => this.showError(this.t('billing.receivables.loadError', 'Impossible de charger les créances de cette facture.'))
     });
   }
 
@@ -286,9 +287,9 @@ export class BillingEstimatesComponent implements OnInit {
     setTimeout(() => this.successMessage.set(null), 3500);
   }
 
+  /** Une erreur reste affichée jusqu'à sa fermeture explicite : elle ne doit pas disparaître avant d'être lue. */
   private showError(msg: string): void {
     this.errorMessage.set(msg);
     this.successMessage.set(null);
-    setTimeout(() => this.errorMessage.set(null), 5000);
   }
 }

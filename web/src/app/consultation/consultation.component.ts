@@ -3,15 +3,15 @@ import { ConsultationVitalsPanelComponent } from './consultation-vitals-panel.co
 import { ConsultationLabPanelComponent } from './consultation-lab-panel.component';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { CommonModule } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute, Router } from '@angular/router';
 import { LabOrderApiService } from '../clinic/lab/lab-api.service';
 import { ExamType } from '../clinic/lab/lab.models';
 import { I18nService } from '../core/i18n/i18n.service';
-import { PatientApiService } from '../patient/patient-api.service';
-import { Patient, PatientAllergy, PatientMedicalHistory } from '../patient/patient.models';
 import { AppShellComponent } from '../shared/layout/app-shell.component';
+import { DialogService } from '../shared/ui/dialog.service';
+import { LoadErrorComponent } from '../shared/ui/load-error.component';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Vitals } from '../visit/visit.models';
 import {
@@ -21,7 +21,9 @@ import {
 } from './ai-consultation-api.service';
 import { ClinicalNoteEditorComponent } from './clinical-note-editor.component';
 import { ConsultationApiService } from './consultation-api.service';
+import { consultationCloseConfirmation } from './consultation-close-confirmation';
 import { ConsultationPatientBannerComponent } from './consultation-patient-banner.component';
+import { ConsultationPatientContextStore } from './consultation-patient-context.store';
 import { ConsultationFeedbackStore } from './consultation-feedback.store';
 import { ConsultationPrescriptionFacade } from './consultation-prescription.facade';
 import { ConsultationUiLabelsService } from './consultation-ui-labels.service';
@@ -43,9 +45,11 @@ interface CommonExam {
     VoiceAssistantPanelComponent,
     ClinicalNoteEditorComponent,
     ConsultationPatientBannerComponent, ConsultationPrescriptionPanelComponent, ConsultationVitalsPanelComponent, ConsultationLabPanelComponent,
+    LoadErrorComponent,
   ],
   providers: [
     ConsultationFeedbackStore,
+    ConsultationPatientContextStore,
     ConsultationPrescriptionFacade,
     ConsultationUiLabelsService,
   ],
@@ -61,9 +65,10 @@ export class ConsultationComponent implements OnInit {
   private readonly fb = inject(FormBuilder);
   private readonly consultationApi = inject(ConsultationApiService);
   private readonly visitApi = inject(VisitApiService);
-  private readonly patientApi = inject(PatientApiService);
   private readonly labOrderApi = inject(LabOrderApiService);
   private readonly feedback = inject(ConsultationFeedbackStore);
+  private readonly dialog = inject(DialogService);
+  readonly patientContext = inject(ConsultationPatientContextStore);
   readonly prescriptions = inject(ConsultationPrescriptionFacade);
   readonly uiLabels = inject(ConsultationUiLabelsService);
   readonly i18n = inject(I18nService);
@@ -79,9 +84,12 @@ export class ConsultationComponent implements OnInit {
   readonly formWorkspaceReady = signal(false);
   readonly visitNumber = signal('');
   readonly visitReason = signal('');
-  readonly patient = signal<Patient | null>(null);
-  readonly patientAllergies = signal<PatientAllergy[]>([]);
-  readonly patientMedicalHistory = signal<PatientMedicalHistory[]>([]);
+  readonly patient = this.patientContext.patient;
+  readonly patientAllergies = this.patientContext.allergies;
+  readonly patientMedicalHistory = this.patientContext.medicalHistory;
+  /** Signature/clôture bloquées tant que les allergies n'ont pas été chargées avec succès. */
+  readonly allergiesVerified = this.patientContext.allergiesVerified;
+  readonly canValidateAndClose = computed(() => this.canSignClinical() && this.allergiesVerified());
 
   visitId = '';
   private patientId = '';
@@ -283,7 +291,7 @@ export class ConsultationComponent implements OnInit {
 
         if (visit?.patientId) {
           this.patientId = visit.patientId;
-          this.loadPatientContext(this.patientId);
+          this.patientContext.load(this.patientId);
           this.labOrderApi.getPatientLabOrders(this.patientId).subscribe({
             next: (orders) => {
               const currentVisitOrder = orders.find((order) => order.visitId === this.visitId);
@@ -319,23 +327,6 @@ export class ConsultationComponent implements OnInit {
     });
   }
 
-  private loadPatientContext(patientId: string): void {
-    this.patientApi.getById(patientId).subscribe({
-      next: (patient) => this.patient.set(patient),
-      error: () => this.patient.set(null),
-    });
-
-    this.patientApi.getAllergies(patientId).subscribe({
-      next: (allergies) => this.patientAllergies.set(allergies),
-      error: () => this.patientAllergies.set([]),
-    });
-
-    this.patientApi.getMedicalHistory(patientId).subscribe({
-      next: (history) => this.patientMedicalHistory.set(history),
-      error: () => this.patientMedicalHistory.set([]),
-    });
-  }
-
   addLabExam(examName: string = ''): void {
     if (!examName.trim()) return;
     const exists = this.labExams.controls.some(
@@ -348,8 +339,20 @@ export class ConsultationComponent implements OnInit {
     this.labExams.removeAt(index);
   }
 
+  /** « Valider & Clôturer » : récapitulatif et confirmation explicites avant verrouillage. */
+  async requestValidateAndClose(): Promise<void> {
+    if (!this.canValidateAndClose() || this.form.invalid || this.isSaving() || this.isClosing()) return;
+    const confirmed = await this.dialog.confirm(consultationCloseConfirmation(this.i18n, {
+      patientName: this.patient()?.displayName || this.patient()?.fullName || '',
+      diagnosis: String(this.form.get('diagnosis')?.value ?? ''),
+      prescriptionLineCount: this.prescriptions.items.length,
+      labExamCount: this.labExams.length,
+    }));
+    if (confirmed) this.onSave(true);
+  }
+
   onSave(closeVisitAfter: boolean = false): void {
-    if (closeVisitAfter && !this.canSignClinical()) return;
+    if (closeVisitAfter && !this.canValidateAndClose()) return;
     if (this.form.invalid || this.isSaving() || this.isClosing()) return;
 
     this.shouldCloseAfterSave = closeVisitAfter;

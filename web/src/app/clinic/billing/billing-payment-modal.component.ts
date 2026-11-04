@@ -13,6 +13,7 @@ import {
 import { FormsModule } from '@angular/forms';
 import { IconComponent } from '../../shared/ui/icon.component';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 export interface BillingPaymentInvoiceContext {
   id: string;
   invoiceNumber: string;
@@ -28,7 +29,7 @@ export interface BillingPaymentForm {
 @Component({
   selector: 'app-billing-payment-modal',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent],
+  imports: [XafPipe, CommonModule, FormsModule, IconComponent],
   template: `
     @if (visible && invoice) {
       <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
@@ -60,7 +61,7 @@ export interface BillingPaymentForm {
               <div>{{ translate('billing.cashierQueue.patient', 'Patient') }} : <strong>{{ patientName }}</strong></div>
             }
             <div>{{ translate('billing.invoice', 'Facture') }} : <strong>{{ invoice.invoiceNumber }}</strong></div>
-            <div>{{ translate('billing.patientShare', 'Part patient à régler') }} : <strong>{{ invoice.patientShare | number:'1.0-0' }} FCFA</strong></div>
+            <div>{{ translate('billing.patientShare', 'Part patient à régler') }} : <strong>{{ invoice.patientShare | xaf }}</strong></div>
           </div>
 
           @if (cashSessionOpen === null) {

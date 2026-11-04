@@ -3,6 +3,8 @@ import { Component, EventEmitter, Input, OnChanges, Output, SimpleChanges, injec
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
 import { ButtonComponent } from '../shared/ui/button.component';
+import { DialogService } from '../shared/ui/dialog.service';
+import { dispensationConfirmation } from './pharmacy-dispensation-confirmation';
 import { PharmacyApiService } from './pharmacy-api.service';
 import { PharmacyDispensationHistoryComponent } from './pharmacy-dispensation-history.component';
 import {
@@ -174,6 +176,7 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
   private readonly fb = inject(FormBuilder);
   private readonly rbac = inject(RbacApiService);
   private readonly pharmacyApi = inject(PharmacyApiService);
+  private readonly dialog = inject(DialogService);
   readonly i18n = inject(I18nService);
 
   readonly history = signal<PharmacyDispensationHistoryEntry[]>([]);
@@ -198,14 +201,38 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
     }
   }
 
-  submitDispensation(): void {
+  /** Délivrance définitive : récapitulatif confirmé explicitement avant envoi (anti double-clic inclus). */
+  async submitDispensation(): Promise<void> {
     if (!this.canSubmitDispensation() || this.isDispensing()) {
       this.dispenseForm.markAllAsTouched();
       return;
     }
 
     const raw = this.dispenseForm.getRawValue();
+    const dispensedItems = this.prescription.items
+      .map((item) => {
+        const draft = this.draftFor(item);
+        return {
+          prescriptionItemId: item.itemId,
+          drugName: item.drugName,
+          quantityDispensed: draft.quantityDispensed,
+          substitutedWith: draft.substitutedWith.trim() || undefined,
+        };
+      })
+      .filter((item) => item.quantityDispensed > 0);
+
     this.isDispensing.set(true);
+    const confirmed = await this.dialog.confirm(dispensationConfirmation(
+      this.i18n,
+      this.prescription,
+      raw.pharmacyName.trim(),
+      dispensedItems.map((item) => ({ drugName: item.drugName, quantity: item.quantityDispensed, substitutedWith: item.substitutedWith })),
+    ));
+    if (!confirmed) {
+      this.isDispensing.set(false);
+      return;
+    }
+
     this.dispenseError.set('');
     this.dispenseSuccess.set('');
 
@@ -214,16 +241,11 @@ export class PharmacyDispensationPanelComponent implements OnChanges {
       pinCode: this.pinCode,
       pharmacyName: raw.pharmacyName.trim(),
       pharmacistLicense: raw.pharmacistLicense.trim(),
-      dispensedItems: this.prescription.items
-        .map((item) => {
-          const draft = this.draftFor(item);
-          return {
-            prescriptionItemId: item.itemId,
-            quantityDispensed: draft.quantityDispensed,
-            substitutedWith: draft.substitutedWith.trim() || undefined,
-          };
-        })
-        .filter((item) => item.quantityDispensed > 0),
+      dispensedItems: dispensedItems.map(({ prescriptionItemId, quantityDispensed, substitutedWith }) => ({
+        prescriptionItemId,
+        quantityDispensed,
+        substitutedWith,
+      })),
     }).subscribe({
       next: () => {
         this.dispenseSuccess.set(this.t('pharmacy.dispenseSuccess'));

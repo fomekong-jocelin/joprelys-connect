@@ -1,5 +1,6 @@
 import { Component, computed, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { EMERGENCY_REASON_MAX_LENGTH, isEmergencyReasonValid } from './emergency-access-reason';
 import { ToastService } from '../shared/ui/toast.service';
 import { Router } from '@angular/router';
 import { catchError, finalize, of, Subject, switchMap, timer } from 'rxjs';
@@ -49,6 +50,8 @@ export class PatientListComponent implements OnInit {
   readonly showCreateForm = signal(false);
   readonly consentRequiredPatient = signal<Patient | null>(null);
   readonly emergencyReason = signal('');
+  readonly emergencyReasonValid = computed(() => isEmergencyReasonValid(this.emergencyReason()));
+  readonly emergencyReasonMaxLength = EMERGENCY_REASON_MAX_LENGTH;
   readonly emergencyLoading = signal(false);
   readonly emergencyError = signal<string | null>(null);
 
@@ -139,7 +142,7 @@ export class PatientListComponent implements OnInit {
   triggerEmergencyAccess(): void {
     const patient = this.consentRequiredPatient();
     const reason = this.emergencyReason().trim();
-    if (!patient || !reason || this.emergencyLoading()) return;
+    if (!patient || !this.emergencyReasonValid() || this.emergencyLoading()) return;
 
     this.emergencyLoading.set(true);
     this.emergencyError.set(null);

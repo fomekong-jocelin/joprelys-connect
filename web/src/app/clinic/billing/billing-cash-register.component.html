@@ -37,30 +37,30 @@
         <div class="space-y-2 text-xs text-[var(--text-secondary)]">
           <div class="flex justify-between">
             <span>Fond de caisse initial :</span>
-            <span class="font-bold text-[var(--text-primary)]">{{ session.openingBalance | number:'1.0-0' }} FCFA</span>
+            <span class="font-bold text-[var(--text-primary)]">{{ session.openingBalance | xaf }}</span>
           </div>
           <div class="flex justify-between">
             <span>Encaissements espèces :</span>
-            <span class="font-bold text-emerald-600 dark:text-emerald-400">+ {{ cashReceipts() | number:'1.0-0' }} FCFA</span>
+            <span class="font-bold text-emerald-600 dark:text-emerald-400">+ {{ cashReceipts() | xaf }}</span>
           </div>
           <div class="flex justify-between">
             <span>Dépenses espèces :</span>
-            <span class="font-bold text-red-600 dark:text-red-400">- {{ cashExpenses() | number:'1.0-0' }} FCFA</span>
+            <span class="font-bold text-red-600 dark:text-red-400">- {{ cashExpenses() | xaf }}</span>
           </div>
           <div class="flex justify-between">
             <span>Versements banque :</span>
-            <span class="font-bold text-blue-600 dark:text-blue-400">- {{ bankDeposits() | number:'1.0-0' }} FCFA</span>
+            <span class="font-bold text-blue-600 dark:text-blue-400">- {{ bankDeposits() | xaf }}</span>
           </div>
           <div class="flex justify-between border-t border-[var(--app-border)]/40 pt-2 text-sm font-bold text-[var(--text-primary)]">
             <span>Solde Théorique :</span>
-            <span>{{ soldeTheorique() | number:'1.0-0' }} FCFA</span>
+            <span>{{ soldeTheorique() | xaf }}</span>
           </div>
         </div>
 
         <div class="space-y-1.5 border-t border-[var(--app-border)]/40 pt-3 text-[10px] text-[var(--text-secondary)]">
           <p class="font-bold uppercase tracking-wider text-[var(--text-muted)]">Encaissements hors espèces</p>
-          <div class="flex justify-between"><span>Chèques reçus</span><span class="font-semibold">{{ chequeReceipts() | number:'1.0-0' }} FCFA</span></div>
-          <div class="flex justify-between"><span>Virements reçus</span><span class="font-semibold">{{ transferReceipts() | number:'1.0-0' }} FCFA</span></div>
+          <div class="flex justify-between"><span>Chèques reçus</span><span class="font-semibold">{{ chequeReceipts() | xaf }}</span></div>
+          <div class="flex justify-between"><span>Virements reçus</span><span class="font-semibold">{{ transferReceipts() | xaf }}</span></div>
           <p class="pt-1 text-[var(--text-muted)]">Ces montants sont tracés, mais ne sont pas inclus dans le comptage physique.</p>
         </div>
 
@@ -182,7 +182,7 @@
                   <td class="p-2 text-right font-bold"
                       [class.text-emerald-600]="m.movementType === 'IN'"
                       [class.text-red-600]="m.movementType === 'OUT' || m.movementType === 'TRANSFER_TO_BANK'">
-                    {{ m.movementType === 'IN' ? '+' : '-' }} {{ m.amount | number:'1.0-0' }} FCFA
+                    {{ m.movementType === 'IN' ? '+' : '-' }} {{ m.amount | xaf }}
                   </td>
                   <td class="p-2 text-[10px]">{{ m.paymentMethod }}</td>
                   <td class="p-2 text-[10px]">{{ m.referenceNumber || '-' }}</td>
@@ -286,7 +286,7 @@
         </p>
         <div class="flex justify-between rounded-[var(--radius-brand-sm)] bg-[var(--app-surface-muted)] p-2 font-bold">
           <span>Solde théorique attendu :</span>
-          <span>{{ soldeTheorique() | number:'1.0-0' }} FCFA</span>
+          <span>{{ soldeTheorique() | xaf }}</span>
         </div>
       </div>
 
@@ -298,7 +298,7 @@
 
         @if (discrepancy() !== 0) {
           <div class="space-y-1 rounded-[var(--radius-brand-sm)] border border-amber-500/30 bg-amber-500/10 p-2 text-[10px] text-amber-700 dark:text-amber-400">
-            <p class="font-bold"><app-ui-icon name="information-circle" /> Écart de caisse détecté : {{ discrepancy() | number:'1.0-0' }} FCFA</p>
+            <p class="font-bold"><app-ui-icon name="information-circle" /> Écart de caisse détecté : {{ discrepancy() | xaf }}</p>
             <label class="mt-1 block font-bold">Justification / Motif de l'écart :</label>
             <input type="text" [(ngModel)]="discrepancyReason" name="discrepancyReason" class="ui-input mt-0.5 w-full bg-[var(--app-surface)] text-xs" placeholder="Ex: Erreur rendu monnaie ticket 14" required />
           </div>

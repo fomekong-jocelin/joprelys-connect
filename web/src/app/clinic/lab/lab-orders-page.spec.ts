@@ -4,6 +4,7 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { LabOrderApiService } from './lab-api.service';
 import { LabOrdersPageComponent } from './lab-orders-page.component';
@@ -118,8 +119,10 @@ describe('LabOrdersPageComponent', () => {
     uploadResults: ReturnType<typeof vi.fn>;
   };
   let permissions: Set<string>;
+  let dialog: { confirm: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    dialog = { confirm: vi.fn().mockResolvedValue(true) };
     labApi = {
       getLabOrders: vi.fn().mockReturnValue(of([labOrder])),
       getPatientResults: vi.fn().mockReturnValue(of([{ id: 'result-1', resultNumber: 'RES-1', examRequestNumber: labOrder.examRequestNumber, patientId: 'patient-1', validatorName: 'Dr Bio', analyteName: 'Glycemie', value: '0.95', unit: 'g/L', createdAt: '2026-07-03T09:00:00Z' }])),
@@ -135,6 +138,7 @@ describe('LabOrdersPageComponent', () => {
         provideRouter([]),
         I18nService,
         { provide: LabOrderApiService, useValue: labApi },
+        { provide: DialogService, useValue: dialog },
         {
           provide: RbacApiService,
           useValue: {
@@ -177,7 +181,7 @@ describe('LabOrdersPageComponent', () => {
     expect(labApi.updateItemStatus).toHaveBeenCalledWith('order-structured', 'item-crp', LabOrderStatus.IN_PROGRESS);
   });
 
-  it('should submit legacy lab results for selected order', () => {
+  it('should submit legacy lab results for selected order', async () => {
     const component = fixture.componentInstance;
     component.resultForm.patchValue({
       validatorName: 'Dr Bio',
@@ -191,8 +195,9 @@ describe('LabOrdersPageComponent', () => {
       interpretation: 'NORMAL',
     });
 
-    component.submitResults(labOrder);
+    await component.submitResults(labOrder);
 
+    expect(dialog.confirm).toHaveBeenCalledWith(expect.objectContaining({ confirmLabel: 'lab.validateConfirm.action' }));
     expect(labApi.uploadResults).toHaveBeenCalledWith(expect.objectContaining({
       examRequestNumber: 'EXAM-REQ-20260703-000042',
       validatorName: 'Dr Bio',
@@ -200,14 +205,37 @@ describe('LabOrdersPageComponent', () => {
     }));
   });
 
-  it('should submit structured results with selected item id', () => {
+  it('should not transmit validated results when the confirmation is cancelled', async () => {
+    dialog.confirm.mockResolvedValueOnce(false);
+    const component = fixture.componentInstance;
+    component.resultForm.patchValue({ validatorName: 'Dr Bio' });
+    component.results.at(0).patchValue({ analyteName: 'Glycemie', value: '0.95' });
+
+    await component.submitResults(labOrder);
+
+    expect(labApi.uploadResults).not.toHaveBeenCalled();
+    expect(component.isSubmitting()).toBe(false);
+  });
+
+  it('should save a draft without asking for validation confirmation', async () => {
+    const component = fixture.componentInstance;
+    component.resultForm.patchValue({ validatorName: 'Dr Bio', status: 'DRAFT' });
+    component.results.at(0).patchValue({ analyteName: 'Glycemie', value: '0.95' });
+
+    await component.submitResults(labOrder);
+
+    expect(dialog.confirm).not.toHaveBeenCalled();
+    expect(labApi.uploadResults).toHaveBeenCalledWith(expect.objectContaining({ status: 'DRAFT' }));
+  });
+
+  it('should submit structured results with selected item id', async () => {
     const component = fixture.componentInstance;
     component.selectOrder(structuredLabOrder);
     component.selectItem(structuredLabOrder.items![1]);
     component.resultForm.patchValue({ validatorName: 'Dr Bio' });
     component.results.at(0).patchValue({ analyteName: 'CRP', value: '12' });
 
-    component.submitResults(structuredLabOrder);
+    await component.submitResults(structuredLabOrder);
 
     expect(labApi.uploadResults).toHaveBeenCalledWith(expect.objectContaining({
       examRequestNumber: structuredLabOrder.examRequestNumber,
@@ -228,13 +256,13 @@ describe('LabOrdersPageComponent', () => {
     expect(component.filteredResults(structuredLabOrder).map((result) => result.id)).toEqual(['crp-result']);
   });
 
-  it('should show backend upload errors', () => {
+  it('should show backend upload errors', async () => {
     labApi.uploadResults.mockReturnValueOnce(throwError(() => ({ error: { detail: 'Erreur de validation' } })));
     const component = fixture.componentInstance;
     component.resultForm.patchValue({ validatorName: 'Dr Bio' });
     component.results.at(0).patchValue({ analyteName: 'CRP', value: '12' });
 
-    component.submitResults(labOrder);
+    await component.submitResults(labOrder);
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Erreur de validation');
@@ -264,7 +292,7 @@ describe('LabOrdersPageComponent', () => {
     expect(component.filteredOrders()[0].priority).toBe('URGENTE');
   });
 
-  it('should not load or expose result actions with queue-only permission', () => {
+  it('should not load or expose result actions with queue-only permission', async () => {
     permissions = new Set(['LAB_QUEUE_READ']);
     labApi.getPatientResults.mockClear();
     labApi.updateStatus.mockClear();
@@ -276,7 +304,7 @@ describe('LabOrdersPageComponent', () => {
     const component = restrictedFixture.componentInstance;
     component.selectOrder(labOrder);
     component.updateStatus(labOrder);
-    component.submitResults(labOrder);
+    await component.submitResults(labOrder);
     restrictedFixture.detectChanges();
 
     expect(labApi.getPatientResults).not.toHaveBeenCalled();

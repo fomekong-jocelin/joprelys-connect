@@ -1,10 +1,10 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { DatePipe } from '@angular/common';
 import { ActivatedRoute } from '@angular/router';
 import { ConsultationApiService } from './consultation-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppLogoComponent } from '../shared/ui/app-logo.component';
 
+import { AppDatePipe } from '../shared/formatting/app-date.pipe';
 interface VerificationMetadata {
   documentNumber: string;
   status: 'VALID' | 'REVOKED' | 'REPLACED' | string;
@@ -20,7 +20,7 @@ interface VerificationMetadata {
 @Component({
   selector: 'app-verification',
   standalone: true,
-  imports: [DatePipe, AppLogoComponent],
+  imports: [AppDatePipe, AppLogoComponent],
   template: `
     <div class="min-h-screen bg-[var(--app-surface-muted)] dark:bg-[var(--app-bg)] flex flex-col justify-between py-12 px-4 sm:px-6 lg:px-8 transition-colors duration-200">
       <div class="flex-grow flex flex-col justify-center">
@@ -182,7 +182,7 @@ interface VerificationMetadata {
                           {{ i18n.t('verify.issuedAt') }}
                         </span>
                         <span class="text-sm font-semibold text-[var(--text-secondary)]">
-                          {{ metadata()?.issuedAt | date:'medium' }}
+                          {{ metadata()?.issuedAt | appDate:'dateTime' }}
                         </span>
                       </div>
 

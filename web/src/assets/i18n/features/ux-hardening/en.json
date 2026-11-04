@@ -1,0 +1,72 @@
+{
+  "clinicalSafety.allergies.unverified": "Allergies not verified: loading failed.",
+  "clinicalSafety.allergies.unverifiedShort": "Allergies not verified",
+  "clinicalSafety.allergies.loading": "Checking allergies…",
+  "clinicalSafety.history.unverified": "Medical history not verified: loading failed.",
+  "clinicalSafety.history.unverifiedShort": "Medical history not verified",
+  "clinicalSafety.patient.unverified": "Patient identity not loaded: loading failed.",
+
+  "consultation.safety.signBlocked": "Closing is unavailable until the patient's allergies have been verified. Retry loading above.",
+  "consultation.safety.prescriptionBlocked": "Prescription locked until the patient's allergies have been verified.",
+  "consultation.closeConfirm.title": "Validate and close the visit?",
+  "consultation.closeConfirm.message": "Patient: {patient}\nDiagnosis: {diagnosis}\nPrescription lines: {prescriptionCount}\nRequested exams: {examCount}\n\nThe consultation will be locked and the visit closed.",
+  "consultation.closeConfirm.action": "Validate and close",
+
+  "notFound.code": "Error 404",
+  "notFound.title": "Page not found",
+  "notFound.message": "This address does not exist or is no longer available. Check the link or go back to your workspace.",
+  "notFound.backToDashboard": "Back to dashboard",
+  "notFound.backToHome": "Back to home",
+
+  "serverUnavailable.title": "Unable to reach the server",
+  "serverUnavailable.message": "The server is not responding right now. Check your network connection and try again: your access rights have not changed.",
+  "serverUnavailable.retrying": "Retrying…",
+
+  "patient.detail.activeVisitLoadError": "Unable to check this patient's ongoing visits. Reload the page before opening a new visit.",
+  "patient.consultations.title": "Medical history and consultations",
+  "patient.consultations.loading": "Loading history…",
+  "patient.consultations.empty": "No previous consultation recorded.",
+  "patient.consultations.loadError": "Consultation history not loaded: loading failed.",
+  "patient.labOrders.loading": "Loading laboratory data…",
+  "patient.labOrders.empty": "No exam request recorded.",
+  "patient.labOrders.loadError": "Laboratory data incomplete: loading failed.",
+
+  "spatial.loadError.spaces": "Unable to load inpatient spaces.",
+  "spatial.loadError.occupancy": "Unable to load this space's occupancy.",
+  "spatial.bedAction.error": "The bed action failed. Its status has not changed.",
+  "spatial.closeBed.confirmTitle": "Close bed {bed}?",
+  "spatial.closeBed.confirmMessage": "Space: {space}\nBed {bed} will no longer accept patients.\nAvailable beds after closing: {available}",
+  "spatial.closeBed.confirmAction": "Close bed",
+
+  "admission.selectPlaceholder": "Select…",
+  "admission.requiredTriage": "Choose the patient's triage level and hemodynamic status.",
+
+  "pharmacy.dispenseConfirm.title": "Confirm dispensing?",
+  "pharmacy.dispenseConfirm.message": "Prescription: {number}\nPatient: {patient}\nPharmacy: {pharmacy}\n\n{lines}\n\nDispensing is final.",
+  "pharmacy.dispenseConfirm.line": "• {drug}: {quantity}",
+  "pharmacy.dispenseConfirm.substitution": "(substituted with {substitute})",
+  "pharmacy.dispenseConfirm.action": "Confirm dispensing",
+
+  "lab.validateConfirm.title": "Validate and send the results?",
+  "lab.validateConfirm.message": "Request: {number}\nPatient: {patient}\nExam: {exam}\nStatus: {status}\nValidated by: {validator}\n\n{lines}\n\nThe results will be sent to the patient's record.",
+  "lab.validateConfirm.line": "• {analyte}: {value} {unit} ({interpretation})",
+  "lab.validateConfirm.action": "Validate and send",
+
+  "emergency.stabilize.submit": "Save disposition",
+
+  "billing.creditNotes.loadError": "Unable to load this invoice's credit notes.",
+  "billing.receivables.loadError": "Unable to load this invoice's receivables.",
+  "billing.deposit.loadError": "Unable to load the patient's deposits.",
+  "billing.deposit.queueLoadError": "Unable to load invoices awaiting collection.",
+
+  "reception.error.loadReferences": "Unable to load patient or staff lists: the form may be incomplete.",
+
+  "shell.nav.accessLoadError": "Your access rights could not be loaded: the menu may be incomplete.",
+
+  "patients.medicalInfo.history.editStatus": "Change status (ongoing / resolved)",
+  "common.reject": "Reject",
+  "common.delete": "Delete",
+  "preRegistrations.rejectTitle": "Reject the request?",
+  "duplicates.primarySelection": "Record to keep as primary",
+  "rbac.users.selfReadOnly": "You cannot change your own roles: another administrator of the facility must do it."
+}

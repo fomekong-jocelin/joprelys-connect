@@ -129,60 +129,64 @@
       }
 
       <!-- Side-by-Side Selection Card Headings -->
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-        <!-- Patient Source Selector -->
-        <div 
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6" role="radiogroup" [attr.aria-label]="t('duplicates.primarySelection')">
+        <!-- Patient Source Selector : label + radio natif, activable au clavier (flèches) -->
+        <label
           [ngClass]="{
             'border-2 border-brand-primary bg-brand-primary/5': selectedPrimaryId() === candidate.sourcePatient.id,
             'border border-[var(--app-border)]/80 bg-[var(--app-surface-muted)]/20': selectedPrimaryId() !== candidate.sourcePatient.id
           }"
-          class="p-4 rounded-lg cursor-pointer transition-all duration-300"
-          (click)="selectPrimary(candidate.sourcePatient.id)"
+          class="block p-4 rounded-lg cursor-pointer transition-all duration-300 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--brand-primary)]"
+          [attr.data-testid]="'primary-choice-a'"
         >
-          <div class="flex items-center justify-between mb-2">
+          <span class="flex items-center justify-between mb-2">
             <span class="text-[10px] font-black text-brand-primary uppercase tracking-wider">
               {{ t('duplicates.patientA') }}
             </span>
-            <input 
-              type="radio" 
-              name="primary_selector" 
+            <input
+              type="radio"
+              name="primary_selector"
+              [value]="candidate.sourcePatient.id"
               [checked]="selectedPrimaryId() === candidate.sourcePatient.id"
-              class="h-4 w-4 text-brand-primary border-[var(--app-border)] focus:ring-brand-primary"
+              (change)="selectPrimary(candidate.sourcePatient.id)"
+              class="h-5 w-5 text-brand-primary border-[var(--app-border)] focus:ring-brand-primary"
             />
-          </div>
-          <div class="font-display font-black text-lg text-[var(--text-primary)]">{{ candidate.sourcePatient.fullName }}</div>
-          <div class="text-xs text-[var(--text-muted)] font-mono mt-1">{{ candidate.sourcePatient.globalPatientNumber }}</div>
-          <div class="mt-2 text-xs font-extrabold text-[var(--brand-success-text)]">
+          </span>
+          <span class="block font-display font-black text-lg text-[var(--text-primary)]">{{ candidate.sourcePatient.fullName }}</span>
+          <span class="block text-xs text-[var(--text-muted)] font-mono mt-1">{{ candidate.sourcePatient.globalPatientNumber }}</span>
+          <span class="block mt-2 text-xs font-extrabold text-[var(--brand-success-text)]">
             {{ selectedPrimaryId() === candidate.sourcePatient.id ? t('duplicates.keepPrimary') : t('duplicates.archiveSecondary') }}
-          </div>
-        </div>
+          </span>
+        </label>
 
         <!-- Patient Target Selector -->
-        <div 
+        <label
           [ngClass]="{
             'border-2 border-brand-primary bg-brand-primary/5': selectedPrimaryId() === candidate.targetPatient.id,
             'border border-[var(--app-border)]/80 bg-[var(--app-surface-muted)]/20': selectedPrimaryId() !== candidate.targetPatient.id
           }"
-          class="p-4 rounded-lg cursor-pointer transition-all duration-300"
-          (click)="selectPrimary(candidate.targetPatient.id)"
+          class="block p-4 rounded-lg cursor-pointer transition-all duration-300 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--brand-primary)]"
+          [attr.data-testid]="'primary-choice-b'"
         >
-          <div class="flex items-center justify-between mb-2">
+          <span class="flex items-center justify-between mb-2">
             <span class="text-[10px] font-black text-brand-primary uppercase tracking-wider">
               {{ t('duplicates.patientB') }}
             </span>
-            <input 
-              type="radio" 
-              name="primary_selector" 
+            <input
+              type="radio"
+              name="primary_selector"
+              [value]="candidate.targetPatient.id"
               [checked]="selectedPrimaryId() === candidate.targetPatient.id"
-              class="h-4 w-4 text-brand-primary border-[var(--app-border)] focus:ring-brand-primary"
+              (change)="selectPrimary(candidate.targetPatient.id)"
+              class="h-5 w-5 text-brand-primary border-[var(--app-border)] focus:ring-brand-primary"
             />
-          </div>
-          <div class="font-display font-black text-lg text-[var(--text-primary)]">{{ candidate.targetPatient.fullName }}</div>
-          <div class="text-xs text-[var(--text-muted)] font-mono mt-1">{{ candidate.targetPatient.globalPatientNumber }}</div>
-          <div class="mt-2 text-xs font-extrabold text-[var(--brand-success-text)]">
+          </span>
+          <span class="block font-display font-black text-lg text-[var(--text-primary)]">{{ candidate.targetPatient.fullName }}</span>
+          <span class="block text-xs text-[var(--text-muted)] font-mono mt-1">{{ candidate.targetPatient.globalPatientNumber }}</span>
+          <span class="block mt-2 text-xs font-extrabold text-[var(--brand-success-text)]">
             {{ selectedPrimaryId() === candidate.targetPatient.id ? t('duplicates.keepPrimary') : t('duplicates.archiveSecondary') }}
-          </div>
-        </div>
+          </span>
+        </label>
       </div>
 
       <!-- Comparison Table -->

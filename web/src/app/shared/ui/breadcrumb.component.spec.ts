@@ -2,6 +2,7 @@ import { Component, signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { provideRouter, Router } from '@angular/router';
 import { readFileSync } from 'node:fs';
+import { AuthTokenStorageService } from '../../auth/auth-token-storage.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { BreadcrumbComponent } from './breadcrumb.component';
 
@@ -33,5 +34,29 @@ describe('BreadcrumbComponent locale changes', () => {
     locale.set('fr'); fixture.detectChanges();
     expect(fixture.nativeElement.textContent).toContain(dictionaries['fr']['breadcrumb.clinic.rbac']);
     expect(fixture.nativeElement.querySelector('nav').getAttribute('aria-label')).toBe(dictionaries['fr']['breadcrumb.navigation']);
+  });
+
+  it.each([
+    ['MEDECIN', '/dashboard'],
+    ['PATIENT', '/patient/dashboard'],
+  ])("fait pointer « Accueil » vers le tableau de bord du rôle %s", async (role, expectedUrl) => {
+    const session = signal<{ role: string } | null>({ role });
+    TestBed.configureTestingModule({ imports: [BreadcrumbComponent], providers: [
+      provideRouter([{ path: 'profile', component: RouteTarget, data: { breadcrumb: 'breadcrumb.profile' } }]),
+      { provide: I18nService, useValue: { t: (key: string) => key } },
+      {
+        provide: AuthTokenStorageService,
+        useValue: {
+          session,
+          isPatientSession: (value: { role: string } | null) => value?.role === 'PATIENT',
+        },
+      },
+    ] });
+    await TestBed.inject(Router).navigateByUrl('/profile');
+    const fixture = TestBed.createComponent(BreadcrumbComponent);
+    fixture.detectChanges();
+
+    const home = fixture.nativeElement.querySelector('[data-testid="breadcrumb-home"]') as HTMLAnchorElement;
+    expect(home.getAttribute('href')).toBe(expectedUrl);
   });
 });

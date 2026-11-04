@@ -16,6 +16,7 @@ import {
   BillingPaymentModalComponent,
 } from './billing-payment-modal.component';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 type QueueFilter = 'ALL' | CashierCollectionStatus;
 
 interface LastPaymentSummary {
@@ -28,7 +29,7 @@ interface LastPaymentSummary {
 @Component({
   selector: 'app-billing-cashier-queue',
   standalone: true,
-  imports: [CommonModule, FormsModule, IconComponent, BillingPaymentModalComponent],
+  imports: [XafPipe, CommonModule, FormsModule, IconComponent, BillingPaymentModalComponent],
   templateUrl: './billing-cashier-queue.component.html',
   styleUrl: './billing-cashier-queue.component.css',
 })

@@ -243,7 +243,8 @@
               <legend class="ui-label mb-3">{{ text('emergencyArrival') }}</legend>
               <div>
                 <label class="ui-label mb-1.5" for="admission-arrival">{{ text('arrivalMode') }}</label>
-                <select id="admission-arrival" formControlName="arrivalMode" class="ui-input">
+                <select id="admission-arrival" formControlName="arrivalMode" class="ui-input" aria-required="true">
+                  <option value="" disabled>{{ text('selectPlaceholder') }}</option>
                   <option value="AMBULANCE">{{ text('ambulance') }}</option>
                   <option value="FIRE_DEPT">{{ text('fireDept') }}</option>
                   <option value="WALK_IN">{{ text('walkIn') }}</option>
@@ -343,7 +344,8 @@
               <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
                   <label class="ui-label mb-1.5" for="admission-triage">{{ text('triageLevel') }}</label>
-                  <select id="admission-triage" formControlName="triageLevel" class="ui-input">
+                  <select id="admission-triage" formControlName="triageLevel" class="ui-input" aria-required="true">
+                    <option value="" disabled>{{ text('selectPlaceholder') }}</option>
                     <option value="RED">🔴 {{ text('red') }}</option>
                     <option value="ORANGE">🟠 {{ text('orange') }}</option>
                     <option value="YELLOW">🟡 {{ text('yellow') }}</option>
@@ -352,7 +354,8 @@
                 </div>
                 <div>
                   <label class="ui-label mb-1.5" for="admission-hemodynamic">{{ text('hemodynamic') }}</label>
-                  <select id="admission-hemodynamic" formControlName="hemodynamicStatus" class="ui-input">
+                  <select id="admission-hemodynamic" formControlName="hemodynamicStatus" class="ui-input" aria-required="true">
+                    <option value="" disabled>{{ text('selectPlaceholder') }}</option>
                     <option value="SHOCK">{{ text('shock') }}</option>
                     <option value="UNSTABLE">{{ text('unstable') }}</option>
                     <option value="STABLE">{{ text('stable') }}</option>

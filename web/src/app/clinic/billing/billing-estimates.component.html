@@ -116,8 +116,8 @@
                 @for (est of estimates(); track est.id) {
                   <tr>
                     <td><span class="mono">{{ est.estimateNumber }}</span></td>
-                    <td class="amount">{{ est.totalAmount | number:'1.0-0' }} FCFA</td>
-                    <td class="amount">{{ est.patientShare | number:'1.0-0' }} FCFA</td>
+                    <td class="amount">{{ est.totalAmount | xaf }}</td>
+                    <td class="amount">{{ est.patientShare | xaf }}</td>
                     <td><span class="badge" [ngClass]="estimateStatusClass(est.status)">{{ est.status }}</span></td>
                     <td>{{ est.createdAt | date:'dd/MM/yyyy' }}</td>
                     <td class="actions-cell">
@@ -157,7 +157,7 @@
             <div class="info-banner">
               <app-ui-icon name="information-circle" />
               Part patient réglée. La part assurance de
-              <strong>{{ settlement?.insurance?.remainingAmount | number:'1.0-0' }} FCFA</strong>
+              <strong>{{ settlement?.insurance?.remainingAmount | xaf }}</strong>
               reste à recouvrer via un bordereau d'assurance.
             </div>
           }
@@ -165,7 +165,7 @@
           @if (selectedInvoice()!.discountAmount && selectedInvoice()!.discountAmount! > 0) {
             <div class="info-banner">
               <app-ui-icon name="receipt-percent" />
-              Remise appliquée : <strong>{{ selectedInvoice()!.discountAmount | number:'1.0-0' }} FCFA</strong>
+              Remise appliquée : <strong>{{ selectedInvoice()!.discountAmount | xaf }}</strong>
               — {{ selectedInvoice()!.discountReason }}
             </div>
           }
@@ -241,9 +241,9 @@
                     @for (r of receivables(); track r.id) {
                       <tr>
                         <td><span class="badge badge-type">{{ r.debtorType }}</span></td>
-                        <td class="amount">{{ r.totalAmount | number:'1.0-0' }} FCFA</td>
-                        <td class="amount text-success">{{ r.paidAmount | number:'1.0-0' }} FCFA</td>
-                        <td class="amount text-danger">{{ r.remainingAmount | number:'1.0-0' }} FCFA</td>
+                        <td class="amount">{{ r.totalAmount | xaf }}</td>
+                        <td class="amount text-success">{{ r.paidAmount | xaf }}</td>
+                        <td class="amount text-danger">{{ r.remainingAmount | xaf }}</td>
                         <td><span class="badge" [ngClass]="receivableStatusClass(r.status)">{{ r.status }}</span></td>
                       </tr>
                     }

@@ -1,3 +1,4 @@
+import { DOCUMENT } from '@angular/common';
 import { HttpClient } from '@angular/common/http';
 import { Injectable, inject, signal } from '@angular/core';
 import { catchError, firstValueFrom, forkJoin, of } from 'rxjs';
@@ -13,6 +14,7 @@ const EMPTY_DICTIONARY = {} as TranslationDictionary;
 export class I18nService {
   private readonly http = inject(HttpClient);
   private readonly consent = inject(ConsentManagementService);
+  private readonly document = inject(DOCUMENT);
 
   readonly locale = signal<AppLocale>(this.loadStoredLocale());
   private readonly dictionary = signal<TranslationDictionary>({});
@@ -20,6 +22,7 @@ export class I18nService {
   private readonly translationAssetRevision = Date.now().toString(36);
 
   async init(): Promise<void> {
+    this.applyDocumentLanguage(this.locale());
     await this.loadLocale(this.locale());
   }
 
@@ -33,6 +36,7 @@ export class I18nService {
 
   async setLocale(lang: AppLocale): Promise<void> {
     this.locale.set(lang);
+    this.applyDocumentLanguage(lang);
     try {
       if (this.consent.preferencesAllowed()) {
         localStorage.setItem(LOCALE_STORAGE_KEY, lang);
@@ -78,6 +82,7 @@ export class I18nService {
         consent: this.optionalDictionary(`/assets/i18n/features/consent/${lang}.json`),
         accessRemediation: this.optionalDictionary(`/assets/i18n/features/access-remediation/${lang}.json`),
         publicSelfRegistration: this.optionalDictionary(`/assets/i18n/features/public-self-registration/${lang}.json`),
+        uxHardening: this.optionalDictionary(`/assets/i18n/features/ux-hardening/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -107,11 +112,17 @@ export class I18nService {
         ...dictionaries.consent,
         ...dictionaries.accessRemediation,
         ...dictionaries.publicSelfRegistration,
+        ...dictionaries.uxHardening,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
       this.dictionary.set({});
     }
+  }
+
+  /** Les lecteurs d'écran choisissent la voix et la prononciation d'après l'attribut `lang` du document. */
+  private applyDocumentLanguage(lang: AppLocale): void {
+    this.document.documentElement.lang = lang;
   }
 
   private optionalDictionary(path: string) {

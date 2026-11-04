@@ -38,6 +38,7 @@ describe('UnifiedAdmissionComponent', () => {
   let visitApi: { create: ReturnType<typeof vi.fn>; getAdmissionOptions: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    sessionStorage.removeItem('joprelys_admission_draft');
     visitApi = {
       create: vi.fn().mockReturnValue(of({ id: 'visit-1' })),
       getAdmissionOptions: vi.fn().mockReturnValue(of({
@@ -86,14 +87,107 @@ describe('UnifiedAdmissionComponent', () => {
     component.form.patchValue({ patientId: patient.id });
   });
 
+  afterEach(() => sessionStorage.removeItem('joprelys_admission_draft'));
+
   it('guides the user through three steps', () => {
     expect(component.currentStep()).toBe(1);
 
     component.nextStep();
     expect(component.currentStep()).toBe(2);
 
+    component.form.patchValue({ arrivalMode: 'WALK_IN' });
     component.nextStep();
     expect(component.currentStep()).toBe(3);
+  });
+
+  it('ne présélectionne ni tri, ni état hémodynamique, ni mode d’arrivée', () => {
+    expect(component.form.get('triageLevel')?.value).toBe('');
+    expect(component.form.get('hemodynamicStatus')?.value).toBe('');
+    expect(component.form.get('arrivalMode')?.value).toBe('');
+    expect(component.form.get('triageLevel')?.hasError('required')).toBe(true);
+    expect(component.form.get('hemodynamicStatus')?.hasError('required')).toBe(true);
+    expect(component.form.get('arrivalMode')?.hasError('required')).toBe(true);
+  });
+
+  it('bloque l’étape 2 des urgences tant que le mode d’arrivée n’est pas choisi', () => {
+    component.nextStep();
+    component.nextStep();
+
+    expect(component.currentStep()).toBe(2);
+    expect(component.error()).toBe('admission.requiredArrival');
+  });
+
+  it('refuse la création d’une urgence sans tri ni état hémodynamique explicites', () => {
+    component.nextStep();
+    component.form.patchValue({ arrivalMode: 'AMBULANCE' });
+    component.nextStep();
+    component.form.patchValue({ chiefComplaint: 'Douleur thoracique' });
+
+    component.submit();
+
+    expect(component.currentStep()).toBe(3);
+    expect(component.error()).toBe('admission.requiredTriage');
+    expect(emergencyApi.create).not.toHaveBeenCalled();
+  });
+
+  it('propose une option « Sélectionner… » vide pour le tri et l’état hémodynamique', () => {
+    component.nextStep();
+    component.form.patchValue({ arrivalMode: 'AMBULANCE' });
+    component.nextStep();
+    fixture.detectChanges();
+
+    for (const id of ['admission-triage', 'admission-hemodynamic']) {
+      const select = fixture.nativeElement.querySelector(`#${id}`) as HTMLSelectElement;
+      expect(select.options[0].value).toBe('');
+      expect(select.options[0].textContent?.trim()).toBe('admission.selectPlaceholder');
+      expect(select.value).toBe('');
+    }
+  });
+
+  it('ne rend pas ces choix obligatoires pour une visite normale', () => {
+    component.setCarePath('NORMAL');
+
+    expect(component.form.get('triageLevel')?.valid).toBe(true);
+    expect(component.form.get('hemodynamicStatus')?.valid).toBe(true);
+    expect(component.form.get('arrivalMode')?.valid).toBe(true);
+  });
+
+  it('écarte les valeurs de tri présélectionnées d’un ancien brouillon', () => {
+    sessionStorage.setItem('joprelys_admission_draft', JSON.stringify({
+      currentStep: 3,
+      carePath: 'EMERGENCY',
+      patientMode: 'EXISTING',
+      formValue: { ...component.form.getRawValue(), arrivalMode: 'AMBULANCE', triageLevel: 'RED', hemodynamicStatus: 'SHOCK' },
+    }));
+
+    const restored = TestBed.createComponent(UnifiedAdmissionComponent);
+    restored.componentRef.setInput('initialCarePath', 'EMERGENCY');
+    restored.detectChanges();
+
+    const form = restored.componentInstance.form;
+    expect(form.get('triageLevel')?.value).toBe('');
+    expect(form.get('hemodynamicStatus')?.value).toBe('');
+    expect(form.get('arrivalMode')?.value).toBe('');
+    expect(form.get('triageLevel')?.hasError('required')).toBe(true);
+  });
+
+  it('conserve le tri explicitement choisi dans un brouillon récent', () => {
+    sessionStorage.setItem('joprelys_admission_draft', JSON.stringify({
+      version: 2,
+      currentStep: 3,
+      carePath: 'EMERGENCY',
+      patientMode: 'EXISTING',
+      formValue: { ...component.form.getRawValue(), arrivalMode: 'WALK_IN', triageLevel: 'ORANGE', hemodynamicStatus: 'STABLE' },
+    }));
+
+    const restored = TestBed.createComponent(UnifiedAdmissionComponent);
+    restored.componentRef.setInput('initialCarePath', 'EMERGENCY');
+    restored.detectChanges();
+
+    const form = restored.componentInstance.form;
+    expect(form.get('triageLevel')?.value).toBe('ORANGE');
+    expect(form.get('hemodynamicStatus')?.value).toBe('STABLE');
+    expect(form.get('arrivalMode')?.value).toBe('WALK_IN');
   });
 
   it('requires third-party identity when arrival mode is accompanied', () => {
@@ -118,7 +212,7 @@ describe('UnifiedAdmissionComponent', () => {
       thirdPartyConsentToContact: true,
     });
     component.nextStep();
-    component.form.patchValue({ chiefComplaint: 'Traumatisme' });
+    component.form.patchValue({ chiefComplaint: 'Traumatisme', triageLevel: 'ORANGE', hemodynamicStatus: 'STABLE' });
 
     component.submit();
 
@@ -136,7 +230,7 @@ describe('UnifiedAdmissionComponent', () => {
     component.nextStep();
     component.form.patchValue({ arrivalMode: 'AMBULANCE' });
     component.nextStep();
-    component.form.patchValue({ chiefComplaint: 'Patient inconscient' });
+    component.form.patchValue({ chiefComplaint: 'Patient inconscient', triageLevel: 'RED', hemodynamicStatus: 'UNSTABLE' });
 
     component.submit();
 

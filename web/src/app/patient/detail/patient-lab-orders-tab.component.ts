@@ -1,6 +1,9 @@
 import { Component, computed, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { catchError, forkJoin, map, of } from 'rxjs';
+import { I18nService } from '../../core/i18n/i18n.service';
+import { LoadErrorComponent } from '../../shared/ui/load-error.component';
 import { PatientDetailComponent } from '../patient-detail.component';
 import { PatientApiService } from '../patient-api.service';
 import { LabOrder, LabResult } from '../patient.models';
@@ -8,15 +11,19 @@ import { LabOrder, LabResult } from '../patient.models';
 @Component({
   selector: 'app-patient-lab-orders-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, LoadErrorComponent],
   template: `
     <div class="space-y-6 animate-fade-in text-xs text-[var(--text-secondary)]">
       @if (isLoadingLab()) {
         <div class="py-12 text-center">
           <div class="inline-block w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
-          <p class="mt-2 text-xs font-bold text-[var(--text-muted)]">Chargement des données de laboratoire...</p>
+          <p class="mt-2 text-xs font-bold text-[var(--text-muted)]">{{ i18n.t('patient.labOrders.loading') }}</p>
         </div>
       } @else {
+        @if (ordersLoadFailed() || resultsLoadFailed()) {
+          <app-ui-load-error [message]="i18n.t('patient.labOrders.loadError')" [testId]="'lab-orders-load-error'" (retry)="loadLab()" />
+        }
+
         <!-- 1. Graphique d'évolution si des résultats existent -->
         @if (analyteNames().length > 0) {
           <div class="p-4 bg-[var(--app-surface)] border border-[var(--app-border)]/80 rounded-xl space-y-4 shadow-xs">
@@ -167,20 +174,24 @@ import { LabOrder, LabResult } from '../patient.models';
         <div class="space-y-3">
           <h4 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-2">Demandes d'Examens Biologiques</h4>
 
-          @if (labOrders().length === 0) {
+          <!-- En cas d'échec (alerte ci-dessus), ne jamais présenter une liste non chargée comme vide. -->
+          @if (labOrders().length === 0 && !ordersLoadFailed()) {
             <div class="p-8 text-center border border-dashed border-[var(--app-border)]/80 rounded-xl">
-              <p class="text-sm font-semibold text-[var(--text-muted)]">Aucune demande d'examen enregistrée.</p>
+              <p class="text-sm font-semibold text-[var(--text-muted)]">{{ i18n.t('patient.labOrders.empty') }}</p>
             </div>
-          } @else {
+          } @else if (labOrders().length > 0) {
             <div class="space-y-2">
               @for (order of labOrders(); track order.id) {
                 <div class="rounded-xl bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/20 border border-[var(--app-border)]/60 overflow-hidden">
                   <!-- En-tête cliquable -->
-                  <div
+                  <button
+                     type="button"
                      (click)="toggleLabOrder(order.id)"
-                     class="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors"
+                     [attr.aria-expanded]="!!expandedLabOrders()[order.id]"
+                     [attr.aria-controls]="'lab-order-panel-' + order.id"
+                     class="w-full min-h-11 text-left p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)]"
                   >
-                    <div class="flex flex-wrap items-center gap-3">
+                    <span class="flex flex-wrap items-center gap-3">
                       <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan uppercase tracking-wider">
                         {{ order.examRequestNumber }}
                       </span>
@@ -195,24 +206,25 @@ import { LabOrder, LabResult } from '../patient.models';
                       >
                         {{ order.status }}
                       </span>
-                    </div>
+                    </span>
 
-                    <div class="flex items-center gap-3">
+                    <span class="flex items-center gap-3">
                       <span class="text-xs font-bold text-[var(--text-muted)]">Prescrit par : {{ formatDoctorName(order.requesterPractitionerName) }}</span>
                       <!-- Chevron -->
                       <svg
+                        aria-hidden="true"
                         class="w-4 h-4 text-[var(--text-muted)] transform transition-transform duration-200"
                         [class.rotate-180]="expandedLabOrders()[order.id]"
                         fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                       >
                         <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                       </svg>
-                    </div>
-                  </div>
+                    </span>
+                  </button>
 
                   <!-- Corps -->
                   @if (expandedLabOrders()[order.id]) {
-                    <div class="px-4 pb-4 pt-2 border-t border-[var(--app-border)]/40 space-y-3 animate-fade-in text-xs text-[var(--text-secondary)]">
+                    <div [id]="'lab-order-panel-' + order.id" class="px-4 pb-4 pt-2 border-t border-[var(--app-border)]/40 space-y-3 animate-fade-in text-xs text-[var(--text-secondary)]">
                       <div>
                         <span class="block text-[9px] font-bold text-[var(--text-muted)] uppercase">Analyses demandées</span>
                         <div class="flex flex-wrap gap-1.5 mt-1">
@@ -249,10 +261,13 @@ import { LabOrder, LabResult } from '../patient.models';
 export class PatientLabOrdersTabComponent implements OnInit {
   readonly parent = inject(PatientDetailComponent);
   private readonly patientApi = inject(PatientApiService);
+  readonly i18n = inject(I18nService);
 
   readonly labOrders = signal<LabOrder[]>([]);
   readonly labResults = signal<LabResult[]>([]);
   readonly isLoadingLab = signal<boolean>(false);
+  readonly ordersLoadFailed = signal(false);
+  readonly resultsLoadFailed = signal(false);
   readonly selectedAnalyte = signal<string>('');
   readonly expandedLabOrders = signal<Record<string, boolean>>({});
 
@@ -315,25 +330,22 @@ export class PatientLabOrdersTabComponent implements OnInit {
     if (!patient) return;
 
     this.isLoadingLab.set(true);
-    this.patientApi.getPatientLabOrders(patient.id).subscribe({
-      next: (orders) => {
-        this.labOrders.set(orders);
-      }
-    });
-
-    this.patientApi.getPatientLabResults(patient.id).subscribe({
-      next: (results) => {
-        this.labResults.set(results);
-        this.isLoadingLab.set(false);
-
-        const analytes = Array.from(new Set(results.map(r => r.analyteName)));
+    // Chaque source est chargée indépendamment : un échec est signalé, jamais affiché comme « aucune donnée ».
+    forkJoin({
+      orders: this.patientApi.getPatientLabOrders(patient.id).pipe(map((orders) => ({ ok: true as const, orders })), catchError(() => of({ ok: false as const }))),
+      results: this.patientApi.getPatientLabResults(patient.id).pipe(map((results) => ({ ok: true as const, results })), catchError(() => of({ ok: false as const }))),
+    }).subscribe(({ orders, results }) => {
+      this.ordersLoadFailed.set(!orders.ok);
+      this.resultsLoadFailed.set(!results.ok);
+      if (orders.ok) this.labOrders.set(orders.orders);
+      if (results.ok) {
+        this.labResults.set(results.results);
+        const analytes = Array.from(new Set(results.results.map(r => r.analyteName)));
         if (analytes.length > 0) {
           this.selectedAnalyte.set(analytes[0]);
         }
-      },
-      error: () => {
-        this.isLoadingLab.set(false);
       }
+      this.isLoadingLab.set(false);
     });
   }
 

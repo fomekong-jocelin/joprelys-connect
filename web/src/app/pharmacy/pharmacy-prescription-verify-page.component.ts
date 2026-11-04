@@ -1,5 +1,4 @@
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -10,10 +9,11 @@ import { PharmacyApiService } from './pharmacy-api.service';
 import { PharmacyDispensationPanelComponent } from './pharmacy-dispensation-panel.component';
 import { PharmacyVerifyItem, PharmacyVerifyResponse, pharmacyDisplayStatus } from './pharmacy.models';
 
+import { AppDatePipe } from '../shared/formatting/app-date.pipe';
 @Component({
   selector: 'app-pharmacy-prescription-verify-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DatePipe, AppShellComponent, PageHeaderComponent, ButtonComponent, PharmacyDispensationPanelComponent],
+  imports: [AppDatePipe, ReactiveFormsModule, AppShellComponent, PageHeaderComponent, ButtonComponent, PharmacyDispensationPanelComponent],
   template: `
     <app-shell>
       <app-page-header
@@ -119,13 +119,13 @@ import { PharmacyVerifyItem, PharmacyVerifyResponse, pharmacyDisplayStatus } fro
                   <div class="ui-card-muted p-4">
                     <span class="ui-label">{{ t('pharmacy.issuedAt') }}</span>
                     <p class="mt-1 text-sm font-bold" style="color: var(--text-primary)">
-                      {{ currentPrescription.issuedAt | date:'mediumDate' }}
+                      {{ currentPrescription.issuedAt | appDate }}
                     </p>
                   </div>
                   <div class="ui-card-muted p-4">
                     <span class="ui-label">{{ t('pharmacy.expiresAt') }}</span>
                     <p class="mt-1 text-sm font-bold" style="color: var(--text-primary)">
-                      {{ currentPrescription.expiresAt | date:'mediumDate' }}
+                      {{ currentPrescription.expiresAt | appDate }}
                     </p>
                   </div>
                 </div>

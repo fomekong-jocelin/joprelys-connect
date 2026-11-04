@@ -9,11 +9,13 @@ import { RbacApiService } from '../rbac/rbac-api.service';
 import { BillingCashSessionHistoryComponent } from './billing-cash-session-history.component';
 import { BillingCashierQueueComponent } from './billing-cashier-queue.component';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 @Component({
   selector: 'app-billing-cash-register',
   standalone: true,
   imports: [
     CommonModule,
+    XafPipe,
     FormsModule,
     IconComponent,
     BillingCashierQueueComponent,

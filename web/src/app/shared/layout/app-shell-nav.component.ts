@@ -24,6 +24,25 @@ export interface NavItem {
   standalone: true,
   imports: [IconComponent, RouterLink, RouterLinkActive],
   template: `
+    @if (accessLoadFailed()) {
+      <div class="ui-alert-danger mx-2 my-2 text-xs" role="alert" data-testid="nav-access-error">
+        @if (!sidebarCollapsed() || isMobile()) {
+          <p>{{ i18n.t('shell.nav.accessLoadError') }}</p>
+        }
+        <button
+          type="button"
+          class="ui-button ui-button-secondary mt-2 min-h-9 w-full text-xs"
+          [attr.aria-label]="i18n.t('shell.nav.accessLoadError') + ' ' + i18n.t('common.retry')"
+          (click)="retryAccess()"
+        >
+          @if (sidebarCollapsed() && !isMobile()) {
+            <app-ui-icon name="exclamation-triangle" aria-hidden="true" />
+          } @else {
+            {{ i18n.t('common.retry') }}
+          }
+        </button>
+      </div>
+    }
     @for (item of menuItems(); track (item.path + '-' + item.label)) {
       @if (item.isHeader) {
         @if (!sidebarCollapsed() || isMobile()) {
@@ -61,7 +80,7 @@ export interface NavItem {
   `,
 })
 export class AppShellNavComponent implements OnInit, OnDestroy {
-  private readonly i18n = inject(I18nService);
+  readonly i18n = inject(I18nService);
   private readonly patientApiService = inject(PatientApiService);
   private readonly rbacApi = inject(RbacApiService);
 
@@ -72,6 +91,8 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
   readonly linkClicked = output<void>();
 
   readonly pendingPreRegistrationsCount = signal(0);
+  /** Droits effectifs non chargés : le menu peut être incomplet, on le signale au lieu de l'ignorer. */
+  readonly accessLoadFailed = signal(false);
 
   private intervalId: ReturnType<typeof setInterval> | null = null;
 
@@ -185,10 +206,15 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
   private loadEffectiveAccess(): void {
     const currentSession = this.session();
     if (!currentSession || this.parseRoles(currentSession.role).includes('PATIENT')) return;
+    this.accessLoadFailed.set(false);
     this.rbacApi.ensureMyAccess().subscribe({
       next: () => this.refreshPendingCount(),
-      error: () => undefined,
+      error: () => this.accessLoadFailed.set(true),
     });
+  }
+
+  retryAccess(): void {
+    this.loadEffectiveAccess();
   }
 
   private refreshPendingCount(): void {
@@ -203,6 +229,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
 
     this.patientApiService.getPendingPreRegistrations(0, 1).subscribe({
       next: (response) => this.pendingPreRegistrationsCount.set(response.totalElements),
+      // Badge indicatif rafraîchi toutes les 30 s : on garde la dernière valeur connue, la page dédiée signale ses erreurs.
       error: () => undefined,
     });
   }

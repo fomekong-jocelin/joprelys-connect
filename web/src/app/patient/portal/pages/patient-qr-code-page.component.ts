@@ -6,10 +6,11 @@ import { CardComponent } from '../../../shared/ui/card.component';
 import { PatientPortalMeResponse, PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
 
+import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
 @Component({
   selector: 'app-patient-qr-code-page',
   standalone: true,
-  imports: [CommonModule, AppShellComponent, PageHeaderComponent, CardComponent],
+  imports: [AppDatePipe, CommonModule, AppShellComponent, PageHeaderComponent, CardComponent],
   template: `
     <app-shell>
       <app-page-header
@@ -46,7 +47,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                   {{ t('patient.qrCode.patient') }} : <span class="font-mono font-semibold" style="color: var(--text-primary)">{{ p.globalPatientNumber }}</span>
                 </p>
                 <p style="color: var(--text-muted)">
-                  {{ t('patient.qrCode.validUntil') }} : <span class="font-semibold" style="color: var(--text-primary)">{{ validUntil() | date:'short' }}</span>
+                  {{ t('patient.qrCode.validUntil') }} : <span class="font-semibold" style="color: var(--text-primary)">{{ validUntil() | appDate:'dateTime' }}</span>
                 </p>
               </div>
 

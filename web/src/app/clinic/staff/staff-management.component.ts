@@ -279,8 +279,7 @@ export class StaffManagementComponent implements OnInit {
         if (type === 'stamp') this.stampPath.set(response.filePath);
         component.setPreviewUrl(response.viewUrl, file.name);
       },
-      error: (error) => {
-        console.error(error);
+      error: () => {
         this.formError.set(this.t('profile.uploadError', "Erreur lors du chargement de l'image."));
       },
     });

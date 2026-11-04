@@ -54,6 +54,7 @@ import { IconComponent } from './icon.component';
           <div class="mt-6 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
             @if (!d.isAlert) {
               <button
+                #cancelButton
                 type="button"
                 class="ui-button ui-button-secondary app-dialog__cancel"
                 (click)="cancel()"
@@ -80,6 +81,7 @@ export class DialogHostComponent {
   readonly dialog = inject(DialogService);
 
   @ViewChild('confirmButton') private confirmButton?: ElementRef<HTMLButtonElement>;
+  @ViewChild('cancelButton') private cancelButton?: ElementRef<HTMLButtonElement>;
   private previouslyFocusedElement?: HTMLElement;
 
   constructor() {
@@ -89,7 +91,9 @@ export class DialogHostComponent {
         if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
           this.previouslyFocusedElement = document.activeElement;
         }
-        queueMicrotask(() => this.confirmButton?.nativeElement.focus());
+        // Action destructive : le focus initial va sur « Annuler » pour éviter une validation par Entrée réflexe.
+        const safeDefault = active.tone === 'danger' && !active.isAlert;
+        queueMicrotask(() => (safeDefault ? this.cancelButton : this.confirmButton)?.nativeElement.focus());
       } else {
         queueMicrotask(() => this.previouslyFocusedElement?.focus());
       }

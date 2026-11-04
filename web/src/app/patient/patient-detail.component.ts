@@ -1,6 +1,7 @@
 import { ToastService } from '../shared/ui/toast.service';
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, OnInit, computed, inject, input, output, signal } from '@angular/core';
+import { EMERGENCY_REASON_MAX_LENGTH, isEmergencyReasonValid } from './emergency-access-reason';
 import { ActivatedRoute, Router, RouterOutlet } from '@angular/router';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { I18nService } from '../core/i18n/i18n.service';
@@ -8,9 +9,11 @@ import { AppShellComponent } from '../shared/layout/app-shell.component';
 import { AlertComponent } from '../shared/ui/alert.component';
 import { ButtonComponent } from '../shared/ui/button.component';
 import { CardComponent } from '../shared/ui/card.component';
+import { LoadErrorComponent } from '../shared/ui/load-error.component';
 import { VisitApiService } from '../visit/visit-api.service';
 import { Visit } from '../visit/visit.models';
 import { ActivePatientService } from './active-patient.service';
+import { ClinicalDataLoadStatus } from './clinical-data-load-status';
 import { PatientApiService } from './patient-api.service';
 import { Patient, PatientAllergy } from './patient.models';
 import { PatientRecordNavigationComponent } from './detail/patient-record-navigation.component';
@@ -26,6 +29,7 @@ import { PatientVisitAdmissionDialogComponent } from './detail/patient-visit-adm
     AlertComponent,
     ButtonComponent,
     CardComponent,
+    LoadErrorComponent,
     PatientRecordNavigationComponent,
     PatientVisitAdmissionDialogComponent,
   ],
@@ -73,16 +77,19 @@ import { PatientVisitAdmissionDialogComponent } from './detail/patient-visit-adm
                     id="emergency-reason"
                     class="ui-input min-h-[80px] w-full"
                     [placeholder]="i18n.t('patient.consent.emergencyReasonPlaceholder')"
+                    [attr.maxlength]="emergencyReasonMaxLength"
+                    aria-describedby="emergency-reason-hint"
                     [value]="emergencyReason()"
                     (input)="emergencyReason.set($any($event.target).value)"
                   ></textarea>
+                  <p id="emergency-reason-hint" class="mt-1 text-xs text-[var(--text-muted)]">{{ i18n.t('patient.consent.emergencyReasonHint') }}</p>
                 </div>
 
                 <div class="grid w-full grid-cols-2 gap-3">
                   <app-ui-button variant="secondary" (pressed)="goBack()">{{ i18n.t('common.cancel') }}</app-ui-button>
                   <app-ui-button
                     variant="primary"
-                    [disabled]="!emergencyReason().trim() || emergencyLoading()"
+                    [disabled]="!emergencyReasonValid() || emergencyLoading()"
                     (pressed)="triggerEmergencyAccess()"
                   >
                     {{ emergencyLoading() ? i18n.t('patient.consent.activating') : i18n.t('patient.consent.breakGlassButton') }}
@@ -172,6 +179,14 @@ import { PatientVisitAdmissionDialogComponent } from './detail/patient-visit-adm
               </div>
             }
 
+            @if (allergiesStatus() === 'error') {
+              <app-ui-load-error
+                [message]="i18n.t('clinicalSafety.allergies.unverified')"
+                [testId]="'patient-allergies-error'"
+                (retry)="loadAllergies()"
+              />
+            }
+
             @if (criticalAllergies().length > 0) {
               <div class="flex items-center gap-3 rounded-md border border-red-200 bg-[var(--brand-danger-subtle)] p-3 text-sm font-bold text-red-800 dark:border-red-800/40 dark:text-[var(--brand-danger-text)] sm:p-4">
                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="h-5 w-5 shrink-0" aria-hidden="true">
@@ -232,6 +247,8 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
 
   readonly consentRequiredPatient = signal<Patient | null>(null);
   readonly emergencyReason = signal('');
+  readonly emergencyReasonValid = computed(() => isEmergencyReasonValid(this.emergencyReason()));
+  readonly emergencyReasonMaxLength = EMERGENCY_REASON_MAX_LENGTH;
   readonly emergencyLoading = signal(false);
   readonly emergencyError = signal<string | null>(null);
 
@@ -239,6 +256,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
   readonly showVisitModal = signal(false);
   readonly activeVisit = signal<Visit | null>(null);
   readonly criticalAllergies = signal<PatientAllergy[]>([]);
+  readonly allergiesStatus = signal<ClinicalDataLoadStatus>('idle');
   readonly criticalAllergiesSubstances = computed(() => this.criticalAllergies().map(allergy => allergy.substance).join(', '));
 
   readonly canAdmit = computed(() => this.rbacApi.hasPermission('VISIT_CREATE') && this.activeVisit() === null);
@@ -289,10 +307,7 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
         document.body.removeChild(anchor);
         window.URL.revokeObjectURL(url);
       },
-      error: err => {
-        console.error('Error downloading summary pdf', err);
-        this.toasts.error(this.i18n.t('patient.detail.downloadPdfError'));
-      },
+      error: () => this.toasts.error(this.i18n.t('patient.detail.downloadPdfError')),
     });
   }
 
@@ -345,25 +360,37 @@ export class PatientDetailComponent implements OnInit, OnDestroy {
     if (this.rbacApi.hasPermission('VISIT_READ')) {
       this.visitApi.getActiveVisits().subscribe({
         next: visits => this.activeVisit.set(visits.find(visit => visit.patientId === currentPatient.id) ?? null),
-        error: () => {},
+        error: () => this.toasts.error(this.i18n.t('patient.detail.activeVisitLoadError'), 0),
       });
     } else {
       this.activeVisit.set(null);
     }
 
+    this.loadAllergies();
+  }
+
+  /** Un échec reste visible (« allergies non vérifiées ») et ne s'affiche jamais comme une absence d'allergie. */
+  loadAllergies(): void {
+    const currentPatient = this.patient();
+    if (!currentPatient) return;
+    this.allergiesStatus.set('loading');
     this.patientApi.getAllergies(currentPatient.id).subscribe({
       next: allergies => {
         this.criticalAllergies.set(allergies.filter(allergy =>
           allergy.status === 'ACTIVE' && (allergy.severity === 'CRITICAL' || allergy.severity === 'HIGH'),
         ));
+        this.allergiesStatus.set('loaded');
       },
-      error: () => {},
+      error: () => {
+        this.criticalAllergies.set([]);
+        this.allergiesStatus.set('error');
+      },
     });
   }
 
   triggerEmergencyAccess(): void {
     const currentPatient = this.consentRequiredPatient();
-    if (!currentPatient || !this.emergencyReason().trim()) return;
+    if (!currentPatient || !this.emergencyReasonValid() || this.emergencyLoading()) return;
 
     this.emergencyLoading.set(true);
     this.emergencyError.set(null);

@@ -7,6 +7,7 @@ import { CashierCollectionQueueItem } from '../../patient/cashier-collection.mod
 import { PatientSearchPickerComponent } from '../../patient/patient-search-picker.component';
 import { Patient, PatientDeposit } from '../../patient/patient.models';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 /**
  * Acomptes au poste caissier (ADR-20261017 D-16) : encaissement avant facturation, puis imputation
  * sur une facture validée du patient sans nouvel encaissement.
@@ -14,7 +15,7 @@ import { Patient, PatientDeposit } from '../../patient/patient.models';
 @Component({
   selector: 'app-billing-deposits-panel',
   standalone: true,
-  imports: [CommonModule, FormsModule, PatientSearchPickerComponent],
+  imports: [XafPipe, CommonModule, FormsModule, PatientSearchPickerComponent],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <section class="ui-card space-y-4 p-4 sm:p-5" [attr.aria-label]="t('billing.deposit.title')">
@@ -48,13 +49,13 @@ import { Patient, PatientDeposit } from '../../patient/patient.models';
           <ul class="divide-y divide-[var(--app-border)] border border-[var(--app-border)]">
             @for (deposit of deposits(); track deposit.id) {
               <li class="flex flex-wrap items-center justify-between gap-2 p-3 text-xs">
-                <span><span class="mono">{{ deposit.depositNumber }}</span> — {{ deposit.amount | number:'1.0-0' }} FCFA
-                  ({{ t('billing.deposit.remaining') }} {{ deposit.remainingAmount | number:'1.0-0' }} FCFA)</span>
+                <span><span class="mono">{{ deposit.depositNumber }}</span> — {{ deposit.amount | xaf }}
+                  ({{ t('billing.deposit.remaining') }} {{ deposit.remainingAmount | xaf }})</span>
                 @if (deposit.remainingAmount > 0 && openInvoices().length > 0) {
                   <span class="flex flex-wrap items-center gap-2">
                     <select class="ui-select w-48" [ngModel]="targetInvoiceId()" (ngModelChange)="targetInvoiceId.set($event)" [name]="'invoice-' + deposit.id" [attr.aria-label]="t('billing.deposit.invoice')">
                       @for (invoice of openInvoices(); track invoice.invoiceId) {
-                        <option [value]="invoice.invoiceId">{{ invoice.invoiceNumber }} — {{ invoice.patientRemainingAmount | number:'1.0-0' }} FCFA</option>
+                        <option [value]="invoice.invoiceId">{{ invoice.invoiceNumber }} — {{ invoice.patientRemainingAmount | xaf }}</option>
                       }
                     </select>
                     <button type="button" class="ui-button ui-button-secondary" (click)="apply(deposit)" [disabled]="busy() || !targetInvoiceId()">{{ t('billing.deposit.apply') }}</button>
@@ -129,13 +130,16 @@ export class BillingDepositsPanelComponent {
   }
 
   private refresh(patientId: string): void {
-    this.billingApi.listDeposits(patientId).subscribe({ next: (deposits) => this.deposits.set(deposits), error: () => undefined });
+    this.billingApi.listDeposits(patientId).subscribe({
+      next: (deposits) => this.deposits.set(deposits),
+      error: () => this.error.set(this.t('billing.deposit.loadError')),
+    });
     this.billingApi.listCashierCollectionQueue().subscribe({
       next: (items) => {
         this.queue.set(items);
         this.targetInvoiceId.set(this.openInvoices()[0]?.invoiceId ?? '');
       },
-      error: () => undefined,
+      error: () => this.error.set(this.t('billing.deposit.queueLoadError')),
     });
   }
 

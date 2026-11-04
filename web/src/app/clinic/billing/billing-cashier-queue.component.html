@@ -31,7 +31,7 @@
     </div>
     <div class="cashier-queue-kpi">
       <span>{{ t('billing.cashierQueue.remainingTotal', 'Total patient restant') }}</span>
-      <strong>{{ totalRemaining() | number:'1.0-0' }} FCFA</strong>
+      <strong>{{ totalRemaining() | xaf }}</strong>
     </div>
     <div class="cashier-queue-kpi">
       <span>{{ t('billing.cashierQueue.partialCases', 'Paiements partiels') }}</span>
@@ -49,7 +49,7 @@
           </p>
           <p class="text-xs">
             {{ payment.item.patientName }} · {{ payment.item.invoiceNumber }} ·
-            <strong>{{ payment.amount | number:'1.0-0' }} FCFA</strong> ·
+            <strong>{{ payment.amount | xaf }}</strong> ·
             {{ paymentMethodLabel(payment.method) }}
           </p>
           @if (payment.receipt) {
@@ -172,11 +172,11 @@
             <dl class="cashier-queue-card__amounts">
               <div>
                 <dt>{{ t('billing.cashierQueue.invoiceTotal', 'Total facture') }}</dt>
-                <dd>{{ item.totalAmount | number:'1.0-0' }} FCFA</dd>
+                <dd>{{ item.totalAmount | xaf }}</dd>
               </div>
               <div class="cashier-queue-card__remaining">
                 <dt>{{ t('billing.cashierQueue.patientRemaining', 'Reste patient') }}</dt>
-                <dd>{{ item.patientRemainingAmount | number:'1.0-0' }} FCFA</dd>
+                <dd>{{ item.patientRemainingAmount | xaf }}</dd>
               </div>
             </dl>
 

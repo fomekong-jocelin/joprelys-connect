@@ -64,16 +64,16 @@
               <dl class="invoice-amount-grid">
                 <div class="invoice-amount">
                   <dt>{{ translate('billing.invoiceTotal', 'Total') }}</dt>
-                  <dd>{{ invoice.totalAmount | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ invoice.totalAmount | xaf }}</dd>
                 </div>
                 <div class="invoice-amount">
                   <dt>{{ getPatientAmountLabel(invoice) }}</dt>
-                  <dd>{{ getPatientRemainingAmount(invoice) | number:'1.0-0' }} FCFA</dd>
+                  <dd>{{ getPatientRemainingAmount(invoice) | xaf }}</dd>
                 </div>
                 @if (hasInsuranceShare(invoice)) {
                   <div class="invoice-amount">
                     <dt>{{ getInsuranceAmountLabel(invoice) }}</dt>
-                    <dd>{{ getInsuranceRemainingAmount(invoice) | number:'1.0-0' }} FCFA</dd>
+                    <dd>{{ getInsuranceRemainingAmount(invoice) | xaf }}</dd>
                   </div>
                 }
               </dl>

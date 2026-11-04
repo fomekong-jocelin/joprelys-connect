@@ -227,6 +227,48 @@ describe('LoginComponent', () => {
     );
   });
 
+  it('ramène le patient vers la page demandée après vérification du code', () => {
+    queryParams['returnUrl'] = '/patient/results';
+    const component = TestBed.createComponent(LoginComponent).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.patientNumber.set('dpu-001');
+    component.otpCode.set('123456');
+    component.verifyOtp();
+    httpTesting.expectOne('/api/public/patient/auth/verify').flush({
+      accessToken: 'patient-token',
+      tokenType: 'Bearer',
+      expiresAt: '2999-07-17T20:00:00Z',
+      email: '',
+      name: 'Patient',
+      role: 'PATIENT',
+      requiresOtp: false,
+    });
+
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/patient/results');
+  });
+
+  it("ignore un returnUrl externe et renvoie vers le tableau de bord patient", () => {
+    queryParams['returnUrl'] = '//evil.example/patient/results';
+    const component = TestBed.createComponent(LoginComponent).componentInstance;
+    const httpTesting = TestBed.inject(HttpTestingController);
+
+    component.patientNumber.set('dpu-001');
+    component.otpCode.set('123456');
+    component.verifyOtp();
+    httpTesting.expectOne('/api/public/patient/auth/verify').flush({
+      accessToken: 'patient-token',
+      tokenType: 'Bearer',
+      expiresAt: '2999-07-17T20:00:00Z',
+      email: '',
+      name: 'Patient',
+      role: 'PATIENT',
+      requiresOtp: false,
+    });
+
+    expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/patient/dashboard');
+  });
+
   it('should keep the error generic when credentials are invalid', () => {
     const fixture = TestBed.createComponent(LoginComponent);
     const component = fixture.componentInstance;

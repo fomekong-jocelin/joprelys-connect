@@ -1,7 +1,8 @@
 import { TestBed } from '@angular/core/testing';
-import { of } from 'rxjs';
+import { Subject, of, throwError } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { SpatialApiService } from '../../patient/spatial-api.service';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { SpatialManagementPageComponent } from './spatial-management-page.component';
 
@@ -11,12 +12,24 @@ describe('SpatialManagementPageComponent', () => {
   let updateBedCapacityStatus: ReturnType<typeof vi.fn>;
   let updateBedCleaningStatus: ReturnType<typeof vi.fn>;
   let updateBedMaintenanceStatus: ReturnType<typeof vi.fn>;
+  let listInpatientSpaces: ReturnType<typeof vi.fn>;
+  let confirm: ReturnType<typeof vi.fn>;
 
   beforeEach(() => {
     hasPermission = vi.fn(() => false);
     updateBedCapacityStatus = vi.fn(() => of({}));
     updateBedCleaningStatus = vi.fn(() => of({}));
     updateBedMaintenanceStatus = vi.fn(() => of({}));
+    confirm = vi.fn().mockResolvedValue(true);
+    listInpatientSpaces = vi.fn(() => of([{
+      id: 'space-1',
+      locationNodeId: null,
+      code: 'MED_201',
+      name: 'Chambre 201',
+      spaceTypeCode: 'HOSPITAL_ROOM',
+      inpatientProfile: true,
+      active: true,
+    }]));
 
     TestBed.configureTestingModule({
       imports: [SpatialManagementPageComponent],
@@ -24,15 +37,7 @@ describe('SpatialManagementPageComponent', () => {
         {
           provide: SpatialApiService,
           useValue: {
-            listInpatientSpaces: vi.fn(() => of([{
-              id: 'space-1',
-              locationNodeId: null,
-              code: 'MED_201',
-              name: 'Chambre 201',
-              spaceTypeCode: 'HOSPITAL_ROOM',
-              inpatientProfile: true,
-              active: true,
-            }])),
+            listInpatientSpaces,
             listSpaces: vi.fn(() => of([{
               id: 'space-1',
               locationNodeId: null,
@@ -60,6 +65,7 @@ describe('SpatialManagementPageComponent', () => {
         },
         { provide: I18nService, useValue: { t: (key: string) => key } },
         { provide: RbacApiService, useValue: { hasPermission } },
+        { provide: DialogService, useValue: { confirm } },
       ],
     });
     TestBed.overrideComponent(SpatialManagementPageComponent, { set: { template: '' } });
@@ -88,12 +94,71 @@ describe('SpatialManagementPageComponent', () => {
     expect(component.canOperateBed()).toBe(true);
   });
 
-  it('calls the dedicated capacity endpoint', () => {
+  it('calls the dedicated capacity endpoint after confirming the bed closure', async () => {
     component.ngOnInit();
 
-    component.changeBedCapacityStatus('bed-1', 'CLOSED');
+    await component.changeBedCapacityStatus('bed-1', 'CLOSED');
 
+    expect(confirm).toHaveBeenCalledWith(expect.objectContaining({
+      title: 'spatial.closeBed.confirmTitle',
+      confirmLabel: 'spatial.closeBed.confirmAction',
+      tone: 'danger',
+    }));
     expect(updateBedCapacityStatus).toHaveBeenCalledWith('bed-1', 'CLOSED');
+  });
+
+  it('keeps the bed open when the closure is not confirmed', async () => {
+    confirm.mockResolvedValue(false);
+    component.ngOnInit();
+
+    await component.changeBedCapacityStatus('bed-1', 'CLOSED');
+
+    expect(updateBedCapacityStatus).not.toHaveBeenCalled();
+  });
+
+  it('reopens a bed without confirmation', async () => {
+    component.ngOnInit();
+
+    await component.changeBedCapacityStatus('bed-1', 'OPEN');
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(updateBedCapacityStatus).toHaveBeenCalledWith('bed-1', 'OPEN');
+  });
+
+  it('ignores a second click while a bed action is pending, then releases it', () => {
+    const pending = new Subject<unknown>();
+    updateBedCleaningStatus.mockReturnValue(pending);
+    component.ngOnInit();
+
+    component.changeBedCleaningStatus('bed-1', 'CLEANING');
+    component.changeBedCleaningStatus('bed-1', 'CLEANING');
+
+    expect(updateBedCleaningStatus).toHaveBeenCalledTimes(1);
+    expect(component.pendingBedId()).toBe('bed-1');
+    pending.next({});
+    pending.complete();
+    expect(component.pendingBedId()).toBeNull();
+  });
+
+  it('shows a bed action error instead of failing silently', () => {
+    updateBedMaintenanceStatus.mockReturnValue(throwError(() => ({ error: {} })));
+    component.ngOnInit();
+
+    component.changeBedMaintenanceStatus('bed-1', 'MAINTENANCE');
+
+    expect(component.bedActionError()).toBe('spatial.bedAction.error');
+    expect(component.pendingBedId()).toBeNull();
+  });
+
+  it('distinguishes a loading failure from an empty space list', () => {
+    listInpatientSpaces.mockReturnValueOnce(throwError(() => new Error('503')));
+
+    component.ngOnInit();
+
+    expect(component.loadError()).toBe('spatial.loadError.spaces');
+    component.retryLoad();
+    expect(component.loadError()).toBeNull();
+    expect(component.spaces().length).toBe(1);
   });
 
   it('calls the dedicated cleaning endpoint', () => {

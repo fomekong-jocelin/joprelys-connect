@@ -1,4 +1,6 @@
-import { ApplicationConfig, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
+import { registerLocaleData } from '@angular/common';
+import localeFr from '@angular/common/locales/fr';
+import { ApplicationConfig, LOCALE_ID, inject, provideAppInitializer, provideBrowserGlobalErrorListeners } from '@angular/core';
 import { provideHttpClient, withFetch, withInterceptors } from '@angular/common/http';
 import { provideRouter } from '@angular/router';
 
@@ -10,9 +12,18 @@ import { I18nService } from './core/i18n/i18n.service';
 import { legalRoutes } from './legal/legal.routes';
 import { routes } from './app.routes';
 
+// Données de locale françaises (noms de mois, séparateurs) pour les pipes Angular.
+registerLocaleData(localeFr);
+
+/** Locale des pipes Angular, alignée sur la langue choisie au démarrage (le français par défaut). */
+export function resolveAppLocaleId(language: string): 'fr' | 'en' {
+  return language === 'en' ? 'en' : 'fr';
+}
+
 export const appConfig: ApplicationConfig = {
   providers: [
     provideBrowserGlobalErrorListeners(),
+    { provide: LOCALE_ID, useFactory: () => resolveAppLocaleId(inject(I18nService).currentLanguage()) },
     provideRouter([...legalRoutes, ...routes]),
     provideHttpClient(withFetch(), withInterceptors([authTokenInterceptor, accessRequirementInterceptor])),
     provideAppInitializer(() => {
