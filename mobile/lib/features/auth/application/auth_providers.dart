@@ -7,6 +7,7 @@ import '../../../core/network/api_client.dart';
 import '../../../core/network/api_client_providers.dart';
 import '../../../core/network/api_request_interceptor.dart';
 import '../../../core/network/api_session.dart';
+import '../../../core/security/local_session_data_purger.dart';
 import '../../../core/security/secure_storage.dart';
 import '../data/auth_api.dart';
 import '../data/auth_session_store.dart';
@@ -57,11 +58,14 @@ final authApiProvider = Provider<AuthApi>((ref) {
 });
 
 final authSessionManagerProvider = Provider<AuthSessionManager>((ref) {
-  return AuthSessionManager(
+  final manager = AuthSessionManager(
     store: ref.watch(authSessionStoreProvider),
     authApi: ref.watch(authApiProvider),
     cookieJar: ref.watch(apiCookieJarProvider),
+    localDataPurgers: ref.watch(localSessionDataPurgersProvider),
   );
+  ref.onDispose(manager.dispose);
+  return manager;
 });
 
 final biometricAuthenticatorProvider = Provider<BiometricAuthenticator>((ref) {

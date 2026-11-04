@@ -134,5 +134,7 @@
   },
   "authEnableBiometrics": "Enable biometric lock",
   "authDisableBiometrics": "Disable biometric lock",
-  "authBiometricEnableReason": "Confirm enabling Joprelys Connect biometric lock"
+  "authBiometricEnableReason": "Confirm enabling Joprelys Connect biometric lock",
+  "authSessionExpired": "Your session has expired. Sign in again to continue.",
+  "labPdfDownloadedTemporarily": "Result PDF downloaded. This temporary copy is erased when you sign out."
 }

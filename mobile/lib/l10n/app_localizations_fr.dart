@@ -276,4 +276,12 @@ class AppLocalizationsFr extends AppLocalizations {
   @override
   String get authBiometricEnableReason =>
       'Confirmer l’activation du verrouillage biométrique Joprelys Connect';
+
+  @override
+  String get authSessionExpired =>
+      'Votre session a expiré. Reconnectez-vous pour continuer.';
+
+  @override
+  String get labPdfDownloadedTemporarily =>
+      'PDF du résultat téléchargé. Cette copie temporaire est effacée à la déconnexion.';
 }

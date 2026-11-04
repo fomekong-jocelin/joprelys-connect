@@ -18,18 +18,20 @@ class JoprelysApp extends ConsumerWidget {
     final themeMode = ref.watch(themeModeProvider);
     final locale = ref.watch(appLocaleProvider);
 
-    return AuthLifecycleLock(
-      child: MaterialApp.router(
-        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-        debugShowCheckedModeBanner: false,
-        locale: locale,
-        supportedLocales: AppConfig.supportedLocales,
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
-        themeMode: themeMode,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        routerConfig: router,
-      ),
+    return MaterialApp.router(
+      onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
+      debugShowCheckedModeBanner: false,
+      locale: locale,
+      supportedLocales: AppConfig.supportedLocales,
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      themeMode: themeMode,
+      theme: AppTheme.light,
+      darkTheme: AppTheme.dark,
+      routerConfig: router,
+      // Inside the app: the lock gets Directionality, Localizations, Theme and
+      // ScaffoldMessenger while staying above every route it must cover.
+      builder: (context, child) =>
+          AuthLifecycleLock(child: child ?? const SizedBox.shrink()),
     );
   }
 }

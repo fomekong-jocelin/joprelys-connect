@@ -553,6 +553,18 @@ abstract class AppLocalizations {
   /// In fr, this message translates to:
   /// **'Confirmer l’activation du verrouillage biométrique Joprelys Connect'**
   String get authBiometricEnableReason;
+
+  /// No description provided for @authSessionExpired.
+  ///
+  /// In fr, this message translates to:
+  /// **'Votre session a expiré. Reconnectez-vous pour continuer.'**
+  String get authSessionExpired;
+
+  /// No description provided for @labPdfDownloadedTemporarily.
+  ///
+  /// In fr, this message translates to:
+  /// **'PDF du résultat téléchargé. Cette copie temporaire est effacée à la déconnexion.'**
+  String get labPdfDownloadedTemporarily;
 }
 
 class _AppLocalizationsDelegate

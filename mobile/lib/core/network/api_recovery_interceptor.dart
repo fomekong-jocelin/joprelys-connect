@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:dio/dio.dart';
 
+import '../security/safe_debug_log.dart';
+import 'api_exception.dart';
 import 'api_headers.dart';
 import 'api_request_policy.dart';
 import 'api_session.dart';
@@ -64,7 +66,7 @@ final class ApiRecoveryInterceptor extends Interceptor {
       return false;
     }
     if (!session.canRefresh) {
-      await _sessionAccess.expire();
+      await _expireSession();
       return false;
     }
 
@@ -85,7 +87,7 @@ final class ApiRecoveryInterceptor extends Interceptor {
         rejectedAccessToken: rejectedToken,
       );
       if (refreshed?.hasUsableAccessToken(_clock()) != true) {
-        await _sessionAccess.expire();
+        await _expireSession();
         return false;
       }
       await _resolveRetry(
@@ -95,23 +97,43 @@ final class ApiRecoveryInterceptor extends Interceptor {
         extraKey: ApiRequestExtraKeys.authRetryCount,
       );
       return true;
+    } on ApiException catch (refreshError) {
+      // The auth client maps transport failures to ApiException: only an
+      // explicit server refusal ends the session. Timeouts and network loss
+      // keep it so the user can retry once connectivity is back.
+      if (_isAuthenticationRefusalKind(refreshError)) {
+        await _expireSession();
+      }
+      handler.next(_refreshFailure(request, refreshError));
+      return true;
     } on DioException catch (refreshError) {
       if (_isAuthenticationRefusal(refreshError)) {
-        await _sessionAccess.expire();
+        await _expireSession();
       }
       handler.next(refreshError);
       return true;
     } catch (failure) {
-      await _sessionAccess.expire();
-      handler.next(
-        DioException(
-          requestOptions: request,
-          type: DioExceptionType.unknown,
-          error: failure,
-        ),
-      );
+      handler.next(_refreshFailure(request, failure));
       return true;
     }
+  }
+
+  /// Expires the session without ever leaving the Dio handler unresolved: a
+  /// failing local purge is logged, and retried by the next sign-in purge.
+  Future<void> _expireSession() async {
+    try {
+      await _sessionAccess.expire();
+    } catch (error) {
+      safeDebugLog('Purge locale de session incomplète', error: error);
+    }
+  }
+
+  DioException _refreshFailure(RequestOptions request, Object failure) {
+    return DioException(
+      requestOptions: request,
+      type: DioExceptionType.unknown,
+      error: failure,
+    );
   }
 
   Future<bool> _tryTransientRetry(
@@ -214,6 +236,11 @@ final class ApiRecoveryInterceptor extends Interceptor {
   bool _isAuthenticationRefusal(DioException error) {
     final status = error.response?.statusCode;
     return status == 401 || status == 403;
+  }
+
+  bool _isAuthenticationRefusalKind(ApiException error) {
+    return error.kind == ApiFailureKind.unauthenticated ||
+        error.kind == ApiFailureKind.forbidden;
   }
 
   bool _isTransient(DioException error) {

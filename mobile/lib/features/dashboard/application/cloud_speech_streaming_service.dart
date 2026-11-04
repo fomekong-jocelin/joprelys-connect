@@ -8,6 +8,8 @@ import 'package:flutter/foundation.dart';
 import 'package:record/record.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../../../core/network/api_exception.dart';
+import '../../../core/security/safe_debug_log.dart';
 import '../data/clinical_transcript_draft_store.dart';
 import '../data/clinical_voice_ai_api.dart';
 import '../domain/consultation_note.dart';
@@ -20,6 +22,10 @@ import 'cloud_speech_streaming_health.dart';
 
 export 'clinical_voice_error_message.dart';
 export 'clinical_voice_state.dart';
+
+/// Returns the access token valid *now*, refreshing it when needed, or `null`
+/// when no session is available. Called before every (re)connection.
+typedef ClinicalVoiceAccessTokenProvider = Future<String?> Function();
 
 @visibleForTesting
 Uri buildClinicalVoiceWebSocketUri({
@@ -62,7 +68,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     required Map<String, String> initialDraft,
     required String locale,
     required Uri apiBaseUri,
-    required String jwtToken,
+    required ClinicalVoiceAccessTokenProvider accessTokenProvider,
     ClinicalTranscriptDraftGateway? draftStore,
     AudioRecorder? recorder,
     WebSocketChannel Function(Uri uri)? channelFactory,
@@ -71,7 +77,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
        _initialDraft = Map<String, String>.unmodifiable(initialDraft),
        _locale = locale,
        _apiBaseUri = apiBaseUri,
-       _jwtToken = jwtToken,
+       _accessTokenProvider = accessTokenProvider,
        _draftStore = draftStore ?? const SecureClinicalTranscriptDraftStore(),
        _recorder = recorder ?? AudioRecorder(),
        _channelFactory = channelFactory ?? WebSocketChannel.connect,
@@ -105,7 +111,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   final Map<String, String> _initialDraft;
   final String _locale;
   final Uri _apiBaseUri;
-  final String _jwtToken;
+  final ClinicalVoiceAccessTokenProvider _accessTokenProvider;
   final ClinicalTranscriptDraftGateway _draftStore;
   final ClinicalDictationParser _parser = const ClinicalDictationParser();
   final AudioRecorder _recorder;
@@ -153,11 +159,6 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   String _currentPartial = '';
   Duration _currentPartialOffset = Duration.zero;
 
-  Uri get _streamUri => buildClinicalVoiceWebSocketUri(
-    apiBaseUri: _apiBaseUri,
-    jwtToken: _jwtToken,
-  );
-
   Future<void> initialize() async {
     if (_disposed) return;
     await _restoreLocalDraft();
@@ -176,10 +177,6 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         _isStreaming ||
         _connecting ||
         value.stage == ClinicalVoiceStage.review) {
-      return;
-    }
-    if (_jwtToken.trim().isEmpty) {
-      _setError(StateError('AUTH_SESSION_MISSING'));
       return;
     }
 
@@ -238,7 +235,16 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
     final generation = ++_connectionGeneration;
 
     try {
-      final channel = _channelFactory(_streamUri);
+      // The token is resolved for each attempt: a reconnection after a token
+      // refresh must never replay the token captured when the sheet opened.
+      final accessToken = await _resolveAccessToken();
+      if (_disposed || !_shouldReconnect || !_isStreaming) return;
+      final channel = _channelFactory(
+        buildClinicalVoiceWebSocketUri(
+          apiBaseUri: _apiBaseUri,
+          jwtToken: accessToken,
+        ),
+      );
       _wsChannel = channel;
       _wsStreamSubscription = channel.stream.listen(
         (message) => _handleWebSocketMessage(message, generation),
@@ -285,13 +291,13 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         soundLevel: value.soundLevel <= 0 ? 12 : value.soundLevel,
         clearError: true,
       );
-      debugPrint('WebSocket vocal prêt : $_streamUri');
+      safeDebugLog('WebSocket vocal prêt');
     } catch (error) {
-      debugPrint('Échec connexion WebSocket vocal: $error');
+      safeDebugLog('Échec connexion WebSocket vocal', error: error);
       _transportReady = false;
       await _cleanupWebSocket();
       if (_disposed || !_isStreaming || !_shouldReconnect) return;
-      if (error is _VoiceSocketException && !error.retryable) {
+      if (_isTerminalConnectionFailure(error)) {
         _stopAfterFailure(error);
       } else {
         await _scheduleReconnect(error);
@@ -302,6 +308,25 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         _startAckCompleter = null;
       }
     }
+  }
+
+  Future<String> _resolveAccessToken() async {
+    final token = (await _accessTokenProvider())?.trim();
+    if (token == null || token.isEmpty) {
+      throw const ApiException(
+        kind: ApiFailureKind.unauthenticated,
+        code: 'AUTH_SESSION_MISSING',
+        message: 'AUTH_SESSION_MISSING',
+      );
+    }
+    return token;
+  }
+
+  bool _isTerminalConnectionFailure(Object error) {
+    if (error is _VoiceSocketException) return !error.retryable;
+    return error is ApiException &&
+        (error.kind == ApiFailureKind.unauthenticated ||
+            error.kind == ApiFailureKind.forbidden);
   }
 
   bool _isCurrentConnection(int generation) {
@@ -415,14 +440,14 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
   }
 
   void _handleAudioStreamError(Object error) {
-    debugPrint('Erreur capture microphone: $error');
+    safeDebugLog('Erreur capture microphone', error: error);
     if (_disposed || !_isStreaming || !_shouldReconnect) return;
     unawaited(_recoverAudioCapture(error));
   }
 
   void _handleAudioStreamDone() {
     if (_disposed || !_isStreaming || !_shouldReconnect) return;
-    debugPrint('Flux microphone terminé alors que la dictée reste active');
+    safeDebugLog('Flux microphone terminé alors que la dictée reste active');
     unawaited(_recoverAudioCapture(StateError('MICROPHONE_STREAM_ENDED')));
   }
 
@@ -565,7 +590,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
           break;
         case 'ack':
           final status = data['status']?.toString() ?? '';
-          debugPrint('WebSocket ACK: $status');
+          safeDebugLog('WebSocket ACK: $status');
           if (status == 'STREAMING_STARTED') {
             _completeStartWaiter();
           } else if (status == 'STREAMING_STOPPED') {
@@ -596,13 +621,13 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
           break;
       }
     } catch (error) {
-      debugPrint('Message WebSocket vocal illisible: $error');
+      safeDebugLog('Message WebSocket vocal illisible', error: error);
     }
   }
 
   void _handleWebSocketError(Object error, int generation) {
     if (generation != _connectionGeneration || _disposed) return;
-    debugPrint('WebSocket vocal en erreur: $error');
+    safeDebugLog('WebSocket vocal en erreur', error: error);
     _failStartWaiter(error);
     _completeStopWaiter();
     if (!_connecting && _shouldReconnect && _isStreaming) {
@@ -612,7 +637,7 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
 
   void _handleWebSocketClosed(int generation) {
     if (generation != _connectionGeneration || _disposed) return;
-    debugPrint('WebSocket vocal fermé');
+    safeDebugLog('WebSocket vocal fermé');
     _failStartWaiter(StateError('VOICE_SOCKET_CLOSED'));
     _completeStopWaiter();
     if (!_connecting && _shouldReconnect && _isStreaming) {
@@ -661,7 +686,8 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
       await _cleanupWebSocket();
       _pendingAudio.clear();
       _recentAudio.clear();
-      _setError(StateError('VOICE_CONNECTION_UNAVAILABLE: $error'));
+      safeDebugLog('Reconnexion vocale abandonnée', error: error);
+      _setError(StateError('VOICE_CONNECTION_UNAVAILABLE'));
       return;
     }
 
@@ -971,9 +997,9 @@ class CloudSpeechStreamingService extends ValueNotifier<RealtimeSpeechState> {
         _wsChannel!.sink.add(jsonEncode(<String, Object?>{'type': 'stop'}));
         await stopAck.future.timeout(_stopAckTimeout);
       } on TimeoutException {
-        debugPrint('Timeout de finalisation du streaming vocal');
+        safeDebugLog('Timeout de finalisation du streaming vocal');
       } catch (error) {
-        debugPrint('Erreur finalisation du streaming vocal: $error');
+        safeDebugLog('Erreur finalisation du streaming vocal', error: error);
       } finally {
         if (identical(_stopAckCompleter, stopAck)) _stopAckCompleter = null;
       }

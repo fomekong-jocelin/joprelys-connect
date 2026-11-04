@@ -312,6 +312,7 @@ class _TranscriptSegmentCardState extends State<_TranscriptSegmentCard> {
           if (_editing)
             TextField(
               controller: _controller,
+              enableIMEPersonalizedLearning: false,
               autofocus: true,
               minLines: 2,
               maxLines: 8,

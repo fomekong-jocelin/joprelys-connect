@@ -20,6 +20,7 @@ class AppTextField extends StatelessWidget {
     this.obscureText = false,
     this.autocorrect = true,
     this.enableSuggestions = true,
+    this.enableIMEPersonalizedLearning = false,
     this.maxLines = 1,
     this.minLines,
     this.prefixIcon,
@@ -43,6 +44,10 @@ class AppTextField extends StatelessWidget {
   final bool obscureText;
   final bool autocorrect;
   final bool enableSuggestions;
+
+  /// Off by default: entries (credentials, clinical notes, patient names) must
+  /// not feed the keyboard's personalised dictionary.
+  final bool enableIMEPersonalizedLearning;
   final int? maxLines;
   final int? minLines;
   final Widget? prefixIcon;
@@ -63,6 +68,7 @@ class AppTextField extends StatelessWidget {
       autofillHints: autofillHints,
       autocorrect: autocorrect,
       enableSuggestions: enableSuggestions,
+      enableIMEPersonalizedLearning: enableIMEPersonalizedLearning,
       maxLines: obscureText ? 1 : maxLines,
       minLines: obscureText ? 1 : minLines,
       decoration: InputDecoration(

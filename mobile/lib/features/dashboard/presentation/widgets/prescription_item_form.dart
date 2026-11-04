@@ -324,6 +324,7 @@ class _PrescriptionItemFormState extends State<PrescriptionItemForm> {
   }) {
     return TextFormField(
       controller: controller,
+      enableIMEPersonalizedLearning: false,
       enabled: enabled,
       minLines: maxLines,
       maxLines: maxLines,

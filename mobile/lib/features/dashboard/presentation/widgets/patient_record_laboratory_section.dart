@@ -1,8 +1,5 @@
-import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:path_provider/path_provider.dart';
 
 import '../../../../core/i18n/app_locale_formatters.dart';
 import '../../../../core/network/api_exception.dart';
@@ -10,6 +7,7 @@ import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/domain/effective_access.dart';
 import '../../data/lab_order_api.dart';
+import '../../data/lab_result_pdf_temporary_store.dart';
 import '../../domain/patient_record.dart';
 import '../lab_localizations.dart';
 import 'lab_order_create_sheet.dart';
@@ -130,17 +128,17 @@ class _PatientRecordLaboratoryDetailSectionState
       final bytes = await ref
           .read(labOrderApiProvider)
           .downloadResultPdf(result.id);
-      final directory = await getApplicationDocumentsDirectory();
-      final rawName = result.resultNumber.trim().isEmpty
-          ? 'lab-result-${result.id}'
-          : result.resultNumber.trim();
-      final safeName = rawName.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '-');
-      final file = File('${directory.path}/$safeName.pdf');
-      await file.writeAsBytes(bytes, flush: true);
+      await ref
+          .read(labResultPdfTemporaryStoreProvider)
+          .save(
+            resultId: result.id,
+            resultNumber: result.resultNumber,
+            bytes: bytes,
+          );
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10n.labPdfSaved)));
+      ).showSnackBar(SnackBar(content: Text(l10n.labPdfDownloadedTemporarily)));
     } catch (error) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

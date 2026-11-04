@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
+import '../../../core/security/local_session_data_purger.dart';
 import '../application/clinical_voice_state.dart';
 
 const int clinicalTranscriptDraftVersion = 3;
@@ -104,7 +105,7 @@ abstract interface class ClinicalTranscriptDraftGateway {
 }
 
 final class SecureClinicalTranscriptDraftStore
-    implements ClinicalTranscriptDraftGateway {
+    implements ClinicalTranscriptDraftGateway, LocalSessionDataPurger {
   const SecureClinicalTranscriptDraftStore({
     this._storage = const FlutterSecureStorage(),
   });
@@ -148,5 +149,20 @@ final class SecureClinicalTranscriptDraftStore
   @override
   Future<void> delete(String visitId) {
     return _storage.delete(key: _key(visitId));
+  }
+
+  /// Erases every dictation draft (current and legacy formats) of every visit:
+  /// drafts must never be restored in another practitioner's session.
+  @override
+  Future<void> purgeLocalSessionData() async {
+    final entries = await _storage.readAll();
+    // Snapshot the keys: deleting must not mutate the map being iterated.
+    final draftKeys = entries.keys
+        .where(
+          (key) =>
+              key.startsWith(_keyPrefix) || key.startsWith(_legacyKeyPrefix),
+        )
+        .toList(growable: false);
+    await Future.wait([for (final key in draftKeys) _storage.delete(key: key)]);
   }
 }
