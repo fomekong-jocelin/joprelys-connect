@@ -4,6 +4,8 @@
 
 ## Statut global
 
+Intervention 2026-11-04 — AUDIT-20261104-FULL-SECURITY-CLINICAL-UX : READY_FOR_REVIEW. Audit complet en 4 volets (AppSec, sécurité clinique, web, mobile) et correctifs sur `fix/audit-20261104-security-clinical-ux`, non commités : actes médicaux réservés aux médecins, patient limité au validé, aucun soin après décès, PIN d'ordonnance durci (V121), secret JWT, audit des lectures, anti-escalade RBAC, OTP, journaux, erreurs ; web (allergies non vérifiées, triage, confirmations, 404, contrastes) ; mobile (session, dictée, verrou, `FLAG_SECURE`, purge). Reste : EPIC-0030 (173 SP).
+
 Intervention 2026-10-18 — FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM : DONE. Élimination complète de l'ensemble des boîtes de dialogue JavaScript natives (`confirm()`, `alert()`, `prompt()`) au profit d'un système moderne, programmatique et accessible (`DialogService`, `DialogHostComponent`), avec confirmation systématique lors de la déconnexion utilisateur (`AppShellComponent.logout`), prise en charge des tonalités `primary`, `warning`, `danger`, `info`, gestion clavier (Escape, Enter), piège de focus et accessibilité ARIA (`role="alertdialog"`). Enrichissement de `ToastService` et `ToastHostComponent` (méthodes d'aide, icônes SVG, tonalité warning). Conformité stricte aux standards de design Joprelys (Tailwind CSS v4 CSS-first, tokens CSS, thèmes light/dark, arrondis sobres 4-6px, zéro texte codé en dur / i18n FR/EN). 100% des tests Angular modifiés verts (`ng test --watch=false`) et build de production `ng build` validé.
 
 Intervention 2026-10-18 — RELEASE-20261018-MERGE-EPIC-0029-TO-MAIN : DONE. Consolidation et fusion sur `main` de l'EPIC-0029 (lots 1 à 3 : sécurité clinique, continuité des épisodes, facturation fiable, Flyway V116-V120), de l'outillage de messagerie locale MailDev et de gestion d'erreur OTP (`StaffOtpRejectedException`), des scripts d'exploitation et de la recette E2E navigateur (15 modules validés sans erreur console). Suites de tests au vert : 22 tests Maven ciblés, 120 suites Angular / 665 tests unitaires et build de production `ng build` validés. Intégrité `.gitignore` garantie (exclusion Playwright et artefacts vidéo).
@@ -22,12 +24,12 @@ Versionnement de ce lot autorisé par l'utilisateur le 2026-10-05 sur `main` ; p
 
 | Champ | Valeur |
 |---|---|
-| Dernière mise à jour | 2026-10-18 — Système unifié de dialogue et notifications UI (FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM) |
+| Dernière mise à jour | 2026-11-04 — Audit complet et correctifs sécurité, clinique, web et mobile (AUDIT-20261104-FULL-SECURITY-CLINICAL-UX) |
 
-| Responsable mise à jour | Antigravity |
-| État global | Système de dialogues et notifications modernes déployé sur le web ; 0 popup native JavaScript restante. |
-| Risques majeurs | Aucun régressif identifié. Suites de tests et build de production verts. |
-| Prochaine priorité | Terminer BUG-20260802 mobile, valider les correctifs hospitaliers puis cadrer les gaps P0. |
+| Responsable mise à jour | Claude Code |
+| État global | Branche `fix/audit-20261104-security-clinical-ux` READY_FOR_REVIEW, non commitée : 1028 tests backend, 742 web, 226 mobile. Correctifs P0/P1 de sécurité et de sécurité clinique livrés ; 3 P0 cliniques planifiés dans EPIC-0030. |
+| Risques majeurs | P0 cliniques ouverts : allergies et doublons à la prescription (A1), posologie libre (A2), prescriptions de séjour (A3) ; aucune alerte au prescripteur pour un résultat critique (A4) ; release mobile signée avec la clé debug (C6) ; secret JWT à changer sur les environnements qui ont utilisé l'ancien défaut. |
+| Prochaine priorité | Relecture clinique (ADR-20261104), recette navigateur et appareil, décision SemVer et commit/PR sur demande ; puis EPIC-0030 A1 → A4 → B1 → A2 → A3, en parallèle de C1 et C6. |
 | Sprint courant | SPRINT-0014 documenté, à replanifier avant nouvel engagement mobile |
 | Capacité sprint | Réserver 15 SP / 6 à 8,5 jours senior pour la consolidation mobile et l'alignement SOAP cross-stack, à 60–70 % de focus. Capacité nominative non fournie : aucun engagement de date. |
 | Charge engagée | PR #258 fusionnée sur main. Lot UI Dialogs livré. |
@@ -37,6 +39,7 @@ Versionnement de ce lot autorisé par l'utilisateur le 2026-10-05 sur `main` ; p
 
 | ID | Epic | Type | Titre | Stack | Statut | Priorité | SP | Profil recommended | Est. Senior | Est. Intermédiaire | Est. Junior | Assigné | Reviewer | Sprint | Temps passé | Reste à faire | Risque | Dernière MAJ |
 |---|---|---|---|---|---|---|---|---:|---|---:|---:|---:|---|---|---|---:|---|---|---|
+| AUDIT-20261104-FULL-SECURITY-CLINICAL-UX | EPIC-0030 / SECURITY / CLINICAL_SAFETY / UX | QA / Diagnostic / Engineering | Audit complet et correctifs sécurité, sécurité clinique, parcours web et mobile | Spring Boot / Angular / Flutter / Flyway | READY_FOR_REVIEW — 1028 Maven verts, 742 Angular verts, 226 Flutter verts, V121 validée sur PostgreSQL ; relecture clinique et recette ouvertes | P0 | 48 | Tech Lead / Senior Full-stack | 6j | 10j | 15j | Claude Code | Médecin référent / Tech Lead / DPO | Hors sprint | 1j | EPIC-0030 (173 SP), recette, commit/PR sur demande | Élevé (P0 cliniques ouverts) | 2026-11-04 |
 | FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM | UI / DESIGN_SYSTEM / SHARED_COMPONENTS | Feature / Engineering UI | Système unifié de boîtes de dialogue et notifications (suppression popups JavaScript natives) | Angular 20 / Tailwind CSS v4 / TypeScript | DONE — 0 native dialog restants, DialogService + DialogHostComponent créés, ToastService enrichi, tests unitaires et ng build OK | P1 | 3 | Senior Frontend Angular / UI | 0.5j | 1.0j | 1.5j | Antigravity | Tech Lead | Hors sprint | 0.4j | Aucun | Faible | 2026-10-18 |
 | RELEASE-20261018-MERGE-EPIC-0029-TO-MAIN | EPIC-0029 / MERGE / RELEASE | Release / Engineering | Fusion sur main de l'EPIC-0029 lots 1-3, de l'outillage MailDev et de la recette E2E | Spring Boot / Angular / Flyway | DONE — branch merged to main, 22 Maven verts, 665 Angular verts, build OK | P0 | 2 | Tech Lead / Senior Full-stack | 0.2j | 0.4j | 0.6j | Antigravity | Tech Lead | Hors sprint | 0.2j | Déploiement / tags si demandé | Faible | 2026-10-18 |
 | QA-20261017-E2E-BROWSER-FULL-CIRCUIT-VALIDATION | QA_REVIEWS / END_TO_END_JOURNEYS | QA Review / Recette E2E | Recette fonctionnelle temps réel navigateur de l'intégralité du circuit hospitalier | Angular / Spring Boot / Playwright | DONE — 15 modules testés et validés en temps réel (Auth 2FA, DPU, Médical, Labo, Pharmacie, Urgences, Caisse, RBAC), 0 erreur console | P1 | 2 | Senior QA / Full-stack | 0.3j | 0.5j | 0.8j | Antigravity | Tech Lead | Hors sprint | 0.2j | Aucun | Faible | 2026-10-17 |

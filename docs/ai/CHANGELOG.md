@@ -8,6 +8,56 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **BREAKING CHANGE — AUDIT-20261104 : audit complet et correctifs de sécurité, de sécurité clinique et d'interface** ([rapport](../features/audit-20261104-full/AUDIT-REPORT.md), [ADR-20261104](../architecture/adr/ADR-20261104-audit-security-clinical-hardening.md), reste à faire dans [EPIC-0030](../pm/backlog/EPIC-0030-audit-20261104-remediation.md)) :
+  - **Actes médicaux.**
+    - La consultation, la décision de sortie et le constat de décès, y compris l'orientation « Décès » des urgences, sont réservés aux médecins (403).
+    - Une ordonnance n'est signée ou annulée que par le praticien en charge (409). Elle n'est rédigée que sur une visite en cours, et annulée seulement depuis Brouillon ou Active.
+    - Correction d'une erreur 500 à l'annulation d'une ordonnance dont le document était déjà annulé.
+  - **Patient.**
+    - Le résumé et l'export ne montrent que les consultations signées et les résultats validés (dernière version).
+    - La notification de résultats est graduée ; une alerte urgente n'est envoyée que pour une valeur critique.
+  - **Décès et soins.**
+    - Délivrance, validation pharmaceutique et demande d'examen sont refusées pour un patient décédé.
+    - Aucune administration datée après l'heure du décès, ni plus de 5 min dans le futur.
+  - **Laboratoire.**
+    - La visite doit appartenir au même patient, dossier fusionné compris.
+    - Une saisie sans statut reste un brouillon.
+    - Un examen ne se valide plus par simple changement de statut.
+    - L'échec de création du PDF est journalisé.
+  - **Pharmacie.**
+    - La vérification renvoie les valeurs prescrites (forme, voie, fréquence, posologie, durée, substitution).
+    - La quantité doit être positive et une substitution interdite est refusée.
+    - PIN d'ordonnance : 6 chiffres `SecureRandom`, 3 essais puis 15 min de blocage persistés et atomiques, 401 identique pour un numéro inconnu (migration **V121**).
+  - **Urgences.** Niveau de triage en liste fermée ; bornes de plausibilité physique sur les constantes initiales.
+  - **Sécurité.**
+    - Secret JWT sans valeur par défaut (aléatoire en dev), démarrage refusé avec l'ancien secret publié.
+    - Audit des lectures réellement persisté.
+    - AUDITEUR réservé à la plateforme ; plus de modification de ses propres rôles.
+    - OTP comparés en temps constant avec compteurs atomiques ; IP cliente résolue par Tomcat (`forward-headers-strategy: native`).
+    - Repli de jeton par e-mail supprimé ; sessions révoquées après réinitialisation du mot de passe.
+    - Portail patient sans énumération ; motif de bris de glace de 10 à 500 caractères.
+    - Écriture clinique limitée à l'établissement de la visite.
+    - Plus de données de santé dans les journaux ; `X-Trace-Id` validé.
+    - Erreurs 400/405/413/415 au lieu de 500.
+    - Origines WebSocket restreintes, avec permission au handshake ; secret de webhook masqué.
+    - Angular 22.2.4 et garde `npm audit --omit=dev` en CI ; `RejectPolicy` dans les scripts SSH.
+  - **Web.**
+    - Allergies, antécédents, examens et lits : état d'erreur avec « Réessayer », et clôture ou ordonnance bloquées tant que les allergies ne sont pas vérifiées.
+    - Triage vide et obligatoire.
+    - Confirmations avant clôture, délivrance, validation labo et fermeture de lit.
+    - Connexion avec `returnUrl` sûr, pages 404 et « Serveur indisponible ».
+    - Formats `dd/MM/yyyy` et FCFA ; contrastes AA (`DESIGN.md` mis à jour) ; erreurs visibles ; accessibilité ciblée.
+  - **Mobile.**
+    - Session conservée en cas de coupure réseau, dictée au-delà de 15 min, état purgé au changement d'utilisateur.
+    - Verrou en surcouche ; `FLAG_SECURE`, sauvegarde désactivée, PDF et brouillons purgés à la déconnexion.
+    - Clavier sans apprentissage sur les champs cliniques ; logs expurgés.
+  - **Tests.**
+    - Backend : 1028 tests, 0 échec, 9 ignorés (Docker).
+    - V121 validée sur PostgreSQL 17 dans une transaction annulée.
+    - Mobile : 226 tests, `flutter analyze` sans problème.
+    - Web : 742 tests, build et `i18n:check` OK.
+  - **MAJOR candidat** : nouveaux refus d'API, 401 au lieu de 404, secret de webhook masqué, `JOPRELYS_JWT_SECRET` obligatoire. Aucune version préparée ; relecture clinique et recette navigateur et appareil ouvertes.
+
 - **FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM — Système unifié de dialogues et notifications (suppression des fenêtres JavaScript natives)** :
   - Éradication de la totalité des boîtes de dialogue et popups natives du navigateur (`window.confirm()`, `window.alert()`, `window.prompt()`) dans l'application web Angular.
   - Création de `DialogService` (`providedIn: 'root'`) fournissant les méthodes programmatiques `confirm(options): Promise<boolean>` et `alert(options): Promise<void>`, avec gestion des tonalités (`primary`, `warning`, `danger`, `info`), titres et libellés de boutons personnalisables.
