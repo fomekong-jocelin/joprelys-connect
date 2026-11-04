@@ -17,11 +17,9 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.sql.Timestamp;
 import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class PharmacyService {
@@ -32,12 +30,11 @@ public class PharmacyService {
 	private final AuditService auditService;
 	private final JdbcTemplate jdbcTemplate;
 
-	private final Map<String, Integer> failedAttempts = new ConcurrentHashMap<>();
-	private final Map<String, Instant> lockouts = new ConcurrentHashMap<>();
+	private final PrescriptionPinGuard pinGuard;
 
+	/** Test support: clears PIN counters and lockouts. */
 	public void resetLockouts() {
-		failedAttempts.clear();
-		lockouts.clear();
+		pinGuard.resetAll();
 	}
 
 	public PharmacyService(
@@ -45,7 +42,9 @@ public class PharmacyService {
 			PrescriptionDispensationRepository dispensationRepository,
 			DispensationItemRepository dispensationItemRepository,
 			AuditService auditService,
-			JdbcTemplate jdbcTemplate) {
+			JdbcTemplate jdbcTemplate,
+			PrescriptionPinGuard pinGuard) {
+		this.pinGuard = pinGuard;
 		this.prescriptionRepository = prescriptionRepository;
 		this.dispensationRepository = dispensationRepository;
 		this.dispensationItemRepository = dispensationItemRepository;
@@ -55,19 +54,7 @@ public class PharmacyService {
 
 	@Transactional
 	public PharmacyVerifyResponse verifyPrescription(String prescriptionNumber, String pinCode) {
-		checkLockout(prescriptionNumber);
-
-		PrescriptionEntity prescription = prescriptionRepository.findByPrescriptionNumberGlobally(prescriptionNumber)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
-
-		// PIN verify
-		if (prescription.getPinCode() == null || !prescription.getPinCode().equalsIgnoreCase(pinCode)) {
-			handleFailedAttempt(prescriptionNumber);
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Code PIN incorrect.");
-		}
-
-		// Clear failed attempts on success
-		failedAttempts.remove(prescriptionNumber);
+		PrescriptionEntity prescription = requireValidPin(prescriptionNumber, pinCode);
 
 		// Expiration check
 		if (prescription.getExpiresAt() != null && prescription.getExpiresAt().isBefore(Instant.now())) {
@@ -96,11 +83,15 @@ public class PharmacyService {
 					item.getId(),
 					item.getDrugName(),
 					item.getDosage(),
-					"Comprimé", // fallback or value from dosage
+					item.getForm(),
 					item.getQuantity(),
 					quantityAlreadyDispensed,
-					true, // substitutionAllowed
-					item.getInstructions()
+					item.isSubstitutionAllowed(),
+					item.getInstructions(),
+					item.getPosology(),
+					item.getRoute(),
+					item.getFrequency(),
+					item.getDuration()
 			);
 		}).toList();
 
@@ -131,17 +122,7 @@ public class PharmacyService {
 
 	@Transactional
 	public void dispensePrescription(PharmacyDispenseRequest request) {
-		checkLockout(request.prescriptionNumber());
-
-		PrescriptionEntity prescription = prescriptionRepository.findByPrescriptionNumberGlobally(request.prescriptionNumber())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
-
-		if (prescription.getPinCode() == null || !prescription.getPinCode().equalsIgnoreCase(request.pinCode())) {
-			handleFailedAttempt(request.prescriptionNumber());
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Code PIN incorrect.");
-		}
-
-		failedAttempts.remove(request.prescriptionNumber());
+		PrescriptionEntity prescription = requireValidPin(request.prescriptionNumber(), request.pinCode());
 
         lockPrescription(prescription.getId());
         String persistedStatus = jdbcTemplate.queryForObject("SELECT status FROM prescriptions WHERE id = ?", String.class, prescription.getId());
@@ -163,6 +144,11 @@ public class PharmacyService {
 		}
         if (!"ACTIVE".equals(persistedStatus)) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance active peut être délivrée.");
+        }
+        rejectIfPatientDeceased(prescription.getId());
+        if (request.dispensedItems().stream().anyMatch(item -> item.quantityDispensed() <= 0)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "La quantité délivrée doit être strictement positive pour chaque ligne.");
         }
         Boolean validated = jdbcTemplate.queryForObject(
                 "SELECT pharmacy_validated_at IS NOT NULL FROM prescriptions WHERE id = ?", Boolean.class, prescription.getId());
@@ -199,6 +185,10 @@ public class PharmacyService {
 					.findFirst()
 					.orElseThrow(() -> new ResponseStatusException(HttpStatus.BAD_REQUEST, "Ligne d'ordonnance introuvable: " + dispItem.prescriptionItemId()));
 
+			if (!item.isSubstitutionAllowed() && dispItem.substitutedWith() != null && !dispItem.substitutedWith().isBlank()) {
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"Le prescripteur n'autorise pas la substitution de : " + item.getDrugName());
+			}
 			int qtyAlreadyDispensed = dispensationItemRepository.sumQuantityDispensedByPrescriptionItemId(item.getId());
 			int qtyPrescribed = parseQuantity(item.getQuantity());
 
@@ -279,17 +269,7 @@ public class PharmacyService {
 
 	@Transactional(readOnly = true)
 	public List<PharmacyDispensationHistoryResponse> getDispensationHistory(String prescriptionNumber, String pinCode) {
-		checkLockout(prescriptionNumber);
-
-		PrescriptionEntity prescription = prescriptionRepository.findByPrescriptionNumberGlobally(prescriptionNumber)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
-
-		if (prescription.getPinCode() == null || !prescription.getPinCode().equalsIgnoreCase(pinCode)) {
-			handleFailedAttempt(prescriptionNumber);
-			throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Code PIN incorrect.");
-		}
-
-		failedAttempts.remove(prescriptionNumber);
+		PrescriptionEntity prescription = requireValidPin(prescriptionNumber, pinCode);
 
 		// Utilise du SQL natif via JdbcTemplate pour contourner le filtre @TenantId de Hibernate.
 		// Sur un endpoint public, il n'y a pas de contexte de tenant actif, ce qui rend
@@ -335,26 +315,12 @@ public class PharmacyService {
 		}).toList();
 	}
 
-	private void checkLockout(String prescriptionNumber) {
-		Instant lockoutTime = lockouts.get(prescriptionNumber);
-		if (lockoutTime != null) {
-			if (lockoutTime.isAfter(Instant.now())) {
-				throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Cette ordonnance est temporairement bloquée suite à plusieurs essais erronés.");
-			} else {
-				lockouts.remove(prescriptionNumber);
-			}
-		}
-	}
-
-	private void handleFailedAttempt(String prescriptionNumber) {
-		int count = failedAttempts.getOrDefault(prescriptionNumber, 0) + 1;
-		if (count >= 3) {
-			lockouts.put(prescriptionNumber, Instant.now().plus(5, ChronoUnit.MINUTES));
-			failedAttempts.remove(prescriptionNumber);
-			throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, "Code PIN incorrect. L'ordonnance est bloquée pour 5 minutes.");
-		} else {
-			failedAttempts.put(prescriptionNumber, count);
-		}
+	/** Ordonnance + PIN : réponse identique si l'ordonnance n'existe pas ou si le PIN est faux (SEC-01). */
+	private PrescriptionEntity requireValidPin(String prescriptionNumber, String pinCode) {
+		PrescriptionEntity prescription = prescriptionRepository.findByPrescriptionNumberGlobally(prescriptionNumber)
+				.orElse(null);
+		pinGuard.verify(prescriptionNumber, prescription == null ? null : prescription.getPinCode(), pinCode);
+		return prescription;
 	}
 
     @Transactional
@@ -365,6 +331,7 @@ public class PharmacyService {
         if (!"ACTIVE".equals(status)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Seule une ordonnance active peut être validée par la pharmacie.");
         }
+        rejectIfPatientDeceased(verified.prescriptionId());
         UUID actorId = currentActorId();
         int updated = jdbcTemplate.update("UPDATE prescriptions SET pharmacy_validated_by = ?, pharmacy_validated_at = ?, pharmacy_validation_notes = ? WHERE id = ? AND pharmacy_validated_at IS NULL",
                 actorId, Timestamp.from(Instant.now()), request.reviewNotes().trim(), verified.prescriptionId());
@@ -372,6 +339,26 @@ public class PharmacyService {
         PrescriptionEntity prescription = prescriptionRepository.findByPrescriptionNumberGlobally(request.prescriptionNumber()).orElseThrow();
         auditService.logSuccess(actorId, prescription.getOrganizationId(), null, "PRESCRIPTION",
                 prescription.getId(), "PHARMACY_VALIDATED", null);
+    }
+
+    /**
+     * Aucune délivrance pour un patient décédé (CLIN-13). Requête SQL hors cloisonnement : la pharmacie
+     * délivrante peut appartenir à un autre établissement ; le dossier canonique d'un patient fusionné compte aussi.
+     */
+    private void rejectIfPatientDeceased(UUID prescriptionId) {
+        Integer deceased = jdbcTemplate.queryForObject("""
+                SELECT COUNT(*) FROM prescriptions pr
+                JOIN consultations c ON pr.consultation_id = c.id
+                JOIN visits v ON c.visit_id = v.id
+                JOIN patients p ON p.id = v.patient_id
+                    OR p.id = (SELECT l.canonical_patient_id FROM patient_canonical_links l
+                               WHERE l.source_patient_id = v.patient_id)
+                WHERE pr.id = ? AND p.deceased_at IS NOT NULL
+                """, Integer.class, prescriptionId);
+        if (deceased != null && deceased > 0) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le patient est déclaré décédé : aucune délivrance n'est possible.");
+        }
     }
 
     private void lockPrescription(UUID id) {

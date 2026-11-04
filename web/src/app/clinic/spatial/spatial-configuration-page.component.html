@@ -172,7 +172,7 @@
           @for (assignment of assignments(); track assignment.id) {
             <button type="button" class="flex w-full min-w-0 flex-col gap-2 rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3 text-left sm:flex-row sm:items-center sm:justify-between" (click)="openAssignmentEditor(assignment)">
               <span class="min-w-0 break-words text-sm font-bold text-[var(--text-primary)]">{{ unitLabel(assignment.organizationalUnitId) }} ↔ {{ spaceLabel(assignment.spaceId) }}</span>
-              <span class="shrink-0 text-xs text-[var(--text-secondary)]">{{ assignment.validFrom | date:'short' }} → {{ assignment.validTo ? (assignment.validTo | date:'short') : '∞' }}</span>
+              <span class="shrink-0 text-xs text-[var(--text-secondary)]">{{ assignment.validFrom | appDate:'dateTime' }} → {{ assignment.validTo ? (assignment.validTo | appDate:'dateTime') : '∞' }}</span>
             </button>
           }
           @if (assignments().length === 0) {

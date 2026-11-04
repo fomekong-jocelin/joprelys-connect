@@ -175,6 +175,41 @@ public class LabOrderControllerTest {
 	}
 
 	@Test
+	void givenVisitOfAnotherPatient_whenCreateLabOrder_thenBadRequest() throws Exception {
+		TenantContext.setTenantId(org.getId());
+		PatientEntity otherPatient = patientRepository.save(new PatientEntity(
+				"PAT-20260703-000002", "LOC-002", "Paul Autre", "MASCULIN",
+				LocalDate.of(1970, 1, 1), "+237 600 00 00 01", "Yaoundé", "", "", "", "", "", ""));
+		TenantContext.clear();
+		String jsonRequest = """
+				{"patientId": "%s", "visitId": "%s", "examType": "LABORATOIRE",
+				 "exams": ["NFS"], "reason": "Bilan", "priority": "NORMALE"}
+				""".formatted(otherPatient.getId(), visit.getId());
+
+		mockMvc.perform(post("/api/lab-orders")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDoctor)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isBadRequest());
+	}
+
+	@Test
+	void givenDeceasedPatient_whenCreateLabOrder_thenConflict() throws Exception {
+		jdbcTemplate.update("UPDATE patients SET status = 'DECEASED', deceased_at = CURRENT_TIMESTAMP WHERE id = ?",
+				patient.getId());
+		String jsonRequest = """
+				{"patientId": "%s", "visitId": "%s", "examType": "LABORATOIRE",
+				 "exams": ["NFS"], "reason": "Bilan", "priority": "NORMALE"}
+				""".formatted(patient.getId(), visit.getId());
+
+		mockMvc.perform(post("/api/lab-orders")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenDoctor)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content(jsonRequest))
+				.andExpect(status().isConflict());
+	}
+
+	@Test
 	void givenPatient_whenCreateLabOrder_thenForbidden() throws Exception {
 		String jsonRequest = """
 				{
@@ -276,6 +311,23 @@ public class LabOrderControllerTest {
 				.content(jsonRequest))
 				.andExpect(status().isOk())
 				.andExpect(jsonPath("$.status").value("SAMPLE_COLLECTED"));
+	}
+
+	@Test
+	void givenResultAvailableExam_whenValidatedByStatusChangeOnly_thenConflict() throws Exception {
+		LabOrderEntity order = new LabOrderEntity(
+				"EXAM-REQ-20260703-000205", patient, visit, doctor, org.getId(), ExamType.LABORATOIRE,
+				List.of("NFS"), "Bilan", "NORMALE", org.getId());
+		order.setOrganizationId(org.getId());
+		order = labOrderRepository.save(order);
+		UUID itemId = order.getItems().get(0).getId();
+		jdbcTemplate.update("UPDATE lab_order_items SET status = 'RESULT_AVAILABLE' WHERE id = ?", itemId);
+
+		mockMvc.perform(patch("/api/lab-orders/" + order.getId() + "/items/" + itemId + "/status")
+				.header(HttpHeaders.AUTHORIZATION, "Bearer " + tokenBiologist)
+				.contentType(MediaType.APPLICATION_JSON)
+				.content("{\"status\": \"VALIDATED\"}"))
+				.andExpect(status().isConflict());
 	}
 
 	@Test

@@ -8,6 +8,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import com.joprelys.backend.ai.domain.AiProvider;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.security.JwtService;
 import com.joprelys.backend.auth.security.TenantContext;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
@@ -49,8 +50,10 @@ class AiConsultationIntegrationTest {
     @Autowired private UserAccountRepository userAccountRepository;
     @Autowired private PatientRepository patientRepository;
     @Autowired private VisitRepository visitRepository;
+    @Autowired private JwtService jwtService;
     @MockitoBean private AiProvider aiProvider;
 
+    private UserAccountEntity doctor;
     private UUID visitId;
     private UUID organizationId;
     private String doctorEmail;
@@ -68,13 +71,13 @@ class AiConsultationIntegrationTest {
 
         TenantContext.setTenantId(organizationId);
         doctorEmail = "doctor-ai-" + suffix + "@test.local";
-        UserAccountEntity doctor = new UserAccountEntity(
+        UserAccountEntity newDoctor = new UserAccountEntity(
                 doctorEmail,
                 "Doctor IA",
                 "MEDECIN",
                 "password");
-        doctor.setOrganizationId(organizationId);
-        userAccountRepository.saveAndFlush(doctor);
+        newDoctor.setOrganizationId(organizationId);
+        doctor = userAccountRepository.saveAndFlush(newDoctor);
 
         PatientEntity patient = new PatientEntity(
                 "DPU-AI-" + suffix,
@@ -106,20 +109,25 @@ class AiConsultationIntegrationTest {
     }
 
     @Test
-    void shouldResolveLegacyStaffTokenAndReturnNoSessionWithoutServerError() throws Exception {
-        String legacyToken = legacyStaffToken(doctorEmail.toUpperCase(), organizationId);
-
-        mockMvc.perform(get("/api/ai/consultations/" + visitId + "/session")
-                        .header("Authorization", "Bearer " + legacyToken))
-                .andExpect(status().isNoContent());
+    void legacyStaffTokenWhoseSubjectIsAnEmailIsRejected() throws Exception {
+        // SEC-07 : plus de résolution d'identité par e-mail ; seul un « sub » UUID de compte est accepté.
+        for (String email : new String[] {doctorEmail, doctorEmail.toUpperCase()}) {
+            mockMvc.perform(get("/api/ai/consultations/" + visitId + "/session")
+                            .header("Authorization", "Bearer " + legacyStaffToken(email, organizationId)))
+                    .andExpect(status().isUnauthorized());
+        }
     }
 
     @Test
-    void shouldResolveLegacyStaffTokenWithRbacAndCreateSession() throws Exception {
-        String legacyToken = legacyStaffToken(doctorEmail, organizationId);
+    void shouldReturnNoSessionThenCreateAndReadSessionWithAccountToken() throws Exception {
+        String token = jwtService.createToken(doctor).value();
+
+        mockMvc.perform(get("/api/ai/consultations/" + visitId + "/session")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isNoContent());
 
         mockMvc.perform(post("/api/ai/consultations/" + visitId + "/sessions")
-                        .header("Authorization", "Bearer " + legacyToken)
+                        .header("Authorization", "Bearer " + token)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"draft\":{}}"))
                 .andExpect(status().isOk())
@@ -127,7 +135,7 @@ class AiConsultationIntegrationTest {
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
         mockMvc.perform(get("/api/ai/consultations/" + visitId + "/session")
-                        .header("Authorization", "Bearer " + legacyToken))
+                        .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.visitId").value(visitId.toString()));
     }

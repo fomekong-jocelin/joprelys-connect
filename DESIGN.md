@@ -3,7 +3,7 @@ version: 1.0.0
 name: Joprelys Connect Design System
 description: Design system central de Joprelys Connect (Google/Material 3 & Tailwind CSS v4 CSS-first).
 colors:
-  primary: '#0b91b2'       # Cyan Médical (Light) / #22a8c8 (Dark)
+  primary: '#077a96'       # Cyan Médical (Light, contraste 5,0:1 sur blanc) / #22a8c8 (Dark)
   on-primary: '#ffffff'
   secondary: '#40556f'     # Slate Blue (Light) / #c6d2e1 (Dark)
   on-secondary: '#ffffff'
@@ -96,7 +96,8 @@ Joprelys Connect est un outil de santé destiné aux cliniques pilotes et aux pa
 
 Les couleurs s'appuient sur :
 - **Brand Night (#0A1D3D)** : pour le texte principal, renvoie au sérieux institutionnel.
-- **Brand Cyan (#0B91B2)** : pour les actions principales (primaire), renvoie au monde médical et de la santé.
+- **Brand Cyan (#077A96 en thème clair)** : pour les actions principales (primaire), renvoie au monde médical et de la santé. Assombri le 2026-11-04 (ancien #0B91B2 : 3,7:1, sous le seuil WCAG AA) pour atteindre 5,0:1 avec un texte blanc.
+- **Texte secondaire (`--text-muted` #5B6C82 en thème clair)** : 5,4:1 sur blanc (ancien #6D7F95 : 4,1:1, insuffisant).
 - **Brand Green (#16A34A)** : pour les indicateurs de succès et de validité.
 - **Thème Light / Dark** : géré de manière globale par la classe `html[data-theme='dark']` et les variables CSS centralisées dans `styles.css`.
 

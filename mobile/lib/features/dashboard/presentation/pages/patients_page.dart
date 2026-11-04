@@ -126,6 +126,7 @@ class _PatientsPageState extends ConsumerState<PatientsPage>
                   const SizedBox(height: 18),
                   TextField(
                     controller: _searchController,
+                    enableIMEPersonalizedLearning: false,
                     onChanged: _onSearchChanged,
                     textInputAction: TextInputAction.search,
                     onSubmitted: (_) => _search(),

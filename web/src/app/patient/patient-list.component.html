@@ -39,9 +39,12 @@
                 id="emergency-reason"
                 class="ui-input min-h-[80px] w-full py-2.5"
                 [placeholder]="t('patient.consent.emergencyReasonPlaceholder')"
+                [attr.maxlength]="emergencyReasonMaxLength"
+                aria-describedby="emergency-reason-hint"
                 [value]="emergencyReason()"
                 (input)="emergencyReason.set($any($event.target).value)"
               ></textarea>
+              <p id="emergency-reason-hint" class="mt-1 text-xs text-[var(--text-muted)]">{{ t('patient.consent.emergencyReasonHint') }}</p>
             </div>
 
             <div class="flex w-full items-center justify-between gap-3">
@@ -49,7 +52,7 @@
               <app-ui-button
                 variant="primary"
                 class="grow"
-                [disabled]="!emergencyReason().trim() || emergencyLoading()"
+                [disabled]="!emergencyReasonValid() || emergencyLoading()"
                 (pressed)="triggerEmergencyAccess()"
               >
                 {{ emergencyLoading() ? t('patient.consent.activating') : t('patient.consent.breakGlassButton') }}

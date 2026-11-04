@@ -121,6 +121,90 @@ void main() {
     },
   );
 
+  test(
+    'keeps the session and propagates the error when refresh times out',
+    () async {
+      final session = FakeSessionAccess.professional('rejected-token')
+        ..refreshError = const ApiException(
+          kind: ApiFailureKind.timeout,
+          code: 'REQUEST_TIMEOUT',
+          message: 'REQUEST_TIMEOUT',
+          retryable: true,
+        );
+      final adapter = QueueHttpClientAdapter((options, callIndex) {
+        return jsonResponse(401, '{"detail":"AUTH_SESSION_INVALID"}');
+      });
+      final client = buildClient(adapter: adapter, sessionAccess: session);
+
+      await expectLater(
+        client.get<Map<String, dynamic>>('/api/visits'),
+        throwsA(
+          isA<ApiException>()
+              .having((error) => error.kind, 'kind', ApiFailureKind.timeout)
+              .having((error) => error.retryable, 'retryable', isTrue),
+        ),
+      );
+      expect(session.refreshCalls, 1);
+      expect(session.expireCalls, 0);
+      expect(session.snapshot?.accessToken, 'rejected-token');
+    },
+  );
+
+  test('keeps the session when the network drops during refresh', () async {
+    final session = FakeSessionAccess.professional('rejected-token')
+      ..refreshError = const ApiException(
+        kind: ApiFailureKind.noConnection,
+        code: 'NETWORK_UNAVAILABLE',
+        message: 'NETWORK_UNAVAILABLE',
+        retryable: true,
+      );
+    final adapter = QueueHttpClientAdapter((options, callIndex) {
+      return jsonResponse(401, '{"detail":"AUTH_SESSION_INVALID"}');
+    });
+    final client = buildClient(adapter: adapter, sessionAccess: session);
+
+    await expectLater(
+      client.get<Map<String, dynamic>>('/api/visits'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.kind,
+          'kind',
+          ApiFailureKind.noConnection,
+        ),
+      ),
+    );
+    expect(session.expireCalls, 0);
+    expect(session.snapshot, isNotNull);
+  });
+
+  test('expires the session when the server refuses the refresh', () async {
+    final session = FakeSessionAccess.professional('rejected-token')
+      ..refreshError = const ApiException(
+        kind: ApiFailureKind.unauthenticated,
+        code: 'UNAUTHORIZED',
+        message: 'UNAUTHORIZED',
+        statusCode: 401,
+      );
+    final adapter = QueueHttpClientAdapter((options, callIndex) {
+      return jsonResponse(401, '{"detail":"AUTH_SESSION_INVALID"}');
+    });
+    final client = buildClient(adapter: adapter, sessionAccess: session);
+
+    await expectLater(
+      client.get<Map<String, dynamic>>('/api/visits'),
+      throwsA(
+        isA<ApiException>().having(
+          (error) => error.kind,
+          'kind',
+          ApiFailureKind.unauthenticated,
+        ),
+      ),
+    );
+    expect(session.expireCalls, 1);
+    expect(session.snapshot, isNull);
+    expect(adapter.requests, hasLength(1));
+  });
+
   test('retries one safe GET after a transient 503 response', () async {
     final session = FakeSessionAccess.professional('access-1');
     final adapter = QueueHttpClientAdapter((options, callIndex) {
@@ -254,6 +338,7 @@ final class FakeSessionAccess implements ApiSessionAccess {
 
   ApiSessionSnapshot? snapshot;
   String? refreshedToken;
+  Object? refreshError;
   Duration refreshDelay = Duration.zero;
   int refreshCalls = 0;
   int expireCalls = 0;
@@ -272,6 +357,10 @@ final class FakeSessionAccess implements ApiSessionAccess {
     refreshCalls += 1;
     if (refreshDelay > Duration.zero) {
       await Future<void>.delayed(refreshDelay);
+    }
+    final error = refreshError;
+    if (error != null) {
+      throw error;
     }
     final token = refreshedToken;
     if (token == null) {

@@ -2,91 +2,89 @@ package com.joprelys.backend.patient.application;
 
 import com.joprelys.backend.auth.api.LoginResponse;
 import com.joprelys.backend.auth.security.JwtService;
+import com.joprelys.backend.auth.security.OtpChallengeStore;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
 import com.joprelys.backend.notification.application.AccountMailService;
+import java.security.SecureRandom;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.util.Locale;
+import java.util.Optional;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
-import java.time.Instant;
-import java.time.LocalDate;
-import java.util.Map;
-import java.security.SecureRandom;
-import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class PatientAuthService {
 
+    /**
+     * Message unique pour tout refus de demande de code (patient inconnu, informations non
+     * concordantes, patient décédé, absence d'e-mail) : aucun motif ne doit permettre
+     * d'énumérer les dossiers patients (SEC-06).
+     */
+    static final String GENERIC_OTP_REQUEST_FAILURE =
+            "Les informations fournies ne permettent pas d'envoyer un code de connexion. "
+                    + "Vérifiez-les ou contactez votre établissement de santé.";
+    static final String OTP_REQUEST_LOCKED =
+            "Trop de tentatives infructueuses. Veuillez réessayer dans quelques minutes.";
+
+    private static final int MAX_OTP_ATTEMPTS = 3;
+    private static final Duration OTP_TTL = Duration.ofMinutes(5);
+    /** Les essais échoués survivent à une redemande de code pendant cette fenêtre. */
+    private static final Duration LOGIN_ATTEMPT_WINDOW = Duration.ofMinutes(15);
+
     private final PatientRepository patientRepository;
     private final JwtService jwtService;
-    private final Map<String, OtpData> otpMap = new ConcurrentHashMap<>();
+    private final OtpChallengeStore loginChallenges;
+    private final OtpChallengeStore consentChallenges;
     private final SecureRandom random = new SecureRandom();
     private final AccountMailService accountMailService;
 
-    public PatientAuthService(PatientRepository patientRepository, JwtService jwtService, AccountMailService accountMailService) {
+    public PatientAuthService(
+            PatientRepository patientRepository,
+            JwtService jwtService,
+            AccountMailService accountMailService,
+            Clock clock) {
         this.patientRepository = patientRepository;
         this.jwtService = jwtService;
         this.accountMailService = accountMailService;
+        this.loginChallenges = new OtpChallengeStore(clock, OTP_TTL, MAX_OTP_ATTEMPTS, LOGIN_ATTEMPT_WINDOW);
+        this.consentChallenges = new OtpChallengeStore(clock, OTP_TTL, MAX_OTP_ATTEMPTS, Duration.ZERO);
     }
 
     public String generateAndSendOtp(String globalPatientNumber, String phone, LocalDate birthDate) {
         String normalizedDpu = normalizePatientNumber(globalPatientNumber);
         PatientEntity patient = patientRepository.findByGlobalPatientNumber(normalizedDpu)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
-
-        if (!normalizePhone(patient.getPhone()).equals(normalizePhone(phone)) || !patient.getBirthDate().equals(birthDate)
-                || patient.isDeceased()) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Les informations fournies ne correspondent pas.");
-        }
+                .filter(candidate -> identityMatches(candidate, phone, birthDate))
+                .filter(candidate -> candidate.getEmail() != null && !candidate.getEmail().isBlank())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, GENERIC_OTP_REQUEST_FAILURE));
 
         String code = String.format("%06d", random.nextInt(1000000));
-        if (patient.getEmail() == null || patient.getEmail().isBlank()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune adresse e-mail n'est associée à ce patient.");
+        if (!loginChallenges.issue(normalizedDpu, code)) {
+            throw new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS, OTP_REQUEST_LOCKED);
         }
-        accountMailService.sendPatientLoginCode(patient.getEmail(), patient.getFullName(), code);
-        otpMap.put(normalizedDpu, new OtpData(code, Instant.now(), 0));
+        try {
+            accountMailService.sendPatientLoginCode(patient.getEmail(), patient.getFullName(), code);
+        } catch (RuntimeException deliveryFailure) {
+            // Code jamais reçu : il est retiré, les essais échoués déjà comptés sont conservés.
+            loginChallenges.discardCode(normalizedDpu);
+            throw deliveryFailure;
+        }
         return code;
     }
 
     public LoginResponse verifyOtp(String globalPatientNumber, String otpCode) {
         String normalizedDpu = normalizePatientNumber(globalPatientNumber);
-        OtpData otpData = otpMap.get(normalizedDpu);
-
-        if (otpData == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucune demande de connexion active.");
-        }
-
-        if (otpData.isExpired()) {
-            otpMap.remove(normalizedDpu);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le code de sécurité a expiré.");
-        }
-
-        if (otpData.code().equals(otpCode)) {
-            otpMap.remove(normalizedDpu);
-            PatientEntity patient = patientRepository.findByGlobalPatientNumber(normalizedDpu)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
-
-            JwtService.CreatedToken token = jwtService.createPatientToken(patient);
-
-            return new LoginResponse(
-                    token.value(),
-                    "Bearer",
-                    token.expiresAt(),
-                    patient.getGlobalPatientNumber() + "@joprelys.local",
-                    patient.getFullName(),
-                    "PATIENT",
-                    false
-            );
-        } else {
-            int newAttempts = otpData.attempts() + 1;
-            if (newAttempts >= 3) {
-                otpMap.remove(normalizedDpu);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Trop de tentatives infructueuses. Veuillez régénérer un code.");
-            } else {
-                otpMap.put(normalizedDpu, new OtpData(otpData.code(), otpData.createdAt(), newAttempts));
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code de sécurité incorrect.");
-            }
-        }
+        OtpChallengeStore.Verification verification = loginChallenges.verify(normalizedDpu, otpCode);
+        return switch (verification.outcome()) {
+            case VERIFIED -> loginResponse(normalizedDpu);
+            case NO_ACTIVE_CHALLENGE -> throw badRequest("Aucune demande de connexion active.");
+            case EXPIRED -> throw badRequest("Le code de sécurité a expiré.");
+            case TOO_MANY_ATTEMPTS -> throw badRequest("Trop de tentatives infructueuses. Veuillez régénérer un code.");
+            case INCORRECT -> throw badRequest("Code de sécurité incorrect.");
+        };
     }
 
     /**
@@ -102,9 +100,7 @@ public class PatientAuthService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
 
         String code = String.format("%06d", random.nextInt(1000000));
-        String key = "CONSENT_" + normalizedDpu + "_" + consentId;
-        otpMap.put(key, new OtpData(code, Instant.now(), 0));
-
+        consentChallenges.issue(consentKey(normalizedDpu, consentId), code);
     }
 
     /**
@@ -115,29 +111,49 @@ public class PatientAuthService {
      * @param otpCode             le code saisi par le patient
      */
     public boolean verifyConsentOtp(String globalPatientNumber, String consentId, String otpCode) {
-        String key = "CONSENT_" + globalPatientNumber + "_" + consentId;
-        OtpData otpData = otpMap.get(key);
+        String key = consentKey(normalizePatientNumber(globalPatientNumber), consentId);
+        OtpChallengeStore.Verification verification = consentChallenges.verify(key, otpCode);
+        return switch (verification.outcome()) {
+            case VERIFIED -> true;
+            case NO_ACTIVE_CHALLENGE -> throw badRequest("Aucun OTP actif pour ce consentement.");
+            case EXPIRED -> throw badRequest("Le code OTP a expiré.");
+            case TOO_MANY_ATTEMPTS -> throw badRequest("Trop de tentatives. Veuillez régénérer un OTP.");
+            case INCORRECT -> throw badRequest("Code OTP incorrect.");
+        };
+    }
 
-        if (otpData == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Aucun OTP actif pour ce consentement.");
-        }
-        if (otpData.isExpired()) {
-            otpMap.remove(key);
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Le code OTP a expiré.");
-        }
-        if (otpData.code().equals(otpCode)) {
-            otpMap.remove(key);
-            return true;
-        } else {
-            int newAttempts = otpData.attempts() + 1;
-            if (newAttempts >= 3) {
-                otpMap.remove(key);
-                throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                        "Trop de tentatives. Veuillez régénérer un OTP.");
-            }
-            otpMap.put(key, new OtpData(otpData.code(), otpData.createdAt(), newAttempts));
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Code OTP incorrect.");
-        }
+    Optional<String> activeLoginCodeForTesting(String globalPatientNumber) {
+        return loginChallenges.activeCodeForTesting(normalizePatientNumber(globalPatientNumber));
+    }
+
+    private LoginResponse loginResponse(String normalizedDpu) {
+        PatientEntity patient = patientRepository.findByGlobalPatientNumber(normalizedDpu)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient introuvable."));
+        JwtService.CreatedToken token = jwtService.createPatientToken(patient);
+        return new LoginResponse(
+                token.value(),
+                "Bearer",
+                token.expiresAt(),
+                patient.getGlobalPatientNumber() + "@joprelys.local",
+                patient.getFullName(),
+                "PATIENT",
+                false
+        );
+    }
+
+    private static boolean identityMatches(PatientEntity patient, String phone, LocalDate birthDate) {
+        return !patient.isDeceased()
+                && normalizePhone(patient.getPhone()).equals(normalizePhone(phone))
+                && patient.getBirthDate() != null
+                && patient.getBirthDate().equals(birthDate);
+    }
+
+    private static ResponseStatusException badRequest(String message) {
+        return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
+    }
+
+    private static String consentKey(String normalizedDpu, String consentId) {
+        return normalizedDpu + "_" + consentId;
     }
 
     private static String normalizePhone(String phone) {
@@ -155,12 +171,6 @@ public class PatientAuthService {
      */
     private static String normalizePatientNumber(String number) {
         if (number == null) return "";
-        return number.trim().toUpperCase();
-    }
-
-    private record OtpData(String code, Instant createdAt, int attempts) {
-        public boolean isExpired() {
-            return createdAt.plusSeconds(300).isBefore(Instant.now()); // 5 minutes
-        }
+        return number.trim().toUpperCase(Locale.ROOT);
     }
 }

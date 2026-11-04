@@ -97,16 +97,16 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
-    void givenNotFound_whenHandle_thenReturnsNotFoundCode() {
+    void givenNotFound_whenHandle_thenReturnsNotFoundCodeWithoutRawMessage() {
         org.slf4j.MDC.put(TraceIdFilter.TRACE_ID_MDC_KEY, "trc_test_def");
         try {
-            NoSuchElementException ex = new NoSuchElementException("Élément manquant");
+            NoSuchElementException ex = new NoSuchElementException("No value present for patient 42");
 
             ResponseEntity<ApiErrorResponse> response = handler.handleNotFound(ex);
 
             assertEquals(HttpStatus.NOT_FOUND, response.getStatusCode());
             assertEquals("NOT_FOUND", response.getBody().error().code());
-            assertEquals("Élément manquant", response.getBody().error().message());
+            assertEquals("La ressource demandée est introuvable.", response.getBody().error().message());
             assertEquals("trc_test_def", response.getBody().error().trace_id());
         } finally {
             org.slf4j.MDC.remove(TraceIdFilter.TRACE_ID_MDC_KEY);

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Must match AppConfig.appName (lib/core/config/app_config.dart). -->
+    <string name="app_name" translatable="false">Joprelys Connect</string>
+</resources>

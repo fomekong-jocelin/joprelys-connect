@@ -8,16 +8,17 @@ import { Consultation } from '../../consultation/consultation.models';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { ToastService } from '../../shared/ui/toast.service';
+import { LoadErrorComponent } from '../../shared/ui/load-error.component';
 
 @Component({
   selector: 'app-patient-consultations-tab',
   standalone: true,
-  imports: [CommonModule, FormsModule, ButtonComponent],
+  imports: [CommonModule, FormsModule, ButtonComponent, LoadErrorComponent],
   template: `
     <div class="space-y-6 animate-fade-in">
       <div>
         <h3 class="text-xs font-black uppercase tracking-wider text-[var(--text-muted)] mb-4">
-          Historique Médical & Consultations
+          {{ i18n.t('patient.consultations.title') }}
         </h3>
 
         @if (downloadError()) {
@@ -34,51 +35,57 @@ import { ToastService } from '../../shared/ui/toast.service';
         @if (isLoadingHistory()) {
           <div class="py-12 text-center">
             <div class="inline-block w-6 h-6 rounded-full border-2 border-indigo-200 border-t-indigo-600 animate-spin"></div>
-            <p class="mt-2 text-xs font-bold text-[var(--text-muted)]">Chargement de l'historique...</p>
+            <p class="mt-2 text-xs font-bold text-[var(--text-muted)]">{{ i18n.t('patient.consultations.loading') }}</p>
           </div>
+        } @else if (historyLoadFailed()) {
+          <app-ui-load-error [message]="i18n.t('patient.consultations.loadError')" [testId]="'consultations-load-error'" (retry)="loadHistory()" />
         } @else if (consultationHistory().length === 0) {
           <div class="p-8 text-center border border-dashed border-[var(--app-border)]/80 rounded-xl">
-            <p class="text-sm font-semibold text-[var(--text-muted)]">Aucun antécédent de consultation enregistré.</p>
+            <p class="text-sm font-semibold text-[var(--text-muted)]">{{ i18n.t('patient.consultations.empty') }}</p>
           </div>
         } @else {
           <div class="space-y-3">
             @for (consult of consultationHistory(); track consult.id) {
               <div class="rounded-xl bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/20 border border-[var(--app-border)]/60 overflow-hidden transition-all duration-200">
                 <!-- En-tête cliquable de l'accordéon -->
-                <div
+                <button
+                  type="button"
                   (click)="toggleConsultation(consult.id)"
-                  class="p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors"
+                  [attr.aria-expanded]="!!expandedConsultations()[consult.id]"
+                  [attr.aria-controls]="'consultation-panel-' + consult.id"
+                  class="w-full min-h-11 text-left p-4 flex items-center justify-between cursor-pointer hover:bg-slate-100/30 dark:hover:bg-slate-800/40 select-none transition-colors focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--brand-primary)]"
                 >
-                  <div class="flex flex-wrap items-center gap-3">
+                  <span class="flex flex-wrap items-center gap-3">
                     <span class="inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-extrabold bg-[var(--brand-info-subtle)] text-[var(--brand-info-text)]  dark:text-brand-cyan uppercase tracking-wider">
                       {{ consult.visitNumber }}
                     </span>
                     <span class="text-xs font-semibold text-[var(--text-muted)]">
                       {{ consult.createdAt | slice:0:10 }}
                     </span>
-                    <p class="text-sm font-bold text-[var(--text-primary)] line-clamp-1">
+                    <span class="text-sm font-bold text-[var(--text-primary)] line-clamp-1">
                       <span class="text-xs font-bold uppercase text-[var(--text-muted)]">Diag : </span>
                       {{ consult.diagnosis }}
-                    </p>
-                  </div>
+                    </span>
+                  </span>
 
-                  <div class="flex items-center gap-3">
+                  <span class="flex items-center gap-3">
                     <span class="text-xs font-extrabold text-[var(--text-muted)] hidden sm:inline">{{ formatDoctorName(consult.doctorName) }}</span>
                     
                     <!-- Chevron de déploiement -->
                     <svg
+                      aria-hidden="true"
                       class="w-4 h-4 text-[var(--text-muted)] transform transition-transform duration-200"
                       [class.rotate-180]="expandedConsultations()[consult.id]"
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"
                     >
                       <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                     </svg>
-                  </div>
-                </div>
+                  </span>
+                </button>
 
                 <!-- Corps déplié de l'accordéon -->
                 @if (expandedConsultations()[consult.id]) {
-                  <div class="px-4 pb-4 pt-2 border-t border-[var(--app-border)]/40 space-y-4 animate-fade-in text-[var(--text-secondary)] text-xs">
+                  <div [id]="'consultation-panel-' + consult.id" class="px-4 pb-4 pt-2 border-t border-[var(--app-border)]/40 space-y-4 animate-fade-in text-[var(--text-secondary)] text-xs">
                     
                     <!-- 1. Constantes Vitales en ligne de type barre médicale -->
                     @if (consult.vitals; as vitals) {
@@ -391,6 +398,7 @@ export class PatientConsultationsTabComponent implements OnInit {
 
   readonly consultationHistory = signal<Consultation[]>([]);
   readonly isLoadingHistory = signal(false);
+  readonly historyLoadFailed = signal(false);
   readonly expandedConsultations = signal<Record<string, boolean>>({});
   readonly downloadError = signal<string | null>(null);
 
@@ -420,12 +428,15 @@ export class PatientConsultationsTabComponent implements OnInit {
     if (!patient) return;
 
     this.isLoadingHistory.set(true);
+    this.historyLoadFailed.set(false);
     this.consultationApi.getPatientConsultations(patient.id).subscribe({
       next: (data) => {
         this.consultationHistory.set(data);
         this.isLoadingHistory.set(false);
       },
+      // Un échec ne doit pas s'afficher comme « aucun antécédent ».
       error: () => {
+        this.historyLoadFailed.set(true);
         this.isLoadingHistory.set(false);
       }
     });

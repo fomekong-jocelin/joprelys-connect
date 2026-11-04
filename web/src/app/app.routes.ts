@@ -202,6 +202,11 @@ export const routes: Routes = [
     loadComponent: () => import('./auth/unauthorized.component').then((module) => module.UnauthorizedComponent),
   },
   {
+    path: 'server-unavailable',
+    loadComponent: () => import('./shared/pages/server-unavailable-page.component').then((m) => m.ServerUnavailablePageComponent),
+    data: { breadcrumb: 'serverUnavailable.title' },
+  },
+  {
     path: 'verify',
     loadComponent: () => import('./consultation/document-search.component').then(m => m.DocumentSearchComponent),
   },
@@ -321,5 +326,11 @@ export const routes: Routes = [
     loadComponent: () => import('./patient/portal/pages/patient-notifications-page.component').then(m => m.PatientNotificationsPageComponent),
     canActivate: [roleGuard],
     data: { expectedRoles: ['PATIENT'], title: 'title.patient.notifications' },
+  },
+  // Doit rester la dernière route : toute URL inconnue affiche la page 404 de l'application.
+  {
+    path: '**',
+    loadComponent: () => import('./shared/pages/not-found-page.component').then((m) => m.NotFoundPageComponent),
+    data: { breadcrumb: 'notFound.title' },
   },
 ];

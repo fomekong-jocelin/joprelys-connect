@@ -68,6 +68,7 @@ class ClinicalTextArea extends StatelessWidget {
 
     return TextFormField(
       controller: controller,
+      enableIMEPersonalizedLearning: false,
       maxLines: null,
       minLines: minLines,
       maxLength: maxLength,

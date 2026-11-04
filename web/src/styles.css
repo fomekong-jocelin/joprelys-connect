@@ -15,7 +15,8 @@
 
   /* --- Palette de marque (valeurs brutes, usage via variables CSS) --- */
   --color-brand-night: #001D4A;       /* Bleu nuit Joprelys — texte principal light */
-  --color-brand-cyan: #0B91B2;        /* Cyan médical — primaire light */
+  /* Suit le thème actif (--brand-cyan, défini sur <html> pour light et dark) : text-brand-cyan reste lisible. */
+  --color-brand-cyan: var(--brand-cyan);
   --color-brand-cyan-dark: #22a8c8;   /* Cyan médical — primaire dark */
   --color-brand-green: #009730;       /* Vert Joprelys — succès light */
   --color-brand-mint: #D1FAE5;        /* Menthe légère */
@@ -47,8 +48,9 @@ body {
    Contrastes WCAG 2.1 AA vérifiés :
    - --text-primary (#001D4A) sur --app-bg (#f7fafc) : 13.8:1 ✓
    - --text-secondary (#40556f) sur --app-surface (#fff) : 6.2:1 ✓
-   - --text-muted (#6d7f95) sur --app-surface (#fff) : 4.6:1 ✓
-   - --brand-primary (#0b91b2) sur #fff : 4.6:1 ✓
+   - --text-muted (#5b6c82) sur --app-surface (#fff) : 5.4:1 ✓ (4.9:1 sur --app-surface-muted)
+   - --brand-primary (#077a96) sur #fff : 5.0:1 ✓ (4.5:1 sur --app-surface-muted)
+   - texte blanc sur --brand-primary (bouton primaire) : 5.0:1 ✓
    ============================================================ */
 :root,
 :root[data-theme='light'] {
@@ -67,16 +69,16 @@ body {
   /* Textes */
   --text-primary: #001d4a;       /* Bleu nuit Joprelys — WCAG AAA */
   --text-secondary: #40556f;     /* Slate médium — WCAG AA */
-  --text-muted: #6d7f95;         /* Slate clair — WCAG AA (4.6:1) */
+  --text-muted: #5b6c82;         /* Slate clair — WCAG AA (5.4:1) */
   --text-inverse: #ffffff;       /* Sur fond sombre */
   --text-on-muted: #001d4a;      /* Texte sur surfaces atténuées */
 
   /* Couleur primaire (cyan médical) */
-  --brand-primary: #0b91b2;
-  --brand-primary-hover: #087c99;
-  --brand-primary-active: #076881;
-  --brand-primary-subtle: rgba(11, 145, 178, 0.10);
-  --brand-primary-border: rgba(11, 145, 178, 0.25);
+  --brand-primary: #077a96;
+  --brand-primary-hover: #066a83;
+  --brand-primary-active: #055a6f;
+  --brand-primary-subtle: rgba(7, 122, 150, 0.10);
+  --brand-primary-border: rgba(7, 122, 150, 0.25);
 
   /* Couleur verte (succès / validité) */
   --brand-success: #009730;
@@ -106,14 +108,14 @@ body {
   --brand-warning-code-bg: #ffffff;
 
   /* Couleur info / neutre secondaire */
-  --brand-info: #0b91b2;               /* Réutilise le cyan pour info */
+  --brand-info: #077a96;               /* Réutilise le cyan pour info */
   --brand-info-subtle: #e0f7fc;
   --brand-info-muted: #b2ebf2;
   --brand-info-text: #006d8f;
   --brand-info-text-dark: #22d3ee;
 
   /* Alias couleurs pour Tailwind CSS (text-brand-cyan, etc.) */
-  --brand-cyan: #0b91b2;               /* Alias du primaire */
+  --brand-cyan: #077a96;               /* Alias du primaire */
 
   /* Couleurs sémantiques graphiques (lab orders) */
   --chart-normal: #009730;             /* Vert Joprelys */
@@ -126,10 +128,10 @@ body {
   /* Inputs */
   --bg-input: #F2F4F7;
   --border-input: #e4e7ec;
-  --border-input-focus: #0b91b2;
+  --border-input-focus: #077a96;
 
   /* Focus ring */
-  --focus-ring: rgba(11, 145, 178, 0.18);
+  --focus-ring: rgba(7, 122, 150, 0.18);
 
   /* Ombres */
   --shadow-panel: 0 4px 16px rgba(10, 29, 61, 0.07);
@@ -503,7 +505,7 @@ body {
     font-size: 0.9rem;
     outline: none;
     appearance: none;
-    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%236d7f95' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%235b6c82' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
     background-repeat: no-repeat;
     background-position: right 1rem center;
     background-size: 1.1em;

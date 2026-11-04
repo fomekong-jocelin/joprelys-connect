@@ -171,7 +171,11 @@ public class RbacAdministrationService {
             Authentication authentication) {
         OrganizationScope scope = organizationScope(authentication, requestedOrganizationId);
         UserAccountEntity actor = scope.actor();
-        boolean isSelf = actor.getId().equals(targetUserId);
+        if (actor.getId().equals(targetUserId)) {
+            throw new ResponseStatusException(
+                    HttpStatus.FORBIDDEN,
+                    "Vous ne pouvez pas modifier vos propres rôles. Demandez à un autre administrateur de l'établissement.");
+        }
         if (roleIds == null || roleIds.isEmpty()) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Au moins un rôle doit être attribué.");
         }
@@ -197,11 +201,6 @@ public class RbacAdministrationService {
         boolean targetWasAdmin = rbacStore.userHasAnyRole(target.getId(), RbacCatalog.adminRoleCodes());
         boolean targetWillRemainAdmin = roles.stream().map(RbacStore.RoleView::code)
                 .anyMatch(RbacCatalog.adminRoleCodes()::contains);
-        if (isSelf && targetWasAdmin && !targetWillRemainAdmin) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "Vous ne pouvez pas révoquer votre propre rôle d'administrateur.");
-        }
         if (target.isEnabled() && targetWasAdmin && !targetWillRemainAdmin
                 && rbacStore.countActiveAdministrators(scope.organizationId()) <= 1) {
             throw new ResponseStatusException(
@@ -219,7 +218,7 @@ public class RbacAdministrationService {
                 scope.organizationId(), actor.getId(), "USER_ROLES_REPLACED", "USER", target.getId().toString(),
                 "roles=" + String.join(",", effective.roles()));
         return new UserAccessView(
-                target.getId(), target.getEmail(), target.getDisplayName(), target.isEnabled(), isSelf,
+                target.getId(), target.getEmail(), target.getDisplayName(), target.isEnabled(), false,
                 effective.roles(), effective.permissions());
     }
 

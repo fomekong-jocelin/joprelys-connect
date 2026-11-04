@@ -103,15 +103,15 @@
     </nav>
 
     @if (successMessage()) {
-      <div class="ui-alert-success text-xs">
+      <div class="ui-alert-success text-xs" role="status" aria-live="polite">
         <app-ui-icon name="check" />
         {{ successMessage() }}
       </div>
     }
     @if (errorMessage()) {
-      <div class="ui-alert-danger text-xs">
-        <app-ui-icon name="x-mark" />
-        {{ errorMessage() }}
+      <div class="ui-alert-danger flex items-start justify-between gap-3 text-xs" role="alert" data-testid="billing-error">
+        <span class="flex items-start gap-2"><app-ui-icon name="x-mark" />{{ errorMessage() }}</span>
+        <button type="button" class="inline-flex min-h-9 min-w-9 shrink-0 items-center justify-center text-[var(--brand-danger-text)]" (click)="errorMessage.set(null)" [attr.aria-label]="t('billing.aria.closeAlert', 'Fermer l’alerte')" data-testid="billing-error-dismiss"><app-ui-icon name="x-mark" /></button>
       </div>
     }
 
@@ -239,16 +239,16 @@
                       <h4 class="mt-1 text-base font-bold text-[var(--text-primary)]">{{ existingInvoice.invoiceNumber }}</h4>
                       <p class="mt-1 text-xs text-[var(--text-secondary)]">{{ t('billing.existingInvoiceNextStep', 'Aucune nouvelle facture à créer pour cette visite.') }}</p>
                     </div>
-                    <span class="text-right text-sm font-bold text-[var(--text-primary)]">{{ existingInvoice.totalAmount | number:'1.0-0' }} FCFA</span>
+                    <span class="text-right text-sm font-bold text-[var(--text-primary)]">{{ existingInvoice.totalAmount | xaf }}</span>
                   </div>
                   <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
                     <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-3">
                       <span class="block text-[10px] text-[var(--text-muted)]">{{ t('billing.invoicePatient', 'Part patient') }}</span>
-                      <strong>{{ existingInvoice.patientShare | number:'1.0-0' }} FCFA</strong>
+                      <strong>{{ existingInvoice.patientShare | xaf }}</strong>
                     </div>
                     <div class="bg-[var(--app-surface)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-3">
                       <span class="block text-[10px] text-[var(--text-muted)]">{{ t('billing.invoiceInsurance', 'Part assurance') }}</span>
-                      <strong>{{ existingInvoice.insuranceShare | number:'1.0-0' }} FCFA</strong>
+                      <strong>{{ existingInvoice.insuranceShare | xaf }}</strong>
                     </div>
                   </div>
                   <div class="flex flex-wrap gap-2">
@@ -357,7 +357,7 @@
                               />
                             </td>
                             <td class="p-2 text-right font-bold text-[var(--text-primary)]">
-                              {{ ((item.unitPrice || 0) * (item.quantity || 0) * (item.coefficient || 1.0)) | number:'1.0-0' }} FCFA
+                              {{ ((item.unitPrice || 0) * (item.quantity || 0) * (item.coefficient || 1.0)) | xaf }}
                             </td>
                             <td class="p-2 text-center">
                               <button (click)="removeItem($index)" [attr.aria-label]="t('billing.aria.deleteItem', 'Supprimer la ligne')" class="text-[var(--brand-danger)] hover:text-[var(--brand-danger-hover)] text-xs font-bold p-1 rounded-[var(--radius-brand-sm)]">
@@ -372,17 +372,17 @@
                   <div class="bg-[var(--app-surface-muted)] border border-[var(--app-border)]/60 rounded-[var(--radius-brand-sm)] p-4 text-xs space-y-2 max-w-md ml-auto">
                     <div class="flex justify-between">
                       <span class="text-[var(--text-secondary)]">{{ t('billing.grossTotal', 'Montant Brut Total') }} :</span>
-                      <span class="font-bold">{{ calculatedTotal() | number:'1.0-0' }} FCFA</span>
+                      <span class="font-bold">{{ calculatedTotal() | xaf }}</span>
                     </div>
                     @if (selectedConventionId()) {
                       <div class="flex justify-between text-blue-600 dark:text-blue-400">
                         <span>{{ t('billing.insuranceShare', 'Part Tiers Payant (Assurance)') }} :</span>
-                        <span>- {{ calculatedInsuranceShare() | number:'1.0-0' }} FCFA</span>
+                        <span>- {{ calculatedInsuranceShare() | xaf }}</span>
                       </div>
                     }
                     <div class="flex justify-between border-t border-[var(--app-border)] pt-2 text-sm font-bold text-[var(--text-primary)]">
                       <span>{{ t('billing.patientShare', 'Part Patient (À régler)') }} :</span>
-                      <span>{{ calculatedPatientShare() | number:'1.0-0' }} FCFA</span>
+                      <span>{{ calculatedPatientShare() | xaf }}</span>
                     </div>
                   </div>
                   <div class="flex justify-end gap-2 pt-2">

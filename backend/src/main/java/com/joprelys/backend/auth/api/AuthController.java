@@ -123,11 +123,11 @@ public class AuthController {
                         .anyMatch("PATIENT"::equals);
     }
 
+    /**
+     * IP d'audit résolue par le conteneur ({@code server.forward-headers-strategy: native} ne fait
+     * confiance à {@code X-Forwarded-For} que depuis un proxy interne) : jamais l'en-tête brut.
+     */
     private static String clientIp(HttpServletRequest request) {
-        String forwardedFor = request.getHeader("X-Forwarded-For");
-        if (forwardedFor != null && !forwardedFor.isBlank()) {
-            return forwardedFor.split(",")[0].trim();
-        }
         return request.getRemoteAddr();
     }
 }

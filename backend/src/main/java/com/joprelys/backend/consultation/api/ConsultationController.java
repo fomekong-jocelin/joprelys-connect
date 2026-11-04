@@ -4,6 +4,7 @@ import com.joprelys.backend.consultation.application.ConsultationService;
 import com.joprelys.backend.patient.application.PatientAccessPolicyService;
 import com.joprelys.backend.patient.application.PatientService;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientRepository;
+import com.joprelys.backend.visit.application.ClinicalWriteScopePolicy;
 import com.joprelys.backend.visit.infrastructure.persistence.VisitRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -33,16 +34,19 @@ public class ConsultationController {
     private final PatientAccessPolicyService accessPolicy;
     private final PatientRepository patientRepository;
     private final VisitRepository visitRepository;
+    private final ClinicalWriteScopePolicy clinicalWriteScopePolicy;
 
     public ConsultationController(
             ConsultationService consultationService,
             PatientAccessPolicyService accessPolicy,
             PatientRepository patientRepository,
-            VisitRepository visitRepository) {
+            VisitRepository visitRepository,
+            ClinicalWriteScopePolicy clinicalWriteScopePolicy) {
         this.consultationService = consultationService;
         this.accessPolicy = accessPolicy;
         this.patientRepository = patientRepository;
         this.visitRepository = visitRepository;
+        this.clinicalWriteScopePolicy = clinicalWriteScopePolicy;
     }
 
     @PostMapping("/{id}/consultation")
@@ -50,7 +54,7 @@ public class ConsultationController {
     @PreAuthorize("hasAuthority('CLINICAL_WRITE')")
     @Operation(summary = "Enregistrer une consultation", description = "Sauvegarde ou met à jour la consultation médicale d'une visite.", responses = {
             @ApiResponse(responseCode = "200", description = "Consultation enregistrée avec succès"),
-            @ApiResponse(responseCode = "403", description = "Consentement ou périmètre d'accès insuffisant"),
+            @ApiResponse(responseCode = "403", description = "Consentement insuffisant, ou visite d'un autre établissement (CLINICAL_WRITE_OUT_OF_SCOPE)"),
             @ApiResponse(responseCode = "404", description = "Visite réellement introuvable")
     })
     public ConsultationResponse saveConsultation(
@@ -59,6 +63,8 @@ public class ConsultationController {
             Authentication authentication) {
         UUID patientId = resolvePatientId(id);
         accessPolicy.validateAccess(patientId, "medical_records");
+        // SEC-09 : le partage ouvre la lecture ; l'écriture reste réservée à l'établissement de la visite.
+        clinicalWriteScopePolicy.requireActorInVisitOrganization(id, authentication.getName());
         var patient = patientRepository.findByIdGlobally(patientId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Patient non trouvé."));
         UUID originalTenantId = com.joprelys.backend.auth.security.TenantContext.getTenantId();

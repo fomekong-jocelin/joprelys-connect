@@ -1,7 +1,6 @@
 package com.joprelys.backend.common.api;
 
 import com.joprelys.backend.common.application.WebhookService;
-import com.joprelys.backend.common.infrastructure.persistence.WebhookEntity;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import org.springframework.http.HttpStatus;
@@ -33,23 +32,27 @@ public class WebhookController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    public WebhookEntity create(@Valid @RequestBody CreateWebhookRequest request, Authentication authentication) {
+    public WebhookResponse create(@Valid @RequestBody CreateWebhookRequest request, Authentication authentication) {
         UUID orgId = resolveOrganizationId(authentication);
-        return webhookService.createWebhook(orgId, request.url(), request.secret(), request.eventTypes());
+        return WebhookResponse.revealingSecret(
+                webhookService.createWebhook(orgId, request.url(), request.secret(), request.eventTypes()));
     }
 
     @GetMapping
-    public List<WebhookEntity> list(Authentication authentication) {
+    public List<WebhookResponse> list(Authentication authentication) {
         UUID orgId = resolveOrganizationId(authentication);
-        return webhookService.getOrganizationWebhooks(orgId);
+        return webhookService.getOrganizationWebhooks(orgId).stream()
+                .map(WebhookResponse::masked)
+                .toList();
     }
 
     @PutMapping("/{id}")
-    public WebhookEntity update(@PathVariable UUID id,
-                                @Valid @RequestBody UpdateWebhookRequest request,
-                                Authentication authentication) {
+    public WebhookResponse update(@PathVariable UUID id,
+                                  @Valid @RequestBody UpdateWebhookRequest request,
+                                  Authentication authentication) {
         UUID orgId = resolveOrganizationId(authentication);
-        return webhookService.updateWebhook(id, orgId, request.url(), request.secret(), request.eventTypes());
+        return WebhookResponse.masked(
+                webhookService.updateWebhook(id, orgId, request.url(), request.secret(), request.eventTypes()));
     }
 
     @DeleteMapping("/{id}")

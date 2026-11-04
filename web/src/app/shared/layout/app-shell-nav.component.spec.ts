@@ -1,7 +1,7 @@
 import { signal } from '@angular/core';
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideRouter } from '@angular/router';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { RbacApiService } from '../../clinic/rbac/rbac-api.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { PatientApiService } from '../../patient/patient-api.service';
@@ -46,6 +46,22 @@ describe('AppShellNavComponent patient isolation', () => {
   });
 
   afterEach(() => fixture.destroy());
+
+  it("signale l'échec de chargement des droits au lieu de l'ignorer, puis permet de réessayer", () => {
+    const rbac = TestBed.inject(RbacApiService) as unknown as { ensureMyAccess: ReturnType<typeof vi.fn> };
+    rbac.ensureMyAccess.mockReturnValueOnce(throwError(() => new Error('503')));
+    fixture.componentRef.setInput('session', { role: 'MEDECIN', name: 'Dr Démo' });
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[data-testid="nav-access-error"]')?.textContent).toContain('shell.nav.accessLoadError');
+
+    (root.querySelector('[data-testid="nav-access-error"] button') as HTMLButtonElement).click();
+    fixture.detectChanges();
+
+    expect(rbac.ensureMyAccess).toHaveBeenCalledTimes(2);
+    expect(root.querySelector('[data-testid="nav-access-error"]')).toBeNull();
+  });
 
   it('should expose only patient routes even when professional permissions remain cached', () => {
     fixture.componentRef.setInput('session', {

@@ -8,6 +8,15 @@ import { AuthSessionRecoveryService } from './auth-session-recovery.service';
 import { AuthTokenStorageService } from './auth-token-storage.service';
 import { canAccessBillingManagement } from './professional-access-policies';
 
+export const PROFESSIONAL_LOGIN_URL = '/login';
+export const PATIENT_LOGIN_URL = '/patient/login';
+export const SERVER_UNAVAILABLE_URL = '/server-unavailable';
+
+/** Réseau coupé (statut 0), passerelle ou serveur en erreur (5xx) : le contrôle d'accès n'a pas pu avoir lieu. */
+function isServerUnreachable(error: unknown): boolean {
+  return error instanceof HttpErrorResponse && (error.status === 0 || error.status >= 500);
+}
+
 export const roleGuard: CanActivateFn = (route, state) => {
   const tokenStorage = inject(AuthTokenStorageService);
   const sessionRecovery = inject(AuthSessionRecoveryService);
@@ -23,10 +32,9 @@ export const roleGuard: CanActivateFn = (route, state) => {
   const isInternalEntryRoute = routePath === 'dashboard'
     || (routePath === 'profile' && !expectsPatient);
   const allowAnyInternalRole = route.data['allowAnyInternalRole'] === true || isInternalEntryRoute;
-  const professionalLoginTree = () => router.createUrlTree(['/'], { queryParams: { returnUrl: state.url } });
-  const patientLoginTree = () => router.createUrlTree(['/'], {
-    queryParams: { mode: 'patient', returnUrl: state.url },
-  });
+  const professionalLoginTree = () => router.createUrlTree([PROFESSIONAL_LOGIN_URL], { queryParams: { returnUrl: state.url } });
+  const patientLoginTree = () => router.createUrlTree([PATIENT_LOGIN_URL], { queryParams: { returnUrl: state.url } });
+  const serverUnavailableTree = () => router.createUrlTree([SERVER_UNAVAILABLE_URL], { queryParams: { returnUrl: state.url } });
 
   const authorizeSession = (session: AuthSession) => {
     const isPatientSession = tokenStorage.isPatientSession(session);
@@ -63,7 +71,9 @@ export const roleGuard: CanActivateFn = (route, state) => {
           }
           return isBillingManagementRoute ? true : router.parseUrl('/unauthorized');
         }),
-        catchError(() => of(router.parseUrl('/unauthorized'))),
+        catchError((error: unknown) => of(isServerUnreachable(error)
+          ? serverUnavailableTree()
+          : router.parseUrl('/unauthorized'))),
       );
     }
 
@@ -92,11 +102,7 @@ export const roleGuard: CanActivateFn = (route, state) => {
       const decision = authorizeSession(restored);
       return isObservable(decision) ? decision : of(decision);
     }),
-    catchError((error: HttpErrorResponse) => {
-      if (error.status === 401 || error.status === 403) {
-        return of(professionalLoginTree());
-      }
-      return of(true);
-    }),
+    // Un serveur injoignable ne doit ni ouvrir un écran vide, ni être confondu avec une session expirée.
+    catchError((error: unknown) => of(isServerUnreachable(error) ? serverUnavailableTree() : professionalLoginTree())),
   );
 };

@@ -42,11 +42,13 @@ import {
   hasAnyPermission,
 } from '../../auth/professional-access-policies';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 @Component({
   selector: 'app-billing-management-page',
   standalone: true,
   imports: [
     CommonModule,
+    XafPipe,
     FormsModule,
     IconComponent,
     AppShellComponent,
@@ -446,9 +448,9 @@ export class BillingManagementPageComponent implements OnInit {
     setTimeout(() => this.successMessage.set(null), 5000);
   }
 
+  /** Une erreur reste affichée jusqu'à sa fermeture explicite : elle ne doit pas disparaître avant d'être lue. */
   private showError(key: string): void {
     this.errorMessage.set(this.t(key, 'Une erreur est survenue.'));
     this.successMessage.set(null);
-    setTimeout(() => this.errorMessage.set(null), 5000);
   }
 }

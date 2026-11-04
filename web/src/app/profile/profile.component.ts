@@ -322,8 +322,7 @@ export class ProfileComponent implements OnInit {
         if (type === 'stamp') this.stampPath.set(response.filePath);
         component.setPreviewUrl(response.viewUrl, file.name);
       },
-      error: (error) => {
-        console.error(error);
+      error: () => {
         this.error.set(this.t('profile.uploadError', "Erreur lors du chargement de l'image."));
       },
     });
@@ -365,7 +364,6 @@ export class ProfileComponent implements OnInit {
         this.loading.set(false);
       },
       error: (error) => {
-        console.error(error);
         this.error.set(error.error?.detail || this.t('profile.saveError', 'Impossible de sauvegarder le profil.'));
         this.loading.set(false);
       },

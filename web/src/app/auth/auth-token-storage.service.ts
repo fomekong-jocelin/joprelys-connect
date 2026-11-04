@@ -47,12 +47,7 @@ export class AuthTokenStorageService {
   }
 
   isPatientSession(session: AuthSession | null = this.session()): boolean {
-    if (!session) return false;
-    return session.role
-      .split(',')
-      .map(role => role.trim())
-      .filter(Boolean)
-      .includes('PATIENT');
+    return hasPatientRole(session);
   }
 
   clearAccessToken(): void {
@@ -141,4 +136,14 @@ export class AuthTokenStorageService {
       // Memory-only authentication remains possible in restricted browser contexts.
     }
   }
+}
+
+/** Vrai si la session porte le rôle PATIENT (valeur de rôle éventuellement multiple, séparée par des virgules). */
+export function hasPatientRole(session: Pick<AuthSession, 'role'> | null | undefined): boolean {
+  if (!session?.role) return false;
+  return session.role
+    .split(',')
+    .map(role => role.trim())
+    .filter(Boolean)
+    .includes('PATIENT');
 }

@@ -126,6 +126,7 @@ class PatientConsentRequired extends StatelessWidget {
                   const SizedBox(height: 22),
                   TextField(
                     controller: controller,
+                    enableIMEPersonalizedLearning: false,
                     minLines: 3,
                     maxLines: 5,
                     textCapitalization: TextCapitalization.sentences,

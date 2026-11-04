@@ -26,6 +26,10 @@ public class HospitalizationCareService {
     private final AuditService auditService;
     private final HospitalizationMedicationUseCase medicationPolicy;
     private final MedicationAdministrationWindowPolicy administrationWindowPolicy;
+    private final com.joprelys.backend.patient.application.PatientDeathService deathService;
+
+    /** Tolérance d'horloge entre poste de soins et serveur pour l'heure d'administration saisie. */
+    private static final java.time.Duration ADMINISTRATION_CLOCK_TOLERANCE = java.time.Duration.ofMinutes(5);
 
     public HospitalizationCareService(HospitalizationRepository hospitalizationRepository,
                                       HospitalizationDailyCareRepository dailyCareRepository,
@@ -33,7 +37,8 @@ public class HospitalizationCareService {
                                       PatientConsumptionRepository patientConsumptionRepository,
                                       UserAccountRepository userAccountRepository,
                                       AuditService auditService, HospitalizationMedicationUseCase medicationPolicy,
-                                      MedicationAdministrationWindowPolicy administrationWindowPolicy) {
+                                      MedicationAdministrationWindowPolicy administrationWindowPolicy,
+                                      com.joprelys.backend.patient.application.PatientDeathService deathService) {
         this.hospitalizationRepository = hospitalizationRepository;
         this.dailyCareRepository = dailyCareRepository;
         this.medicationAdministrationRepository = medicationAdministrationRepository;
@@ -42,6 +47,7 @@ public class HospitalizationCareService {
         this.auditService = auditService;
         this.medicationPolicy = medicationPolicy;
         this.administrationWindowPolicy = administrationWindowPolicy;
+        this.deathService = deathService;
     }
 
     @Transactional
@@ -138,6 +144,13 @@ public class HospitalizationCareService {
         UserAccountEntity actor = getCurrentUser();
         String administeredBy = actor != null ? actor.getDisplayName() : "Inconnu";
         Instant administeredAt = request.administeredAt() != null ? request.administeredAt() : Instant.now();
+        // Une administration se trace au moment où elle a eu lieu : jamais dans le futur (CLIN-09),
+        // jamais après l'heure du décès (CLIN-13).
+        if (administeredAt.isAfter(Instant.now().plus(ADMINISTRATION_CLOCK_TOLERANCE))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "L'heure d'administration ne peut pas être dans le futur.");
+        }
+        deathService.rejectCareAfterDeath(hosp.getPatientId(), administeredAt);
         var prescribedItem = medicationPolicy.validate(hosp, request);
         String overrideReason = normalizedReason(request.overrideReason());
         rejectAdministrationInsideSafetyWindow(hospitalizationId, prescribedItem, administeredAt, overrideReason);

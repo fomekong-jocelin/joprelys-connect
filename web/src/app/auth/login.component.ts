@@ -8,6 +8,7 @@ import { AppLocale } from '../core/config/app-brand.config';
 import { ThemeService } from '../core/theme/theme.service';
 import { LegalFooterLinkDirective } from '../legal/legal-footer-link.directive';
 import { AppLogoComponent } from '../shared/ui/app-logo.component';
+import { safeInternalUrl } from './safe-return-url';
 
 type LoginMode = 'staff' | 'patient';
 
@@ -220,7 +221,7 @@ export class LoginComponent {
     }).subscribe({
       next: () => {
         this.loading.set(false);
-        this.router.navigate(['/patient/dashboard']);
+        this.router.navigateByUrl(this.destinationAfterLogin('PATIENT'));
       },
       error: (err) => {
         this.loading.set(false);
@@ -281,11 +282,7 @@ export class LoginComponent {
   }
 
   private resolveReturnUrl(): string | null {
-    const returnUrl = this.route?.snapshot.queryParamMap.get('returnUrl')?.trim();
-    if (!returnUrl || !returnUrl.startsWith('/') || returnUrl.startsWith('//')) {
-      return null;
-    }
-    return returnUrl;
+    return safeInternalUrl(this.route?.snapshot.queryParamMap.get('returnUrl'));
   }
 
   private resolveInitialMode(): LoginMode {

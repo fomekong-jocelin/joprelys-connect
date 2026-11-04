@@ -8,16 +8,25 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
+import org.springframework.web.HttpMediaTypeNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import org.springframework.web.multipart.MaxUploadSizeExceededException;
 import org.springframework.web.server.ResponseStatusException;
 
 /**
  * Gestionnaire global des exceptions API.
  * Retourne le format d'erreur normalisé du CDC Module 16 :
  * { "error": { "code", "message", "trace_id" } }
+ *
+ * <p>Les erreurs de requête du client (paramètre absent ou mal typé, corps illisible, format
+ * ou taille non supportés) renvoient un statut 4xx et un message générique : le détail
+ * technique (type Java, position dans le JSON, nom de classe) reste dans les journaux.</p>
  *
  * Ce handler est complémentaire à {@link com.joprelys.backend.auth.api.AuthExceptionHandler}
  * qui gère les cas d'authentification spécifiques.
@@ -78,7 +87,37 @@ public class GlobalExceptionHandler {
         log.warn("[trace_id={}] Not found: {}", traceId, ex.getMessage());
 
         return ResponseEntity.status(HttpStatus.NOT_FOUND)
-                .body(new ApiErrorResponse("NOT_FOUND", ex.getMessage(), traceId));
+                .body(new ApiErrorResponse("NOT_FOUND", "La ressource demandée est introuvable.", traceId));
+    }
+
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<ApiErrorResponse> handleMissingParameter(MissingServletRequestParameterException ex) {
+        return clientError(HttpStatus.BAD_REQUEST, "BAD_REQUEST",
+                "La requête est incomplète : un paramètre obligatoire est manquant.", ex);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    ResponseEntity<ApiErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex) {
+        return clientError(HttpStatus.BAD_REQUEST, "BAD_REQUEST",
+                "La requête est invalide : un paramètre n'a pas le format attendu.", ex);
+    }
+
+    @ExceptionHandler(HttpMessageNotReadableException.class)
+    ResponseEntity<ApiErrorResponse> handleUnreadableBody(HttpMessageNotReadableException ex) {
+        return clientError(HttpStatus.BAD_REQUEST, "BAD_REQUEST",
+                "Le contenu de la requête est illisible ou mal formé.", ex);
+    }
+
+    @ExceptionHandler(HttpMediaTypeNotSupportedException.class)
+    ResponseEntity<ApiErrorResponse> handleUnsupportedMediaType(HttpMediaTypeNotSupportedException ex) {
+        return clientError(HttpStatus.UNSUPPORTED_MEDIA_TYPE, "UNSUPPORTED_MEDIA_TYPE",
+                "Le format du contenu envoyé n'est pas pris en charge pour cette ressource.", ex);
+    }
+
+    @ExceptionHandler(MaxUploadSizeExceededException.class)
+    ResponseEntity<ApiErrorResponse> handleUploadTooLarge(MaxUploadSizeExceededException ex) {
+        return clientError(HttpStatus.CONTENT_TOO_LARGE, "PAYLOAD_TOO_LARGE",
+                "Le fichier envoyé dépasse la taille maximale autorisée.", ex);
     }
 
     @ExceptionHandler(MailRecipientRejectedException.class)
@@ -181,6 +220,16 @@ public class GlobalExceptionHandler {
                         "INTERNAL_ERROR",
                         "Une erreur interne est survenue. Veuillez réessayer plus tard.",
                         traceId));
+    }
+
+    private ResponseEntity<ApiErrorResponse> clientError(
+            HttpStatus status, String code, String message, Exception ex) {
+        String traceId = getTraceId();
+        // Seuls les types d'exception sont journalisés : le message peut recopier une valeur
+        // saisie (fragment JSON, paramètre) potentiellement porteuse de données de santé.
+        log.warn("[trace_id={}] Client request rejected: status={} exception={} cause={}",
+                traceId, status.value(), ex.getClass().getSimpleName(), failureType(ex));
+        return ResponseEntity.status(status).body(new ApiErrorResponse(code, message, traceId));
     }
 
     private String getTraceId() {

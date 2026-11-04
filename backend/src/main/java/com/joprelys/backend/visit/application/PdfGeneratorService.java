@@ -24,6 +24,8 @@ import com.lowagie.text.Rectangle;
 import com.lowagie.text.pdf.PdfPCell;
 import com.lowagie.text.pdf.PdfPTable;
 import com.lowagie.text.pdf.PdfWriter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import java.awt.Color;
 import java.io.ByteArrayOutputStream;
@@ -38,6 +40,7 @@ import java.util.UUID;
 @Service
 public class PdfGeneratorService {
 
+    private static final Logger log = LoggerFactory.getLogger(PdfGeneratorService.class);
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
             .withZone(ZoneId.systemDefault());
 
@@ -64,7 +67,8 @@ public class PdfGeneratorService {
                 return image;
             }
         } catch (Exception e) {
-            System.err.println("Failed to load PDF image asset: " + path + ". Error: " + e.getMessage());
+            // SEC-11 : ni chemin ni message d'exception (identifiants de stockage, données du document).
+            log.warn("Image du PDF non chargée ({}) : document généré sans cette image.", e.getClass().getSimpleName());
         }
         return null;
     }

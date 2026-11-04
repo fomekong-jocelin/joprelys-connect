@@ -3,12 +3,13 @@ import { Component, ElementRef, EventEmitter, Input, Output } from '@angular/cor
 import { Invoice, InvoiceSettlementSummary } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 type CollectionStatus = InvoiceSettlementSummary['collectionStatus'];
 
 @Component({
   selector: 'app-billing-invoice-history',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [XafPipe, CommonModule, IconComponent],
   templateUrl: './billing-invoice-history.component.html',
   styleUrl: './billing-invoice-history.component.css',
 })

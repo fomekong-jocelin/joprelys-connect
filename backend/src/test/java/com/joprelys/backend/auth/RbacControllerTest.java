@@ -171,26 +171,28 @@ class RbacControllerTest {
     }
 
     @Test
-    void shouldRejectSelfAdminRevocationAndAllowRoleExpansion() throws Exception {
-        // Reject revoking own admin role
+    void shouldRejectAnySelfRoleModificationAndOutOfScopeTargets() throws Exception {
+        // SEC-03 : ni révocation ni extension de ses propres rôles (auto-escalade interdite).
         mockMvc.perform(put("/api/rbac/users/" + admin.getId() + "/roles")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "roleIds", List.of(roleId("MEDECIN"))))))
-                .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.detail").value("Vous ne pouvez pas révoquer votre propre rôle d'administrateur."));
+                .andExpect(status().isForbidden());
 
-        // Allow expanding own roles while preserving admin role
         mockMvc.perform(put("/api/rbac/users/" + admin.getId() + "/roles")
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "roleIds", List.of(roleId("ADMIN_CLINIQUE"), roleId("MEDECIN"))))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.detail").value(
+                        "Vous ne pouvez pas modifier vos propres rôles. Demandez à un autre administrateur de l'établissement."));
+
+        mockMvc.perform(get("/api/rbac/me")
+                        .header("Authorization", "Bearer " + adminToken))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.currentUser").value(true))
-                .andExpect(jsonPath("$.roles[?(@ == 'ADMIN_CLINIQUE')]").exists())
-                .andExpect(jsonPath("$.roles[?(@ == 'MEDECIN')]").exists());
+                .andExpect(jsonPath("$.roles[?(@ == 'MEDECIN')]").doesNotExist());
 
         mockMvc.perform(put("/api/rbac/users/" + outsider.getId() + "/roles")
                         .header("Authorization", "Bearer " + adminToken)
@@ -214,6 +216,38 @@ class RbacControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "roleIds", List.of(roleId("ADMIN_JOPRELYS"))))))
+                .andExpect(status().isForbidden());
+
+        // SEC-03 : AUDITEUR porte la lecture d'audit multi-établissements => rôle de plateforme.
+        mockMvc.perform(put("/api/rbac/users/" + staff.getId() + "/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "roleIds", List.of(roleId("AUDITEUR"))))))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void shouldHideAndRejectCrossTenantAuditCapabilitiesInClinicAdministration() throws Exception {
+        mockMvc.perform(get("/api/rbac/roles")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code == 'AUDITEUR')]").doesNotExist());
+
+        mockMvc.perform(get("/api/rbac/permissions")
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.code == 'AUDIT_READ')]").exists())
+                .andExpect(jsonPath("$[?(@.code == 'AUDIT_CROSS_TENANT_READ')]").doesNotExist());
+
+        mockMvc.perform(post("/api/rbac/roles")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "code", "AUDIT_ETENDU",
+                                "name", "Audit étendu",
+                                "assignable", true,
+                                "permissionCodes", List.of("AUDIT_READ", "AUDIT_CROSS_TENANT_READ")))))
                 .andExpect(status().isForbidden());
     }
 

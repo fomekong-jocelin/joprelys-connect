@@ -30,8 +30,9 @@ public class NotificationService {
         var saved = notificationRepository.save(notification);
         
         // Simuler l'envoi via un canal Email/SMS/WhatsApp en loggant dans la console
-        log.info("[NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | Recipient Patient: {} | Title: {} | Message: {}", 
-                patientId, title, message);
+        // SEC-11 : ni titre ni contenu (données de santé) dans les journaux, seulement des identifiants techniques.
+        log.info("[NOTIFICATION GATEWAY MOCK] Channel: EMAIL/SMS | notification={} | type={}",
+                saved.getId(), type);
 
         return saved;
     }

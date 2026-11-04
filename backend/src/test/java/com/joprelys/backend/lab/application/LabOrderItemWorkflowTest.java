@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
 
 class LabOrderItemWorkflowTest {
 
-    private final LabOrderService service = new LabOrderService(null, null, null, null, null, null);
+    private final LabOrderService service = new LabOrderService(null, null, null, null, null, null, null);
 
     @Test
     void oneExamCanAdvanceWithoutCompletingTheWholeRequest() {

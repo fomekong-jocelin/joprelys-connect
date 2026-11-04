@@ -103,14 +103,15 @@ export class ReceptionLogsComponent implements OnInit {
   }
 
   private loadDropdowns(): void {
+    // Listes de référence du formulaire : un échec est signalé, sinon les listes vides paraîtraient normales.
     this.patientApi.list().subscribe({
       next: (data) => this.patients.set(data),
-      error: () => {},
+      error: () => this.error.set(this.i18n.t('reception.error.loadReferences')),
     });
 
     this.staffApi.list().subscribe({
       next: (data) => this.staff.set(data),
-      error: () => {},
+      error: () => this.error.set(this.i18n.t('reception.error.loadReferences')),
     });
   }
 

@@ -39,14 +39,18 @@ public class LabOrderService {
 	private final AuditService auditService;
 	private final LabPaymentGatePolicy paymentGatePolicy;
 
+	private final com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver canonicalResolver;
+
 	public LabOrderService(
 			LabOrderRepository labOrderRepository,
 			PatientRepository patientRepository,
 			VisitRepository visitRepository,
 			UserAccountRepository userAccountRepository,
 			AuditService auditService,
-			LabPaymentGatePolicy paymentGatePolicy) {
+			LabPaymentGatePolicy paymentGatePolicy,
+			com.joprelys.backend.patient.reconciliation.application.PatientCanonicalResolver canonicalResolver) {
 		this.paymentGatePolicy = paymentGatePolicy;
+		this.canonicalResolver = canonicalResolver;
 		this.labOrderRepository = labOrderRepository;
 		this.patientRepository = patientRepository;
 		this.visitRepository = visitRepository;
@@ -59,10 +63,21 @@ public class LabOrderService {
 		PatientEntity patient = patientRepository.findById(request.patientId())
 				.orElseThrow(() -> new IllegalArgumentException("Patient introuvable"));
 
+		// Aucun nouvel examen pour un patient décédé, y compris via un dossier fusionné (CLIN-13).
+		var canonicalPatient = canonicalResolver.resolve(patient.getId()).canonicalPatient();
+		com.joprelys.backend.patient.application.PatientDeathService.rejectIfDeceased(canonicalPatient);
+		UUID canonicalPatientId = canonicalPatient.getId();
+
 		VisitEntity visit = null;
 		if (request.visitId() != null) {
 			visit = visitRepository.findById(request.visitId())
 					.orElseThrow(() -> new IllegalArgumentException("Visite introuvable"));
+			// Identitovigilance : la demande et la visite doivent concerner le même patient (CLIN-11).
+			if (visit.getPatient() == null || !canonicalPatientId.equals(canonicalPatientId(visit.getPatient().getId()))) {
+				throw new org.springframework.web.server.ResponseStatusException(
+						org.springframework.http.HttpStatus.BAD_REQUEST,
+						"La visite indiquée n'appartient pas à ce patient.");
+			}
 		}
 
 		UserAccountEntity practitioner = userAccountRepository.findByEmail(practitionerEmail)
@@ -197,6 +212,11 @@ public class LabOrderService {
 					.findFirst()
 					.orElseThrow(() -> new IllegalArgumentException("Examen introuvable dans cette demande"));
 
+			if (status == LabOrderStatus.VALIDATED) {
+				// La validation biologique valide des résultats : elle passe par leur enregistrement (CLIN-05).
+				throw new ResponseStatusException(HttpStatus.CONFLICT,
+						"Un examen se valide en enregistrant ses résultats validés, pas par un simple changement de statut.");
+			}
 			validatePaymentGate(entity.getStatus(), status);
 			validateItemTransition(item.getStatus(), status);
 			item.applyStatus(status, Instant.now());
@@ -356,5 +376,9 @@ public class LabOrderService {
 				entity.getPriority(),
 				entity.getStatus(),
 				entity.getCreatedAt());
+	}
+
+	private UUID canonicalPatientId(UUID patientId) {
+		return canonicalResolver.resolve(patientId).canonicalPatient().getId();
 	}
 }

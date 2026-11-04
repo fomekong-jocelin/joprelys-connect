@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:cookie_jar/cookie_jar.dart';
 
 import '../../../core/network/api_exception.dart';
 import '../../../core/network/api_session.dart';
+import '../../../core/security/local_session_data_purger.dart';
 import '../data/auth_api.dart';
 import '../data/auth_session_store.dart';
 import '../domain/professional_session.dart';
@@ -11,12 +14,15 @@ final class AuthSessionManager implements ApiSessionAccess {
     required AuthSessionStore store,
     required AuthGateway authApi,
     required CookieJar cookieJar,
+    Iterable<LocalSessionDataPurger> localDataPurgers =
+        const <LocalSessionDataPurger>[],
     DateTime Function()? clock,
   }) {
     return AuthSessionManager._(
       store,
       authApi,
       cookieJar,
+      List<LocalSessionDataPurger>.unmodifiable(localDataPurgers),
       clock ?? DateTime.now,
     );
   }
@@ -25,13 +31,22 @@ final class AuthSessionManager implements ApiSessionAccess {
     this._store,
     this._authApi,
     this._cookieJar,
+    this._localDataPurgers,
     this._clock,
   );
 
   final AuthSessionStore _store;
   final AuthGateway _authApi;
   final CookieJar _cookieJar;
+  final List<LocalSessionDataPurger> _localDataPurgers;
   final DateTime Function() _clock;
+  final StreamController<void> _expirations =
+      StreamController<void>.broadcast();
+
+  /// Emits once each time a stored session is invalidated by the server
+  /// (refused refresh) or expired by the network layer. Network failures and
+  /// timeouts never emit: the session stays available for a later retry.
+  Stream<void> get sessionExpirations => _expirations.stream;
 
   Future<AuthExchangeResult> login({
     required String email,
@@ -111,8 +126,15 @@ final class AuthSessionManager implements ApiSessionAccess {
     return updated;
   }
 
+  /// Clears the session, its cookies and every feature-owned local data
+  /// (clinical drafts, downloaded results). All purges run even if one fails;
+  /// the first failure is then rethrown.
   Future<void> clearLocalSession() async {
-    await Future.wait([_store.clear(), _cookieJar.deleteAll()]);
+    await Future.wait([
+      _store.clear(),
+      _cookieJar.deleteAll(),
+      for (final purger in _localDataPurgers) purger.purgeLocalSessionData(),
+    ]);
   }
 
   @override
@@ -139,14 +161,29 @@ final class AuthSessionManager implements ApiSessionAccess {
     } on ApiException catch (error) {
       if (error.kind == ApiFailureKind.unauthenticated ||
           error.kind == ApiFailureKind.forbidden) {
-        await clearLocalSession();
+        await _expireStoredSession();
       }
       rethrow;
     }
   }
 
   @override
-  Future<void> expire() => clearLocalSession();
+  Future<void> expire() => _expireStoredSession();
+
+  Future<void> dispose() => _expirations.close();
+
+  Future<void> _expireStoredSession() async {
+    final hadSession = await _store.read() != null;
+    try {
+      await clearLocalSession();
+    } finally {
+      // The UI must leave the expired session even if a local purge failed;
+      // the failure itself still propagates to the caller.
+      if (hadSession && !_expirations.isClosed) {
+        _expirations.add(null);
+      }
+    }
+  }
 
   Future<ProfessionalSession> _refreshProfessionalSession(
     ProfessionalSession previous,

@@ -3,6 +3,11 @@ package com.joprelys.backend.emergency.api;
 import com.joprelys.backend.emergency.triage.api.EmergencyAbcdeAssessmentRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
@@ -14,6 +19,7 @@ public record EmergencyTriageRequest(
 
         @NotBlank(message = "EMERGENCY_TRIAGE_LEVEL_REQUIRED")
         @Size(max = 20, message = "EMERGENCY_TRIAGE_LEVEL_TOO_LONG")
+        @Pattern(regexp = "RED|ORANGE|YELLOW|GREEN", message = "EMERGENCY_TRIAGE_LEVEL_INVALID")
         String triageLevel,
 
         @NotBlank(message = "EMERGENCY_HEMODYNAMIC_STATUS_REQUIRED")
@@ -24,9 +30,13 @@ public record EmergencyTriageRequest(
         @Size(max = 4000, message = "EMERGENCY_CHIEF_COMPLAINT_TOO_LONG")
         String chiefComplaint,
 
+        @Min(value = 0, message = "EMERGENCY_SYSTOLIC_OUT_OF_RANGE") @Max(value = 300, message = "EMERGENCY_SYSTOLIC_OUT_OF_RANGE")
         Integer initialBpSystolic,
+        @Min(value = 0, message = "EMERGENCY_DIASTOLIC_OUT_OF_RANGE") @Max(value = 200, message = "EMERGENCY_DIASTOLIC_OUT_OF_RANGE")
         Integer initialBpDiastolic,
+        @Min(value = 0, message = "EMERGENCY_HEART_RATE_OUT_OF_RANGE") @Max(value = 300, message = "EMERGENCY_HEART_RATE_OUT_OF_RANGE")
         Integer initialHr,
+        @DecimalMin(value = "20.0", message = "EMERGENCY_TEMPERATURE_OUT_OF_RANGE") @DecimalMax(value = "45.0", message = "EMERGENCY_TEMPERATURE_OUT_OF_RANGE")
         BigDecimal initialTemp,
 
         @Size(max = 160, message = "EMERGENCY_THIRD_PARTY_NAME_TOO_LONG")

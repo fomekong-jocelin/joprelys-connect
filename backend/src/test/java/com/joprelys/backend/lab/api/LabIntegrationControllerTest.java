@@ -256,6 +256,44 @@ public class LabIntegrationControllerTest {
 	}
 
 	@Test
+	void patientNotificationIsGradedByTheValidatedInterpretation() throws Exception {
+		jdbcTemplate.update("DELETE FROM notifications");
+
+		uploadSingleResult("ABNORMAL");
+		assertEquals(1, notificationCount("INFO"));
+		assertEquals(0, notificationCount("EMERGENCY"));
+
+		uploadSingleResult("CRITICAL");
+		assertEquals(1, notificationCount("EMERGENCY"));
+		String message = jdbcTemplate.queryForObject(
+				"SELECT message FROM notifications WHERE patient_id = ? AND type = 'EMERGENCY'", String.class, patient.getId());
+		assertTrue(message.contains("urgences"));
+	}
+
+	private void uploadSingleResult(String interpretation) throws Exception {
+		// Le filtre vide le contexte d'établissement après chaque requête anonyme (voir le test d'upload ci-dessus).
+		TenantContext.setTenantId(org.getId());
+		String payload = """
+				{"examRequestNumber": "%s", "validatorName": "Dr. Jean Biologiste", "status": "VALIDATED",
+				 "sampleCollectedAt": "2026-07-03T07:30:00Z", "resultAt": "2026-07-03T10:00:00Z",
+				 "validatedAt": "2026-07-03T10:15:00Z",
+				 "results": [{"analyteName": "Potassium", "value": "6.9", "unit": "mmol/L",
+				              "referenceRange": "3.5 - 5.0", "interpretation": "%s"}]}
+				""".formatted(labOrder.getExamRequestNumber(), interpretation);
+		mockMvc.perform(post("/api/public/lab-integration/upload")
+						.header("X-API-KEY", "lab-partner-secret-token")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(payload))
+				.andExpect(status().isCreated());
+	}
+
+	private int notificationCount(String type) {
+		Integer count = jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM notifications WHERE patient_id = ? AND type = ?", Integer.class, patient.getId(), type);
+		return count == null ? 0 : count;
+	}
+
+	@Test
 	void givenInvalidPdfHeader_whenUpload_thenBadRequest() throws Exception {
 		// Mock PDF Base64 simple but without %PDF header ("Hello PDF" in base64)
 		String mockPdfBase64 = "SGVsbG8gUERGCg==";

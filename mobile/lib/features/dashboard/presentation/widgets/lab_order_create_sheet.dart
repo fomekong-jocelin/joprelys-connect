@@ -214,6 +214,7 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _examsController,
+                    enableIMEPersonalizedLearning: false,
                     enabled: !_saving,
                     minLines: 3,
                     maxLines: 5,
@@ -251,6 +252,7 @@ class _LabOrderCreateSheetState extends ConsumerState<LabOrderCreateSheet> {
                   const SizedBox(height: 12),
                   TextFormField(
                     controller: _reasonController,
+                    enableIMEPersonalizedLearning: false,
                     enabled: !_saving,
                     minLines: 2,
                     maxLines: 4,

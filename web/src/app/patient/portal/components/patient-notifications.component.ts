@@ -4,10 +4,11 @@ import { PatientNotification, PatientPortalService } from '../services/patient-p
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { ToastService } from '../../../shared/ui/toast.service';
 
+import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
 @Component({
   selector: 'app-patient-notifications',
   standalone: true,
-  imports: [CommonModule],
+  imports: [AppDatePipe, CommonModule],
   template: `
     <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-4">
       <div class="flex flex-col gap-2 border-b border-[var(--app-border)] pb-4 sm:flex-row sm:items-end sm:justify-between">
@@ -68,7 +69,7 @@ import { ToastService } from '../../../shared/ui/toast.service';
                   {{ notif.message }}
                 </p>
                 <p class="text-[10px] text-[var(--text-muted)]">
-                  {{ notif.createdAt | date:'medium' }}
+                  {{ notif.createdAt | appDate:'dateTime' }}
                 </p>
               </div>
 

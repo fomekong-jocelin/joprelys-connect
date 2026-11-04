@@ -43,21 +43,37 @@ class _AuthLifecycleLockState extends ConsumerState<AuthLifecycleLock>
     final preserveClinicalCapture =
         authStatus == AuthStatus.locked && activities.preservesRouteOnLock;
 
-    if (!preserveClinicalCapture) return widget.child;
-
+    // The Stack is always present so that locking never re-parents the router
+    // subtree: the clinical capture underneath keeps its state.
     return Stack(
       fit: StackFit.expand,
       children: [
         widget.child,
-        Positioned.fill(
-          child: BlockSemantics(
-            child: Material(
-              color: Theme.of(context).colorScheme.surface,
-              child: const UnlockPage(),
-            ),
+        if (preserveClinicalCapture)
+          const Positioned.fill(child: BlockSemantics(child: _LockSurface())),
+      ],
+    );
+  }
+}
+
+/// Unlock screen drawn above the router. It owns a [Navigator] (and thus an
+/// [Overlay]) because tooltips and menus of the auth shell need one, and the
+/// app builder sits above the router's navigator.
+class _LockSurface extends StatelessWidget {
+  const _LockSurface();
+
+  @override
+  Widget build(BuildContext context) {
+    return HeroControllerScope.none(
+      child: Navigator(
+        onGenerateRoute: (settings) => PageRouteBuilder<void>(
+          settings: settings,
+          pageBuilder: (context, animation, secondaryAnimation) => Material(
+            color: Theme.of(context).colorScheme.surface,
+            child: const UnlockPage(),
           ),
         ),
-      ],
+      ),
     );
   }
 }

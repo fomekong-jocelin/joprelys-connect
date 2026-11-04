@@ -29,16 +29,6 @@ public class RbacAuthorityService {
                 .flatMap(user -> resolveUser(user, tokenOrganizationId));
     }
 
-    @Transactional
-    public Optional<ResolvedAuthorities> resolveByEmail(String email, UUID tokenOrganizationId) {
-        if (email == null || email.isBlank()) {
-            return Optional.empty();
-        }
-        return userAccountRepository.findByEmailIgnoreCase(email.trim())
-                .filter(UserAccountEntity::isEnabled)
-                .flatMap(user -> resolveUser(user, tokenOrganizationId));
-    }
-
     private Optional<ResolvedAuthorities> resolveUser(
             UserAccountEntity user,
             UUID tokenOrganizationId) {

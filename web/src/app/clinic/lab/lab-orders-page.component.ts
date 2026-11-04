@@ -1,18 +1,20 @@
-import { DatePipe } from '@angular/common';
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { AppDatePipe } from '../../shared/formatting/app-date.pipe';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
+import { DialogService } from '../../shared/ui/dialog.service';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { LabOrderApiService } from './lab-api.service';
 import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models';
+import { labResultConfirmation } from './lab-result-confirmation';
 
 @Component({
   selector: 'app-lab-orders-page',
   standalone: true,
-  imports: [ReactiveFormsModule, DatePipe, AppShellComponent, PageHeaderComponent, ButtonComponent],
+  imports: [ReactiveFormsModule, AppDatePipe, AppShellComponent, PageHeaderComponent, ButtonComponent],
   template: `
     <app-shell>
       <app-page-header
@@ -104,7 +106,7 @@ import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models'
                       </span>
                     </div>
                     <p class="mt-2 text-xs" style="color: var(--text-muted)">
-                      {{ order.examType }} · {{ order.priority }} · {{ order.createdAt | date:'short' }}
+                      {{ order.examType }} · {{ order.priority }} · {{ order.createdAt | appDate:'dateTime' }}
                     </p>
                   </button>
                 }
@@ -141,7 +143,7 @@ import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models'
                   </div>
                   <div class="ui-card-muted p-4">
                     <span class="ui-label">{{ t('lab.createdAt') }}</span>
-                    <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.createdAt | date:'mediumDate' }}</p>
+                    <p class="mt-1 font-bold" style="color: var(--text-primary)">{{ order.createdAt | appDate }}</p>
                   </div>
                 </div>
 
@@ -192,7 +194,7 @@ import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models'
                           </div>
                           @if (item.sampleCollectedAt) {
                             <p class="mt-1 text-[11px]" style="color: var(--text-muted)">
-                              {{ t('lab.sampleCollectedAt') }}: {{ item.sampleCollectedAt | date:'short' }}
+                              {{ t('lab.sampleCollectedAt') }}: {{ item.sampleCollectedAt | appDate:'dateTime' }}
                             </p>
                           }
                         </button>
@@ -379,7 +381,7 @@ import { LabOrder, LabOrderItem, LabOrderStatus, LabResult } from './lab.models'
                                 <td><strong style="color: var(--text-primary)">{{ result.value }}</strong> {{ result.unit || '' }}</td>
                                 <td>{{ result.referenceRange || '-' }}</td>
                                 <td>{{ result.validatorName }}</td>
-                                <td>{{ (result.validatedAt || result.createdAt) | date:'short' }}</td>
+                                <td>{{ (result.validatedAt || result.createdAt) | appDate:'dateTime' }}</td>
                               </tr>
                             }
                           </tbody>
@@ -408,6 +410,7 @@ export class LabOrdersPageComponent {
   private readonly fb = inject(FormBuilder);
   private readonly labApi = inject(LabOrderApiService);
   private readonly rbacApi = inject(RbacApiService);
+  private readonly dialog = inject(DialogService);
   readonly i18n = inject(I18nService);
   readonly LabOrderStatus = LabOrderStatus;
   readonly canReadLabResults = computed(() => this.rbacApi.hasPermission('LAB_ORDER_READ'));
@@ -599,7 +602,8 @@ export class LabOrdersPageComponent {
     if (this.results.length > 1) this.results.removeAt(this.results.length - 1);
   }
 
-  submitResults(order: LabOrder): void {
+  /** Une validation transmet les résultats au dossier patient : récapitulatif confirmé avant envoi. */
+  async submitResults(order: LabOrder): Promise<void> {
     if (!this.canWriteLab()) return;
     const item = this.hasStructuredItems(order) ? this.selectedItem(order) : null;
     if (item && !this.canEnterResults(order)) {
@@ -613,6 +617,17 @@ export class LabOrdersPageComponent {
 
     const raw = this.resultForm.getRawValue();
     this.isSubmitting.set(true);
+    if (raw.status === 'VALIDATED' && !(await this.dialog.confirm(labResultConfirmation(this.i18n, {
+      examRequestNumber: order.examRequestNumber,
+      patientName: order.patientName,
+      examName: item?.examName ?? '',
+      statusLabel: this.statusLabel(raw.status),
+      validatorName: raw.validatorName,
+      lines: raw.results,
+    })))) {
+      this.isSubmitting.set(false);
+      return;
+    }
     this.submitError.set('');
     this.submitSuccess.set('');
 

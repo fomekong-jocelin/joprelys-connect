@@ -8,12 +8,13 @@ import { CashSessionHistory } from '../../patient/cash-session-history.models';
 import { CashMovement } from '../../patient/patient.models';
 import { IconComponent } from '../../shared/ui/icon.component';
 
+import { XafPipe } from '../../shared/formatting/xaf.pipe';
 type CashHistoryPeriod = '7' | '30' | '90' | 'all';
 
 @Component({
   selector: 'app-billing-cash-session-history',
   standalone: true,
-  imports: [CommonModule, IconComponent],
+  imports: [XafPipe, CommonModule, IconComponent],
   templateUrl: './billing-cash-session-history.component.html',
   styleUrls: [
     './billing-cash-session-history.component.css',

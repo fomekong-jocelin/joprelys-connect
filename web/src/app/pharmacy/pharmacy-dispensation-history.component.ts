@@ -1,12 +1,12 @@
-import { DatePipe } from '@angular/common';
 import { Component, Input, inject } from '@angular/core';
 import { I18nService } from '../core/i18n/i18n.service';
 import { PharmacyDispensationHistoryEntry } from './pharmacy.models';
 
+import { AppDatePipe } from '../shared/formatting/app-date.pipe';
 @Component({
   selector: 'app-pharmacy-dispensation-history',
   standalone: true,
-  imports: [DatePipe],
+  imports: [AppDatePipe],
   template: `
     <aside class="ui-card-muted p-4 md:p-5">
       <div class="mb-4">
@@ -31,7 +31,7 @@ import { PharmacyDispensationHistoryEntry } from './pharmacy.models';
                   <p class="text-sm font-black" style="color: var(--text-primary)">{{ entry.pharmacyName }}</p>
                   <p class="text-xs" style="color: var(--text-muted)">{{ entry.pharmacistLicense }}</p>
                 </div>
-                <time class="text-right text-xs font-bold" style="color: var(--text-muted)">{{ entry.dispensedAt | date:'short' }}</time>
+                <time class="text-right text-xs font-bold" style="color: var(--text-muted)">{{ entry.dispensedAt | appDate:'dateTime' }}</time>
               </div>
               <ul class="mt-3 space-y-2">
                 @for (item of entry.items; track item.prescriptionItemId) {

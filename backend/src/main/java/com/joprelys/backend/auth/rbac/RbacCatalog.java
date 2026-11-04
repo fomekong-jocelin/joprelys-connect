@@ -15,6 +15,8 @@ public final class RbacCatalog {
     public static final String ROLE_ADMIN_CLINIQUE = "ADMIN_CLINIQUE";
     public static final String ROLE_AGENT_HYGIENE = "AGENT_HYGIENE";
     public static final String ROLE_TECHNICIEN_MAINTENANCE = "TECHNICIEN_MAINTENANCE";
+    /** Auditeur transverse : porte la lecture d'audit multi-établissements, rôle de plateforme. */
+    public static final String ROLE_AUDITEUR = "AUDITEUR";
 
     public static final String PERMISSION_USER_READ = "USER_READ";
     public static final String PERMISSION_USER_MANAGE = "USER_MANAGE";
@@ -22,6 +24,7 @@ public final class RbacCatalog {
     public static final String PERMISSION_RBAC_MANAGE = "RBAC_MANAGE";
     public static final String PERMISSION_ORGANIZATION_MANAGE = "ORGANIZATION_MANAGE";
     public static final String PERMISSION_ORGANIZATION_STRUCTURE_MANAGE = "ORGANIZATION_STRUCTURE_MANAGE";
+    public static final String PERMISSION_AUDIT_CROSS_TENANT_READ = "AUDIT_CROSS_TENANT_READ";
     public static final String PERMISSION_AUTH_SESSION_MANAGE = "AUTH_SESSION_MANAGE";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_READ = "EMERGENCY_MEDICO_LEGAL_READ";
     public static final String PERMISSION_EMERGENCY_MEDICO_LEGAL_WRITE = "EMERGENCY_MEDICO_LEGAL_WRITE";
@@ -139,7 +142,7 @@ public final class RbacCatalog {
                 permission("ACCOUNTING_DASHBOARD_READ", "COMPTABILITE", "Consulter le pilotage financier", "Consulter les indicateurs financiers et les écarts."),
                 permission("ACCOUNTING_EXPORT", "COMPTABILITE", "Exporter la comptabilité", "Générer les exports comptables."),
                 permission("AUDIT_READ", "AUDIT", "Consulter les journaux", "Consulter les journaux d'audit autorisés."),
-                permission("AUDIT_CROSS_TENANT_READ", "AUDIT", "Auditer plusieurs établissements", "Consulter les journaux d'audit au-delà de son établissement."),
+                permission(PERMISSION_AUDIT_CROSS_TENANT_READ, "AUDIT", "Auditer plusieurs établissements", "Consulter les journaux d'audit au-delà de son établissement."),
                 permission(PERMISSION_APPOINTMENT_READ, "RENDEZ_VOUS", "Consulter les rendez-vous", "Consulter l'agenda et les rendez-vous de l'établissement."),
                 permission(PERMISSION_APPOINTMENT_READ_OWN, "RENDEZ_VOUS", "Consulter son agenda médecin", "Consulter uniquement les rendez-vous affectés au médecin connecté."),
                 permission(PERMISSION_APPOINTMENT_WRITE, "RENDEZ_VOUS", "Gérer les rendez-vous", "Réserver pour un patient, enregistrer les arrivées et gérer le cycle de vie des rendez-vous."),
@@ -164,7 +167,7 @@ public final class RbacCatalog {
         mappings.put(ROLE_ADMIN_CLINIQUE, without(
                 all,
                 PERMISSION_ORGANIZATION_MANAGE,
-                "AUDIT_CROSS_TENANT_READ",
+                PERMISSION_AUDIT_CROSS_TENANT_READ,
                 "PRESCRIPTION_WRITE", "PRESCRIPTION_SIGN", "CLINICAL_SIGN", "CONSULTATION_LOCK",
                 "PHARMACY_VALIDATE", "PHARMACY_DISPENSE", "PATIENT_DEATH_DECLARE",
                 PERMISSION_APPOINTMENT_READ_OWN,
@@ -239,9 +242,9 @@ public final class RbacCatalog {
                 "HOSPITALIZATION_READ", PERMISSION_BED_CLEANING_MANAGE));
         mappings.put(ROLE_TECHNICIEN_MAINTENANCE, set(
                 "HOSPITALIZATION_READ", PERMISSION_BED_MAINTENANCE_MANAGE));
-        mappings.put("AUDITEUR", set(
+        mappings.put(ROLE_AUDITEUR, set(
                 "AUDIT_READ", "BILLING_INVOICE_READ", "CASH_HISTORY_READ", "ACCOUNTING_DASHBOARD_READ",
-                "AUDIT_CROSS_TENANT_READ", PERMISSION_EMERGENCY_MEDICO_LEGAL_READ));
+                PERMISSION_AUDIT_CROSS_TENANT_READ, PERMISSION_EMERGENCY_MEDICO_LEGAL_READ));
         mappings.put("PATIENT", set(
                 PERMISSION_PATIENT_PORTAL_ACCESS,
                 PERMISSION_PATIENT_APPOINTMENT_MANAGE,
@@ -269,12 +272,17 @@ public final class RbacCatalog {
         return Set.of(ROLE_ADMIN_JOPRELYS, ROLE_SUPER_ADMIN, ROLE_ADMIN_CLINIQUE);
     }
 
+    /**
+     * Rôles de plateforme : jamais attribuables depuis l'administration d'un établissement.
+     * {@link #ROLE_AUDITEUR} en fait partie car il porte {@link #PERMISSION_AUDIT_CROSS_TENANT_READ}.
+     */
     public static Set<String> platformRoleCodes() {
-        return Set.of(ROLE_ADMIN_JOPRELYS, ROLE_SUPER_ADMIN);
+        return Set.of(ROLE_ADMIN_JOPRELYS, ROLE_SUPER_ADMIN, ROLE_AUDITEUR);
     }
 
+    /** Permissions de plateforme : interdites dans les rôles personnalisés d'un établissement. */
     public static Set<String> platformPermissionCodes() {
-        return Set.of("ORGANIZATION_MANAGE");
+        return Set.of(PERMISSION_ORGANIZATION_MANAGE, PERMISSION_AUDIT_CROSS_TENANT_READ);
     }
 
     public static Set<String> permissionCodes() {
@@ -325,7 +333,7 @@ public final class RbacCatalog {
             case "RESPONSABLE_HOSPITALISATION" -> "Responsable hospitalisation";
             case ROLE_AGENT_HYGIENE -> "Agent d'hygiène";
             case ROLE_TECHNICIEN_MAINTENANCE -> "Technicien de maintenance";
-            case "AUDITEUR" -> "Auditeur";
+            case ROLE_AUDITEUR -> "Auditeur";
             case "PATIENT" -> "Patient";
             default -> code;
         };

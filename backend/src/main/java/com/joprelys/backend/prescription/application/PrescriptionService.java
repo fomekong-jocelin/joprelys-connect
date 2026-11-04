@@ -25,6 +25,10 @@ import java.util.UUID;
 @Service
 public class PrescriptionService {
 
+	private static final java.util.Set<String> CANCELLABLE_STATUSES = java.util.Set.of("DRAFT", "ACTIVE");
+
+	private final PrescriptionPinGuard pinGuard;
+
 	private final PrescriptionRepository prescriptionRepository;
 	private final ConsultationRepository consultationRepository;
 	private final PrescriptionNumberGenerator prescriptionNumberGenerator;
@@ -45,7 +49,9 @@ public class PrescriptionService {
 			PatientRepository patientRepository,
 			@Lazy DocumentService documentService,
             com.joprelys.backend.consultation.application.MedicalSigningPolicy signingPolicy,
-            com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visits) {
+            com.joprelys.backend.visit.infrastructure.persistence.VisitRepository visits,
+            PrescriptionPinGuard pinGuard) {
+        this.pinGuard = pinGuard;
 		this.prescriptionRepository = prescriptionRepository;
 		this.consultationRepository = consultationRepository;
 		this.prescriptionNumberGenerator = prescriptionNumberGenerator;
@@ -63,12 +69,18 @@ public class PrescriptionService {
 		var consultation = consultationRepository.findById(consultationId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Consultation introuvable."));
 
-        visits.findByIdForUpdate(consultation.getVisit().getId());
+        var visit = visits.findByIdForUpdate(consultation.getVisit().getId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Visite introuvable."));
+        // Une ordonnance se rédige pendant l'épisode de soins, jamais sur une visite clôturée ou annulée.
+        if (!"EN_COURS".equals(visit.getStatus())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "La visite n'est plus en cours : aucune ordonnance ne peut y être rédigée.");
+        }
 		PrescriptionEntity prescription = prescriptionRepository.findByConsultationId(consultationId)
 				.orElseGet(() -> {
 					PrescriptionEntity newPresc = new PrescriptionEntity(consultation);
 					newPresc.setPrescriptionNumber(prescriptionNumberGenerator.generateNextPrescriptionNumber());
-					newPresc.setPinCode(generateRandomPin());
+					newPresc.setPinCode(pinGuard.generatePin());
 					newPresc.setExpiresAt(Instant.now().plus(90, java.time.temporal.ChronoUnit.DAYS));
 					newPresc.setStatus("DRAFT");
 					return newPresc;
@@ -115,6 +127,7 @@ public class PrescriptionService {
 		if (!"DRAFT".equals(prescription.getStatus())) {
 			throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Seule une ordonnance au statut DRAFT peut être finalisée.");
 		}
+		requirePractitionerInCharge(prescription, actorUserId);
 
 		validateDraftCompleteness(prescription);
 		prescription.setStatus("ACTIVE");
@@ -146,15 +159,17 @@ public class PrescriptionService {
 		PrescriptionEntity prescription = prescriptionRepository.findByIdWithConsultationAndItems(prescriptionId)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Ordonnance introuvable."));
 
+		if (!CANCELLABLE_STATUSES.contains(prescription.getStatus())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Seule une ordonnance en brouillon ou active peut être annulée.");
+		}
+		requirePractitionerInCharge(prescription, actorUserId);
 		prescription.setStatus("CANCELLED");
 		prescription = prescriptionRepository.save(prescription);
 
 		if (prescription.getDocumentId() != null) {
-			try {
-				documentService.cancelDocument(prescription.getDocumentId(), "Prescription annulée par le médecin.", actorUserId);
-			} catch (Exception e) {
-				// Ignorer si le document est déjà annulé/révoqué
-			}
+			documentService.cancelDocumentIfValid(
+					prescription.getDocumentId(), "Prescription annulée par le médecin.", actorUserId);
 		}
 
 		auditService.logSuccess(
@@ -257,6 +272,20 @@ public class PrescriptionService {
 		return transmitPrescription(id, patient.getId(), null, globalPatientNumber, true);
 	}
 
+	/**
+	 * Seul le praticien qui a le patient en consultation signe ou annule son ordonnance
+	 * (ADR-20261017 D-01, étendu à l'ordonnance : CLIN-06).
+	 */
+	private void requirePractitionerInCharge(PrescriptionEntity prescription, UUID actorUserId) {
+		var consultation = prescription.getConsultation();
+		var visit = consultation == null ? null : consultation.getVisit();
+		if (visit != null && visit.isInConsultationWithAnotherPractitioner(actorUserId)) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"Patient en consultation chez " + visit.getConsultingPractitionerName()
+							+ ". Seul le praticien en charge peut signer ou annuler cette ordonnance.");
+		}
+	}
+
 	private void validateDraftCompleteness(PrescriptionEntity prescription) {
 		boolean missingDosage = prescription.getItems().stream()
 				.anyMatch(item -> item.getDosage() == null || item.getDosage().isBlank());
@@ -265,10 +294,5 @@ public class PrescriptionService {
 					HttpStatus.BAD_REQUEST,
 					"Complétez le dosage de chaque médicament avant de finaliser l’ordonnance.");
 		}
-	}
-
-	private String generateRandomPin() {
-		int pin = (int) (Math.random() * 9000) + 1000;
-		return String.valueOf(pin);
 	}
 }

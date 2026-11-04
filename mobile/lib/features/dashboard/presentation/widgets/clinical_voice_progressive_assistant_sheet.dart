@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/config/app_config.dart';
 import '../../../../core/lifecycle/app_activity_registry.dart';
+import '../../../../core/network/api_client_providers.dart';
 import '../../../../core/theme/app_design_tokens.dart';
 import '../../../../l10n/app_localizations.dart';
 import '../../../auth/application/auth_controller.dart';
@@ -102,8 +103,7 @@ class _ClinicalVoiceProgressiveAssistantSheetState
     )..repeat();
 
     final aiGateway = ref.read(clinicalVoiceAiApiProvider);
-    final authState = ref.read(authControllerProvider).value;
-    final jwtToken = authState?.session?.accessToken ?? '';
+    final tokenResolver = ref.read(apiAccessTokenResolverProvider);
 
     _speechService = CloudSpeechStreamingService(
       gateway: aiGateway,
@@ -111,7 +111,7 @@ class _ClinicalVoiceProgressiveAssistantSheetState
       initialDraft: widget.initialDraft,
       locale: widget.locale,
       apiBaseUri: AppConfig.runtime.apiBaseUri,
-      jwtToken: jwtToken,
+      accessTokenProvider: tokenResolver.resolve,
     );
     _coordinator = ClinicalVoiceProgressiveCoordinator(
       speechService: _speechService,

@@ -89,9 +89,6 @@ extension LabLocalizations on AppLocalizations {
   String get labValidatedAt => _labFrench ? 'Validation' : 'Validation';
   String get labDownloadPdf =>
       _labFrench ? 'Télécharger le PDF' : 'Download PDF';
-  String get labPdfSaved => _labFrench
-      ? 'PDF enregistré dans les fichiers de l’application.'
-      : 'PDF saved in the app files.';
   String get labPdfError => _labFrench
       ? 'Le PDF ne peut pas être téléchargé pour le moment.'
       : 'The PDF cannot be downloaded right now.';

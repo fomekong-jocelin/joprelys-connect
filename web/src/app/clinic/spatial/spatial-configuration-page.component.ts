@@ -22,6 +22,7 @@ import {
   UnitSpaceAssignment,
 } from './spatial-configuration.models';
 
+import { AppDatePipe } from '../../shared/formatting/app-date.pipe';
 type EditorKind = 'location' | 'space' | 'bed' | 'assignment';
 
 interface EditorState {
@@ -45,7 +46,7 @@ interface EditorState {
 @Component({
   selector: 'app-spatial-configuration-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, AppShellComponent, PageHeaderComponent, IconComponent],
+  imports: [AppDatePipe, CommonModule, FormsModule, AppShellComponent, PageHeaderComponent, IconComponent],
   templateUrl: './spatial-configuration-page.component.html',
 })
 export class SpatialConfigurationPageComponent implements OnInit {

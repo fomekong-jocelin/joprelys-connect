@@ -109,6 +109,7 @@ class _ActiveQueueSectionState extends ConsumerState<ActiveQueueSection> {
         // ── Search bar ──
         TextField(
           controller: _searchController,
+          enableIMEPersonalizedLearning: false,
           onChanged: _onSearchChanged,
           decoration: InputDecoration(
             hintText: l10n.directorySearchHint,

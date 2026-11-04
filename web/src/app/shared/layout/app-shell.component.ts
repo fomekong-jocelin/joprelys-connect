@@ -92,9 +92,10 @@ import { DialogService } from '../ui/dialog.service';
                 <a
                   routerLink="/profile"
                   [title]="profileLabel()"
+                  [attr.aria-label]="profileLabel()"
                   class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-brand-cyan hover:bg-[var(--app-surface-muted)] transition-all duration-150 cursor-pointer ml-1"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                  <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
                   </svg>
                 </a>
@@ -104,9 +105,11 @@ import { DialogService } from '../ui/dialog.service';
                 type="button"
                 (click)="logout()"
                 [title]="logoutLabel()"
+                [attr.aria-label]="logoutLabel()"
+                data-testid="shell-logout"
                 class="hidden md:inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-[var(--brand-danger-text)] hover:bg-[var(--brand-danger-subtle)] hover:border-[var(--brand-danger-border)] transition-all duration-150 cursor-pointer ml-1"
               >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="w-4.5 h-4.5">
+                <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.2" stroke="currentColor" class="w-4.5 h-4.5">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" />
                 </svg>
               </button>
@@ -213,7 +216,8 @@ import { DialogService } from '../ui/dialog.service';
                     type="button"
                     (click)="toggleTheme()"
                     [title]="themeTooltip()"
-                    class="inline-flex items-center justify-center w-9 h-9 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-[var(--brand-cyan)] transition-all duration-150 cursor-pointer"
+                    [attr.aria-label]="themeTooltip()"
+                    class="inline-flex items-center justify-center w-11 h-11 rounded-sm border border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-muted)] hover:text-[var(--brand-cyan)] transition-all duration-150 cursor-pointer"
                   >
                     @if (theme() === 'dark') {
                       <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
@@ -233,6 +237,7 @@ import { DialogService } from '../ui/dialog.service';
                     <button
                       type="button"
                       (click)="setLang('fr')"
+                      [attr.aria-pressed]="locale() === 'fr'"
                       [class]="locale() === 'fr' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
                     >
                       FR
@@ -241,6 +246,7 @@ import { DialogService } from '../ui/dialog.service';
                     <button
                       type="button"
                       (click)="setLang('en')"
+                      [attr.aria-pressed]="locale() === 'en'"
                       [class]="locale() === 'en' ? 'text-brand-cyan font-extrabold pointer-events-none' : 'text-[var(--text-muted)] hover:text-[var(--text-secondary)] cursor-pointer'"
                     >
                       EN
@@ -249,6 +255,20 @@ import { DialogService } from '../ui/dialog.service';
                 </div>
 
                 @if (session(); as currentSession) {
+                  @if (!isPatientSession(currentSession.role)) {
+                    <!-- Le lien profil de l'en-tête est masqué sur mobile : il reste accessible depuis le tiroir. -->
+                    <a
+                      routerLink="/profile"
+                      (click)="closeMobileMenu()"
+                      class="ui-button ui-button-secondary min-h-11 w-full justify-center gap-2"
+                      data-testid="mobile-profile-link"
+                    >
+                      <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4.5 h-4.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+                      </svg>
+                      <span>{{ profileLabel() }}</span>
+                    </a>
+                  }
                   <button
                     type="button"
                     (click)="logout(); closeMobileMenu()"

@@ -30,7 +30,7 @@ public class PrescriptionEntity {
 	@Column(name = "prescription_number", length = 50, unique = true)
 	private String prescriptionNumber;
 
-	@Column(name = "pin_code", length = 4)
+	@Column(name = "pin_code", length = 8)
 	private String pinCode;
 
 	@Column(name = "status", nullable = false, length = 20)

@@ -5,6 +5,7 @@ import { ExternalAccessResponse, PatientPortalService } from '../services/patien
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { ToastService } from '../../../shared/ui/toast.service';
 
+import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
 const ACCESS_SCOPES = [
   { key: 'medical_records' },
   { key: 'prescriptions' },
@@ -15,7 +16,7 @@ const ACCESS_SCOPES = [
 @Component({
   selector: 'app-patient-requests-list',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [AppDatePipe, CommonModule, FormsModule],
   template: `
     <div class="ui-card-subtle p-5 lg:p-6 flex flex-col gap-4">
       <div class="flex flex-col gap-1 border-b border-[var(--app-border)] pb-4 sm:flex-row sm:items-end sm:justify-between">
@@ -138,7 +139,7 @@ const ACCESS_SCOPES = [
                   </p>
                   @if (req.status === 'APPROUVEE' && req.expiresAt) {
                     <p class="text-[10px] text-[var(--brand-success-text)]">
-                      {{ i18n.t('patient.access.requests.expires') }} {{ req.expiresAt | date:'medium' }}
+                      {{ i18n.t('patient.access.requests.expires') }} {{ req.expiresAt | appDate:'dateTime' }}
                     </p>
                   }
                 </div>

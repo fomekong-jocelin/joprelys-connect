@@ -56,8 +56,32 @@ final class AuthState {
 }
 
 class AuthController extends AsyncNotifier<AuthState> {
+  static const String sessionExpiredCode = 'AUTH_SESSION_EXPIRED';
+
   @override
-  Future<AuthState> build() => _restore();
+  Future<AuthState> build() {
+    final subscription = ref
+        .watch(authSessionManagerProvider)
+        .sessionExpirations
+        .listen((_) => _onSessionExpired());
+    ref.onDispose(subscription.cancel);
+    return _restore();
+  }
+
+  /// The server refused the session (refresh 401/403): local data is already
+  /// purged by the session manager; leaving the authenticated state sends the
+  /// router back to sign-in and resets every session-scoped provider.
+  void _onSessionExpired() {
+    final status = state.value?.status;
+    if (status == null ||
+        status == AuthStatus.unauthenticated ||
+        status == AuthStatus.otpRequired) {
+      return;
+    }
+    state = const AsyncData(
+      AuthState.unauthenticated(errorCode: sessionExpiredCode),
+    );
+  }
 
   Future<void> login({required String email, required String password}) async {
     state = const AsyncLoading();

@@ -68,11 +68,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 RbacCatalog.permissionsForLegacyRoles(Set.of("PATIENT")).forEach(permission ->
                         authorities.add(new SimpleGrantedAuthority(permission)));
             } else {
+                // SEC-07 : l'identité professionnelle repose uniquement sur le « sub » (UUID du
+                // compte). Aucun repli par e-mail : un jeton dont le sujet n'est pas un compte
+                // existant et actif est refusé.
                 Optional<RbacAuthorityService.ResolvedAuthorities> resolved = parseUuid(claims.subject())
                         .flatMap(userId -> rbacAuthorityService.resolve(userId, claimedOrganizationId));
-                if (resolved.isEmpty()) {
-                    resolved = rbacAuthorityService.resolveByEmail(claims.email(), claimedOrganizationId);
-                }
                 if (resolved.isEmpty()) {
                     response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
                     return false;

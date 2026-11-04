@@ -1,5 +1,5 @@
 import { Component, inject, OnInit, signal } from '@angular/core';
-import { CommonModule, DatePipe } from '@angular/common';
+import { CommonModule } from '@angular/common';
 import { AppShellComponent } from '../../../shared/layout/app-shell.component';
 import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
 import { CardComponent } from '../../../shared/ui/card.component';
@@ -8,10 +8,11 @@ import { PatientPortalConsultation, PatientPortalMeResponse, PatientPortalServic
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { ToastService } from '../../../shared/ui/toast.service';
 
+import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
 @Component({
   selector: 'app-patient-documents-page',
   standalone: true,
-  imports: [CommonModule, AppShellComponent, PageHeaderComponent, CardComponent, EmptyStateComponent],
+  imports: [AppDatePipe, CommonModule, AppShellComponent, PageHeaderComponent, CardComponent, EmptyStateComponent],
   template: `
     <app-shell>
       <app-page-header
@@ -51,7 +52,7 @@ import { ToastService } from '../../../shared/ui/toast.service';
                     </div>
                     <p class="text-sm font-semibold" style="color: var(--text-primary)">{{ doc.clinicName }}</p>
                     <p class="text-xs mt-1" style="color: var(--text-secondary)">{{ doc.doctorName }}</p>
-                    <p class="text-xs mt-2" style="color: var(--text-muted)">{{ doc.visitDate | date:'mediumDate' }}</p>
+                    <p class="text-xs mt-2" style="color: var(--text-muted)">{{ doc.visitDate | appDate }}</p>
                   </div>
                   <div class="mt-5 pt-4 border-t" style="border-color: var(--app-border)">
                     <button

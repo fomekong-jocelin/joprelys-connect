@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../config/app_config.dart';
 import '../i18n/locale_controller.dart';
 import '../security/secure_storage.dart';
+import 'api_access_token_resolver.dart';
 import 'api_client.dart';
 import 'api_exception_mapper.dart';
 import 'api_network_config.dart';
@@ -44,6 +45,14 @@ final sessionRefreshCoordinatorProvider = Provider<SessionRefreshCoordinator>((
   ref,
 ) {
   return SessionRefreshCoordinator();
+});
+
+/// Current access token for transports outside Dio (clinical voice WebSocket).
+final apiAccessTokenResolverProvider = Provider<ApiAccessTokenResolver>((ref) {
+  return ApiAccessTokenResolver(
+    sessionAccess: ref.watch(apiSessionAccessProvider),
+    refreshCoordinator: ref.watch(sessionRefreshCoordinatorProvider),
+  );
 });
 
 final apiDioProvider = Provider<Dio>((ref) {

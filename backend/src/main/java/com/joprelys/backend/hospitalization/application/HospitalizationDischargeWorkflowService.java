@@ -63,7 +63,7 @@ public class HospitalizationDischargeWorkflowService {
                     "Une décision médicale de sortie existe déjà pour cette hospitalisation.");
         }
 
-        UserAccountEntity actor = currentUserOrNull();
+        UserAccountEntity actor = requirePhysician("La décision médicale de sortie est réservée à un médecin.");
         boolean againstMedicalAdvice = Boolean.TRUE.equals(request.againstMedicalAdvice());
         hospitalization.decideDischarge(
                 request.dischargeDiagnosis().trim(),
@@ -209,6 +209,14 @@ public class HospitalizationDischargeWorkflowService {
             return null;
         }
         return note.trim();
+    }
+
+    private UserAccountEntity requirePhysician(String refusalMessage) {
+        UserAccountEntity actor = currentUserOrNull();
+        if (!com.joprelys.backend.consultation.application.MedicalSigningPolicy.isPhysician(actor)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, refusalMessage);
+        }
+        return actor;
     }
 
     private UserAccountEntity currentUserOrNull() {

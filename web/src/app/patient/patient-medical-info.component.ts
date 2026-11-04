@@ -134,20 +134,24 @@ import { DialogService } from '../shared/ui/dialog.service';
                         </div>
                         <div class="flex items-center gap-1">
                           <button
+                            type="button"
                             (click)="toggleOngoingHistory(item)"
-                            class="p-1 rounded-sm text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
+                            class="inline-flex min-h-9 min-w-9 items-center justify-center p-1 rounded-sm text-[var(--text-muted)] hover:bg-[var(--app-surface-muted)] hover:text-[var(--text-secondary)] transition-colors cursor-pointer"
                             [title]="t('patients.medicalInfo.history.editStatus')"
+                            [attr.aria-label]="t('patients.medicalInfo.history.editStatus')"
                           >
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg aria-hidden="true" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                             </svg>
                           </button>
                           <button
+                            type="button"
                             (click)="deleteHistory(item)"
-                            class="p-1 rounded-sm text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 transition-colors cursor-pointer"
+                            class="inline-flex min-h-9 min-w-9 items-center justify-center p-1 rounded-sm text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/20 hover:text-rose-600 transition-colors cursor-pointer"
                             [title]="t('common.delete')"
+                            [attr.aria-label]="t('common.delete')"
                           >
-                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg aria-hidden="true" class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
                           </button>

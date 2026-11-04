@@ -107,7 +107,10 @@ def main():
         sys.exit(1)
 
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.load_system_host_keys()
+    # Refuse unknown host keys: a spoofed server would otherwise receive the SSH password.
+    # Add the server key once to ~/.ssh/known_hosts after checking its fingerprint out of band.
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
     client.connect(
         hostname=HOST,
         port=PORT,

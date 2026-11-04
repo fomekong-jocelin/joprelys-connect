@@ -134,5 +134,7 @@
   },
   "authEnableBiometrics": "Activer le verrouillage biométrique",
   "authDisableBiometrics": "Désactiver le verrouillage biométrique",
-  "authBiometricEnableReason": "Confirmer l’activation du verrouillage biométrique Joprelys Connect"
+  "authBiometricEnableReason": "Confirmer l’activation du verrouillage biométrique Joprelys Connect",
+  "authSessionExpired": "Votre session a expiré. Reconnectez-vous pour continuer.",
+  "labPdfDownloadedTemporarily": "PDF du résultat téléchargé. Cette copie temporaire est effacée à la déconnexion."
 }

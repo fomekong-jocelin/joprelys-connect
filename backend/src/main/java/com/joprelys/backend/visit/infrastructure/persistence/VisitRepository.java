@@ -34,4 +34,8 @@ public interface VisitRepository extends JpaRepository<VisitEntity, UUID> {
     // WT1 (SCOPES): Find patient ID from a visit ID (used for scope validation)
     @Query(value = "SELECT patient_id FROM visits WHERE id = :visitId", nativeQuery = true)
     Optional<Object> findPatientIdByVisitId(@Param("visitId") UUID visitId);
+
+    // SEC-09 : établissement propriétaire d'une visite, lu hors filtre tenant (contrôle d'écriture).
+    @Query(value = "SELECT organization_id FROM visits WHERE id = :visitId", nativeQuery = true)
+    Optional<Object> findOrganizationIdByVisitId(@Param("visitId") UUID visitId);
 }

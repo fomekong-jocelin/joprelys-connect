@@ -1,5 +1,6 @@
 import { Component, computed, inject, input, model, output, signal } from '@angular/core';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { ToastService } from '../../shared/ui/toast.service';
 import { HttpClient } from '@angular/common/http';
 import { AlertComponent } from '../../shared/ui/alert.component';
 import { ButtonComponent } from '../../shared/ui/button.component';
@@ -151,6 +152,7 @@ export interface OrganizationFormLabels {
 export class OrganizationFormComponent {
   private readonly http = inject(HttpClient);
   private readonly i18n = inject(I18nService);
+  private readonly toasts = inject(ToastService);
   readonly attempted = signal(false);
   readonly t = (key: string) => this.i18n.t(key);
 
@@ -200,9 +202,8 @@ export class OrganizationFormComponent {
         this.logoPath.set(res.filePath);
         uploader.setPreviewUrl(res.viewUrl, file.name);
       },
-      error: (err) => {
-        console.error(err);
-      }
+      // Pas de journalisation console de la réponse HTTP (URL, détails techniques) : message utilisateur uniquement.
+      error: () => this.toasts.error(this.t('profile.uploadError'), 0)
     });
   }
 }

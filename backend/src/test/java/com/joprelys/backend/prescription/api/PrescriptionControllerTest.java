@@ -288,6 +288,42 @@ public class PrescriptionControllerTest {
                 .andExpect(jsonPath("$.status").value("CANCELLED"));
     }
 
+    @Test
+    void anotherPhysicianCannotSignOrCancelThePrescriptionOfThePractitionerInCharge() throws Exception {
+        UserAccountEntity colleague = new UserAccountEntity("medecin.c@joprelys.local", "Dr. Gamma", "MEDECIN", "passhash");
+        colleague.setOrganizationId(orgA.getId());
+        String colleagueToken = jwtService.createToken(userAccountRepository.save(colleague)).value();
+        jdbcTemplate.update("UPDATE visits SET care_stage = 'EN_CONSULTATION', consulting_practitioner_id = ?, "
+                + "consulting_practitioner_name = ? WHERE id = ?",
+                userMedecinA.getId(), userMedecinA.getDisplayName(), consultationA.getVisit().getId());
+        PrescriptionEntity draft = savePrescription("TX-DOC-OTHER", "DRAFT", null);
+
+        mockMvc.perform(post("/api/prescriptions/" + draft.getId() + "/finalize")
+                        .header("Authorization", "Bearer " + colleagueToken))
+                .andExpect(status().isConflict());
+        mockMvc.perform(patch("/api/prescriptions/" + draft.getId() + "/cancel")
+                        .header("Authorization", "Bearer " + colleagueToken))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void noPrescriptionIsWrittenOnAClosedVisit() throws Exception {
+        jdbcTemplate.update("UPDATE visits SET status = 'TERMINEE' WHERE id = ?", consultationA.getVisit().getId());
+        mockMvc.perform(post("/api/consultations/" + consultationA.getId() + "/prescription")
+                        .header("Authorization", "Bearer " + tokenMedecinA)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"items\":[{\"drugName\":\"Paracétamol\",\"dosage\":\"1g\"}]}"))
+                .andExpect(status().isConflict());
+    }
+
+    @Test
+    void anExpiredPrescriptionCannotBeCancelled() throws Exception {
+        PrescriptionEntity expired = savePrescription("TX-DOC-EXPIRED", "EXPIRED", null);
+        mockMvc.perform(patch("/api/prescriptions/" + expired.getId() + "/cancel")
+                        .header("Authorization", "Bearer " + tokenMedecinA))
+                .andExpect(status().isConflict());
+    }
+
     private PrescriptionEntity savePrescription(String number, String status, String transmissionStatus) {
         TenantContext.setTenantId(orgA.getId());
         try {

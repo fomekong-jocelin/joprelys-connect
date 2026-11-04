@@ -365,7 +365,7 @@
       </div>
       <div class="mt-5 flex justify-end gap-3 border-t border-[var(--divider-subtle)] pt-4">
         <app-ui-button variant="secondary" (pressed)="closeStabilizeModal()" [disabled]="isProcessing()">{{ t('common.cancel') }}</app-ui-button>
-        <app-ui-button variant="primary" (pressed)="onSubmitStabilize()" [disabled]="isProcessing()">{{ t('common.save') }}</app-ui-button>
+        <app-ui-button variant="primary" (pressed)="onSubmitStabilize()" [disabled]="isProcessing()" data-testid="stabilize-submit">{{ t('emergency.stabilize.submit') }}</app-ui-button>
       </div>
     </div>
   </div>

@@ -70,7 +70,7 @@ public class PatientSimilarityService {
 
     @Transactional
     public List<PatientDuplicateCandidateEntity> checkForDuplicates(PatientEntity newPatient) {
-        log.info("Checking duplicates for patient: {} (ID: {})", newPatient.getFullName(), newPatient.getId());
+        log.debug("Checking duplicates for patient ID: {}", newPatient.getId());
         List<PatientEntity> sameBirthdatePatients = patientRepository.findByBirthDate(newPatient.getBirthDate());
         List<PatientDuplicateCandidateEntity> candidates = new ArrayList<>();
 
@@ -84,7 +84,8 @@ public class PatientSimilarityService {
 
             double score = getSimilarityScore(newPatient.getFullName(), existing.getFullName());
             if (score >= 85.0) {
-                log.info("Potential duplicate found: {} and {} with score {}%", newPatient.getFullName(), existing.getFullName(), score);
+                // SEC-11 : identifiants uniquement, jamais les noms des patients.
+                log.info("Potential duplicate found: {} and {} with score {}%", newPatient.getId(), existing.getId(), score);
                 
                 PatientEntity source = newPatient;
                 PatientEntity target = existing;

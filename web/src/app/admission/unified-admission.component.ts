@@ -18,6 +18,10 @@ import { orientationLabel } from '../visit/visit-orientation.util';
 import { hasRequiredVisitDetails, localDateTimeNow, toCreateVisitRequest, visitDetailsControls } from './visit-details-form';
 
 const STALE_DRAFT_ARRIVAL_MS = 30 * 60_000;
+/** v2 : tri, état hémodynamique et mode d'arrivée ne sont plus présélectionnés. */
+const ADMISSION_DRAFT_VERSION = 2;
+/** Choix cliniques des urgences : toujours explicites, jamais présélectionnés (sécurité patient). */
+const EMERGENCY_REQUIRED_CONTROLS = ['arrivalMode', 'triageLevel', 'hemodynamicStatus'] as const;
 
 export type AdmissionCarePath = 'NORMAL' | 'EMERGENCY';
 export type AdmissionPatientMode = 'EXISTING' | 'NEW' | 'PROVISIONAL';
@@ -77,15 +81,15 @@ export class UnifiedAdmissionComponent implements OnInit {
     physicalDescription: [''],
     foundLocation: [''],
     ...visitDetailsControls(),
-    arrivalMode: ['AMBULANCE'],
+    arrivalMode: [''],
     thirdPartyName: [''],
     thirdPartyPhone: [''],
     thirdPartyRelationship: [''],
     thirdPartyIdDocument: [''],
     thirdPartyCircumstances: [''],
     thirdPartyConsentToContact: [false],
-    triageLevel: ['RED'],
-    hemodynamicStatus: ['SHOCK'],
+    triageLevel: [''],
+    hemodynamicStatus: [''],
     chiefComplaint: [''],
     initialBpSystolic: [null, [Validators.min(30), Validators.max(300)]],
     initialBpDiastolic: [null, [Validators.min(20), Validators.max(200)]],
@@ -96,12 +100,14 @@ export class UnifiedAdmissionComponent implements OnInit {
   ngOnInit(): void {
     this.form.patchValue({ carePath: this.initialCarePath() });
     this.restoreDraftIfAvailable();
+    this.applyCarePathValidators();
     this.form.valueChanges.subscribe(() => this.saveDraft());
   }
 
   private saveDraft(): void {
     try {
       const draft = {
+        version: ADMISSION_DRAFT_VERSION,
         currentStep: this.currentStep(),
         carePath: this.carePath,
         patientMode: this.patientMode,
@@ -120,7 +126,7 @@ export class UnifiedAdmissionComponent implements OnInit {
       if (draft && draft.formValue) {
         if (draft.carePath) this.form.patchValue({ carePath: draft.carePath });
         if (draft.patientMode) this.form.patchValue({ patientMode: draft.patientMode });
-        this.form.patchValue(draft.formValue);
+        this.form.patchValue(this.withoutLegacyEmergencyDefaults(draft));
         this.refreshStaleDraftArrival();
         if (draft.selectedPatient) this.selectedPatient.set(draft.selectedPatient);
         if (draft.currentStep && [1, 2, 3].includes(draft.currentStep)) {
@@ -129,6 +135,29 @@ export class UnifiedAdmissionComponent implements OnInit {
         this.isDraftRestored.set(true);
       }
     } catch {}
+  }
+
+  /**
+   * Les brouillons antérieurs à la v2 contiennent des valeurs de tri présélectionnées
+   * (RED / SHOCK / AMBULANCE) que l'utilisateur n'a pas forcément choisies : on les écarte.
+   */
+  private withoutLegacyEmergencyDefaults(draft: { version?: unknown; formValue: Record<string, unknown> }): Record<string, unknown> {
+    if (draft.version === ADMISSION_DRAFT_VERSION) return draft.formValue;
+    const formValue = { ...draft.formValue };
+    for (const control of EMERGENCY_REQUIRED_CONTROLS) formValue[control] = '';
+    return formValue;
+  }
+
+  /** Tri, état hémodynamique et mode d'arrivée sont obligatoires uniquement pour le parcours urgences. */
+  private applyCarePathValidators(): void {
+    const emergency = this.carePath === 'EMERGENCY';
+    for (const name of EMERGENCY_REQUIRED_CONTROLS) {
+      const control = this.form.get(name);
+      if (!control) continue;
+      if (emergency) control.addValidators(Validators.required);
+      else control.removeValidators(Validators.required);
+      control.updateValueAndValidity({ emitEvent: false });
+    }
   }
 
   /** Un brouillon repris tard ne doit pas imposer une heure d'arrivée périmée. */
@@ -162,6 +191,7 @@ export class UnifiedAdmissionComponent implements OnInit {
 
   setCarePath(path: AdmissionCarePath): void {
     this.form.patchValue({ carePath: path });
+    this.applyCarePathValidators();
     if (path === 'NORMAL' && this.patientMode === 'PROVISIONAL') {
       this.setPatientMode('NEW');
     }
@@ -431,6 +461,10 @@ export class UnifiedAdmissionComponent implements OnInit {
       )) {
         return this.text('requiredThirdParty');
       }
+    }
+
+    if (step === 3 && this.carePath === 'EMERGENCY' && (!value.triageLevel || !value.hemodynamicStatus)) {
+      return this.text('requiredTriage');
     }
 
     if (step === 3 && this.carePath === 'EMERGENCY' && !value.chiefComplaint?.trim()) {

@@ -9,5 +9,6 @@ public enum AuthSessionRevocationReason {
     USER_DISABLED,
     ORGANIZATION_INACTIVE,
     ADMIN_REVOKED,
-    MFA_POLICY_CHANGE
+    MFA_POLICY_CHANGE,
+    PASSWORD_RESET
 }

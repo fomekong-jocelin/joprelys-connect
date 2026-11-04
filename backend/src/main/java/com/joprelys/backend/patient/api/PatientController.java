@@ -13,6 +13,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.UUID;
@@ -121,7 +123,7 @@ public class PatientController {
     @ResponseStatus(HttpStatus.CREATED)
     public void triggerEmergencyAccess(
             @PathVariable UUID id,
-            @RequestBody EmergencyAccessRequest request) {
+            @Valid @RequestBody EmergencyAccessRequest request) {
         patientService.triggerEmergencyAccess(id, request.reason());
     }
 
@@ -201,5 +203,12 @@ public class PatientController {
     }
 }
 
-record EmergencyAccessRequest(String reason) {
+/**
+ * Bris de glace : le motif est obligatoire et circonstancié (10 à 500 caractères), car il est
+ * la seule justification tracée d'un accès hors consentement au dossier (SEC-02).
+ */
+record EmergencyAccessRequest(
+        @NotBlank(message = "Le motif de l'accès d'urgence est obligatoire.")
+        @Size(min = 10, max = 500, message = "Le motif de l'accès d'urgence doit contenir entre 10 et 500 caractères.")
+        String reason) {
 }

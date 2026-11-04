@@ -6,6 +6,7 @@ import { provideRouter } from '@angular/router';
 import { By } from '@angular/platform-browser';
 import { of, Subject, throwError } from 'rxjs';
 import { provideI18nTesting } from '../../testing/i18n-testing';
+import { DialogService } from '../shared/ui/dialog.service';
 import { PharmacyApiService } from './pharmacy-api.service';
 import { PharmacyDispensationPanelComponent } from './pharmacy-dispensation-panel.component';
 import { PharmacyPrescriptionVerifyPageComponent } from './pharmacy-prescription-verify-page.component';
@@ -95,7 +96,10 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
     getDispensationHistory: ReturnType<typeof vi.fn>;
   };
 
+  let dialog: { confirm: ReturnType<typeof vi.fn> };
+
   beforeEach(async () => {
+    dialog = { confirm: vi.fn().mockResolvedValue(true) };
     pharmacyApi = {
       verifyPrescription: vi.fn().mockReturnValue(of({
         prescriptionId: 'prescription-1',
@@ -132,6 +136,7 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
         provideHttpClientTesting(),
         provideRouter([]),
         { provide: PharmacyApiService, useValue: pharmacyApi },
+        { provide: DialogService, useValue: dialog },
         provideI18nTesting(),
       ],
     }).compileComponents();
@@ -222,7 +227,7 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('PIN incorrect');
   });
 
-  it('should submit a partial dispensation and refresh prescription details', () => {
+  it('should submit a partial dispensation and refresh prescription details', async () => {
     const component = fixture.componentInstance;
     component.form.setValue({ prescriptionNumber: 'ORD-20260703-000042', pinCode: '1234' });
     component.verify();
@@ -232,8 +237,9 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
 
     panel.dispenseForm.setValue({ pharmacyName: 'Pharmacie du Centre', pharmacistLicense: 'LIC-123' });
     panel.updateQuantity('item-1', '1');
-    panel.submitDispensation();
+    await panel.submitDispensation();
 
+    expect(dialog.confirm).toHaveBeenCalledWith(expect.objectContaining({ tone: 'warning' }));
     expect(pharmacyApi.dispensePrescription).toHaveBeenCalledWith({
       prescriptionNumber: 'ORD-20260703-000042',
       pinCode: '1234',
@@ -244,7 +250,23 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
     expect(pharmacyApi.verifyPrescription).toHaveBeenCalledTimes(2);
   });
 
-  it('should surface backend dispensation errors', () => {
+  it('should not dispense when the pharmacist cancels the confirmation', async () => {
+    dialog.confirm.mockResolvedValueOnce(false);
+    const component = fixture.componentInstance;
+    component.form.setValue({ prescriptionNumber: 'ORD-20260703-000042', pinCode: '1234' });
+    component.verify();
+    fixture.detectChanges();
+
+    const panel = fixture.debugElement.query(By.directive(PharmacyDispensationPanelComponent)).componentInstance;
+    panel.dispenseForm.setValue({ pharmacyName: 'Pharmacie du Centre', pharmacistLicense: 'LIC-123' });
+    panel.updateQuantity('item-1', '1');
+    await panel.submitDispensation();
+
+    expect(pharmacyApi.dispensePrescription).not.toHaveBeenCalled();
+    expect(panel.isDispensing()).toBe(false);
+  });
+
+  it('should surface backend dispensation errors', async () => {
     pharmacyApi.dispensePrescription.mockReturnValueOnce(throwError(() => ({
       error: { detail: 'Quantité dispensée excède la quantité prescrite' },
     })));
@@ -258,7 +280,7 @@ describe('PharmacyPrescriptionVerifyPageComponent', () => {
 
     panel.dispenseForm.setValue({ pharmacyName: 'Pharmacie du Centre', pharmacistLicense: 'LIC-123' });
     panel.updateQuantity('item-1', '1');
-    panel.submitDispensation();
+    await panel.submitDispensation();
     fixture.detectChanges();
 
     expect((fixture.nativeElement as HTMLElement).textContent).toContain('Quantité dispensée excède la quantité prescrite');

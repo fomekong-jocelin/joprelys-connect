@@ -75,6 +75,21 @@ describe('DuplicatesPageComponent', () => {
     expect(component.selectedCandidate()).toBeNull();
   });
 
+  it('choisit le dossier principal via un groupe radio natif accessible au clavier', () => {
+    component.openMergeAssistant(mockCandidates[0] as any);
+    fixture.detectChanges();
+
+    const root = fixture.nativeElement as HTMLElement;
+    expect(root.querySelector('[role="radiogroup"]')?.getAttribute('aria-label')).toBe('duplicates.primarySelection');
+    const radioB = root.querySelector('[data-testid="primary-choice-b"] input[type="radio"]') as HTMLInputElement;
+    expect(radioB.closest('label')).not.toBeNull();
+
+    radioB.click();
+    fixture.detectChanges();
+
+    expect(component.selectedPrimaryId()).toBe(mockCandidates[0].targetPatient.id);
+  });
+
   it('should ignore duplicate candidate and reload', () => {
     component.ignoreCandidate(mockCandidates[0] as any);
     expect(mockPatientApi.ignoreDuplicate).toHaveBeenCalledWith('candidate-1');

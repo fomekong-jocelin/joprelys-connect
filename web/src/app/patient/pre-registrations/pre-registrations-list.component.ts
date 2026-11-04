@@ -203,7 +203,7 @@ export class PreRegistrationsListComponent implements OnInit, OnDestroy {
   async rejectRequest(id: string): Promise<void> {
     if (this.actionLoading()) return;
     const confirmed = await this.dialog.confirm({
-      title: this.t('preRegistrations.rejectConfirm'),
+      title: this.t('preRegistrations.rejectTitle'),
       message: this.t('preRegistrations.rejectConfirm'),
       confirmLabel: this.t('common.reject'),
       cancelLabel: this.t('common.cancel'),
@@ -289,8 +289,7 @@ export class PreRegistrationsListComponent implements OnInit, OnDestroy {
         document.body.removeChild(a);
         window.URL.revokeObjectURL(url);
       },
-      error: (err) => {
-        console.error('Error downloading summary pdf', err);
+      error: () => {
         this.error.set(this.t('preRegistrations.downloadError'));
       }
     });

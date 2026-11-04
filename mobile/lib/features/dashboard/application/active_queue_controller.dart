@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/network/api_client_providers.dart';
+import '../../auth/application/auth_session_scope.dart';
 import '../data/active_visits_api.dart';
 import '../domain/active_visit.dart';
 
@@ -10,11 +13,26 @@ final activeVisitsApiProvider = Provider<ActiveVisitsGateway>((ref) {
 
 class ActiveQueueController extends AsyncNotifier<List<ActiveVisit>> {
   @override
-  Future<List<ActiveVisit>> build() => _load();
+  FutureOr<List<ActiveVisit>> build() {
+    // Rebuilt (and emptied synchronously) whenever the session ends or changes.
+    if (ref.watch(authSessionScopeProvider) == null) {
+      return const <ActiveVisit>[];
+    }
+    return _load();
+  }
 
   Future<void> refreshQueue() async {
+    // Captured ref: it is unmounted if the session scope changes meanwhile,
+    // so a late response can never land in another practitioner's state.
+    final scopedRef = ref;
+    if (scopedRef.read(authSessionScopeProvider) == null) {
+      state = const AsyncData<List<ActiveVisit>>(<ActiveVisit>[]);
+      return;
+    }
     state = const AsyncLoading<List<ActiveVisit>>();
-    state = await AsyncValue.guard(_load);
+    final result = await AsyncValue.guard(_load);
+    if (!scopedRef.mounted) return;
+    state = result;
   }
 
   Future<List<ActiveVisit>> _load() async {
@@ -26,6 +44,6 @@ class ActiveQueueController extends AsyncNotifier<List<ActiveVisit>> {
 }
 
 final activeQueueControllerProvider =
-    AsyncNotifierProvider<ActiveQueueController, List<ActiveVisit>>(
+    AsyncNotifierProvider.autoDispose<ActiveQueueController, List<ActiveVisit>>(
       ActiveQueueController.new,
     );

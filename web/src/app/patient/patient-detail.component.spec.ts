@@ -11,7 +11,7 @@ import { I18nService } from '../core/i18n/i18n.service';
 import { AuditApiService } from '../audit/audit-api.service';
 import { PatientApiService } from './patient-api.service';
 import { StaffApiService } from '../clinic/staff/staff-api.service';
-import { of } from 'rxjs';
+import { of, throwError } from 'rxjs';
 import { provideRouter } from '@angular/router';
 import { signal } from '@angular/core';
 import { Patient, LabOrder, LabResult } from './patient.models';
@@ -228,6 +228,23 @@ describe('PatientDetail System Tests', () => {
       fixture.detectChanges();
       expect(component.canViewAudit()).toBe(false);
     });
+
+    it("signale des allergies non vérifiées au lieu d'une absence d'allergie, puis permet de réessayer", () => {
+      mockPatientApi.getAllergies.mockReturnValueOnce(throwError(() => new Error('503')));
+      component.loadAllergies();
+      fixture.detectChanges();
+
+      const root = fixture.nativeElement as HTMLElement;
+      expect(component.allergiesStatus()).toBe('error');
+      expect(root.querySelector('[data-testid="patient-allergies-error"]')?.textContent)
+        .toContain('clinicalSafety.allergies.unverified');
+
+      (root.querySelector('[data-testid="patient-allergies-error"] button') as HTMLButtonElement).click();
+      fixture.detectChanges();
+
+      expect(component.allergiesStatus()).toBe('loaded');
+      expect(root.querySelector('[data-testid="patient-allergies-error"]')).toBeNull();
+    });
   });
 
   describe('PatientProfileTabComponent', () => {
@@ -278,6 +295,29 @@ describe('PatientDetail System Tests', () => {
     it('should load history and display consultations', () => {
       expect(mockConsultationApi.getPatientConsultations).toHaveBeenCalledWith('pat-1');
       expect(component.consultationHistory()).toEqual(mockConsultations);
+    });
+
+    it("affiche un état d'erreur distinct de l'historique vide", () => {
+      mockConsultationApi.getPatientConsultations.mockReturnValueOnce(throwError(() => new Error('500')));
+      component.consultationHistory.set([]);
+      component.loadHistory();
+      fixture.detectChanges();
+
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(component.historyLoadFailed()).toBe(true);
+      expect(text).toContain('patient.consultations.loadError');
+      expect(text).not.toContain('patient.consultations.empty');
+    });
+
+    it('expose un accordéon activable au clavier avec aria-expanded', () => {
+      const header = (fixture.nativeElement as HTMLElement).querySelector('button[aria-controls="consultation-panel-c-1"]') as HTMLButtonElement;
+      expect(header.getAttribute('aria-expanded')).toBe('false');
+
+      header.click();
+      fixture.detectChanges();
+
+      expect(header.getAttribute('aria-expanded')).toBe('true');
+      expect((fixture.nativeElement as HTMLElement).querySelector('#consultation-panel-c-1')).not.toBeNull();
     });
 
     it('should open and close revoke modal', () => {
@@ -365,7 +405,8 @@ describe('PatientDetail System Tests', () => {
         imports: [PatientLabOrdersTabComponent],
         providers: [
           { provide: PatientDetailComponent, useValue: mockParentDetail },
-          { provide: PatientApiService, useValue: mockPatientApi }
+          { provide: PatientApiService, useValue: mockPatientApi },
+          { provide: I18nService, useValue: mockI18n }
         ]
       }).compileComponents();
 
@@ -379,6 +420,19 @@ describe('PatientDetail System Tests', () => {
       expect(mockPatientApi.getPatientLabResults).toHaveBeenCalledWith('pat-1');
       expect(component.labOrders()).toEqual(mockLabOrders);
       expect(component.labResults()).toEqual(mockLabResults);
+    });
+
+    it("signale l'échec de chargement des demandes sans les présenter comme absentes", () => {
+      mockPatientApi.getPatientLabOrders.mockReturnValueOnce(throwError(() => new Error('503')));
+      component.labOrders.set([]);
+      component.loadLab();
+      fixture.detectChanges();
+
+      const text = (fixture.nativeElement as HTMLElement).textContent ?? '';
+      expect(component.ordersLoadFailed()).toBe(true);
+      expect(component.resultsLoadFailed()).toBe(false);
+      expect(text).toContain('patient.labOrders.loadError');
+      expect(text).not.toContain('patient.labOrders.empty');
     });
 
     it('should compute analyteNames, filteredResults, and chartPoints correctly', () => {

@@ -120,7 +120,17 @@ Contrats consommés :
 
 La session et les cookies sont persistés via `flutter_secure_storage`. Les features n’accèdent jamais au refresh token. Le Dio d’authentification ne contient pas l’intercepteur de recovery afin d’éviter toute récursion du refresh.
 
-La biométrie est optionnelle. Elle verrouille localement une session déjà authentifiée lorsque l’application passe en arrière-plan ; elle ne remplace jamais le login serveur.
+La biométrie est optionnelle. Elle verrouille localement une session déjà authentifiée lorsque l’application passe en arrière-plan ; elle ne remplace jamais le login serveur. Le verrou est rendu dans `MaterialApp.router(builder:)` afin de disposer des `Localizations` et du thème.
+
+Fin de session :
+
+- seul un refus serveur du refresh (401/403) expire la session ; un timeout ou une coupure réseau la conserve et l’erreur reste réessayable ;
+- une expiration réelle est publiée par `AuthSessionManager.sessionExpirations` ; `AuthController` repasse alors en non authentifié (`AUTH_SESSION_EXPIRED`) ;
+- les providers de données patient surveillent `authSessionScopeProvider` et sont réinitialisés à chaque fin ou changement de session ;
+- `clearLocalSession` purge aussi les données locales déclarées via `LocalSessionDataPurger` (brouillons de dictée, PDF de résultats écrits dans le dossier temporaire) ; la liste est injectée dans `bootstrap.dart` ;
+- la dictée WebSocket relit (et rafraîchit si besoin) le jeton à chaque (re)connexion via `apiAccessTokenResolverProvider`.
+
+Android : `FLAG_SECURE` sur `MainActivity`, sauvegarde et transfert d’appareil désactivés (`allowBackup`, `fullBackupContent`, `res/xml/data_extraction_rules.xml`). Les journaux de diagnostic passent par `safeDebugLog` (debug uniquement, jetons expurgés).
 
 ## Vérifications standard
 

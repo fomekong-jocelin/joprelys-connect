@@ -167,6 +167,8 @@ generated/
 .m2-test-cache/
 .codex/
 .claude/cache/
+# Worktrees temporaires des agents (copies de travail Git, jamais versionnées)
+.claude/worktrees/
 .gemini/cache/
 *.scratch.md
 scratch/

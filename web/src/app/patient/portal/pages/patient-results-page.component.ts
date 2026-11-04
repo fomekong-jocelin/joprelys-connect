@@ -5,6 +5,7 @@ import { PatientPortalService } from '../services/patient-portal.service';
 import { I18nService } from '../../../core/i18n/i18n.service';
 import { ToastService } from '../../../shared/ui/toast.service';
 
+import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
 interface GroupedResult {
   resultNumber: string;
   examRequestNumber: string;
@@ -28,7 +29,7 @@ interface GroupedResult {
 @Component({
   selector: 'app-patient-results-page',
   standalone: true,
-  imports: [CommonModule, AppShellComponent],
+  imports: [AppDatePipe, CommonModule, AppShellComponent],
   template: `
     <app-shell>
       <div class="app-container py-6 space-y-6">
@@ -93,7 +94,7 @@ interface GroupedResult {
                       </span>
                     </div>
                     <div class="mt-1 text-xs text-[var(--text-muted)]">
-                      {{ t('lab.validatedAt') }} : {{ (group.validatedAt || group.createdAt) | date:'medium' }} · {{ t('lab.validatorName') }} : {{ group.validatorName }}
+                      {{ t('lab.validatedAt') }} : {{ (group.validatedAt || group.createdAt) | appDate:'dateTime' }} · {{ t('lab.validatorName') }} : {{ group.validatorName }}
                     </div>
                   </div>
                   <div class="flex items-center gap-2">

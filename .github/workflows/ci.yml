@@ -215,6 +215,9 @@ jobs:
             angular-${{ runner.os }}-node22-
       - name: Install dependencies
         run: npm ci --prefer-offline --no-audit --fund=false
+      - name: Audit shipped dependencies
+        # Blocks the build when a dependency bundled into the browser app has a high or critical advisory.
+        run: npm audit --omit=dev --audit-level=high
       - name: Run tests
         shell: bash
         run: |

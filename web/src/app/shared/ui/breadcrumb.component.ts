@@ -2,6 +2,7 @@ import { Component, computed, inject } from '@angular/core';
 import { NavigationEnd, Router, RouterLink } from '@angular/router';
 import { filter, startWith } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
+import { DashboardRouteService } from '../../auth/dashboard-route.service';
 import { I18nService } from '../../core/i18n/i18n.service';
 
 interface BreadcrumbItem {
@@ -21,7 +22,8 @@ interface BreadcrumbItem {
         [attr.aria-label]="i18n.t('breadcrumb.navigation')"
       >
         <a
-          routerLink="/"
+          [routerLink]="dashboardRoute.url()"
+          data-testid="breadcrumb-home"
           class="transition-colors"
           style="color:var(--text-muted)"
           [style.color]="'var(--text-muted)'"
@@ -55,6 +57,8 @@ interface BreadcrumbItem {
 export class BreadcrumbComponent {
   private readonly router = inject(Router);
   readonly i18n = inject(I18nService);
+  /** « Accueil » mène au tableau de bord du rôle connecté, jamais à la page marketing. */
+  readonly dashboardRoute = inject(DashboardRouteService);
 
   private readonly navigationEnd$ = this.router.events.pipe(
     filter((event): event is NavigationEnd => event instanceof NavigationEnd),

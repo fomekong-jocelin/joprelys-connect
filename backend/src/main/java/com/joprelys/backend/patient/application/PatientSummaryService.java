@@ -46,6 +46,8 @@ public class PatientSummaryService {
     private final com.joprelys.backend.visit.application.QrCodeGeneratorService qrCodeGeneratorService;
     private final VerificationUrlProvider verificationUrlProvider;
 
+    private static final String SIGNED_CONSULTATION_STATUS = "VALIDEE";
+
     public PatientSummaryService(
             PatientRepository patientRepository,
             PatientAllergyRepository patientAllergyRepository,
@@ -148,6 +150,8 @@ public class PatientSummaryService {
 
         List<ConsultationEntity> consultations = consultationRepository
                 .findByPatientIdOrderByCreatedAtDesc(patientId).stream()
+                // Only signed consultations: a draft diagnosis is not a medical conclusion yet.
+                .filter(consultation -> SIGNED_CONSULTATION_STATUS.equals(consultation.getStatus()))
                 .limit(3)
                 .collect(Collectors.toList());
         List<MedicalSummaryResponse.DiagnosticSummaryDto> recentDiagnostics = consultations.stream()
@@ -160,8 +164,11 @@ public class PatientSummaryService {
                         consultation.getConclusion()))
                 .collect(Collectors.toList());
 
-        List<LabResultEntity> criticalResultsList = labResultRepository
-                .findByPatientIdAndInterpretationOrderByCreatedAtDesc(patientId, "CRITICAL");
+        // Latest version first, then interpretation: a critical value corrected to normal must disappear.
+        List<LabResultEntity> criticalResultsList = latestValidatedResults(labResultRepository
+                .findByPatientIdOrderByCreatedAtDesc(patientId)).stream()
+                .filter(result -> "CRITICAL".equals(result.getInterpretation()))
+                .collect(Collectors.toList());
         List<MedicalSummaryResponse.CriticalResultSummaryDto> criticalResults = criticalResultsList.stream()
                 .map(result -> new MedicalSummaryResponse.CriticalResultSummaryDto(
                         result.getId(),
@@ -268,5 +275,23 @@ public class PatientSummaryService {
             return userAccountRepository.findByEmail(auth.getName().trim().toLowerCase()).orElse(null);
         }
         return null;
+    }
+
+    /**
+     * Keeps only biologically validated results, latest version per analyte: drafts and
+     * superseded versions must never appear in a medical summary (portal or staff).
+     */
+    private static List<LabResultEntity> latestValidatedResults(List<LabResultEntity> results) {
+        java.util.Map<String, LabResultEntity> latest = new java.util.LinkedHashMap<>();
+        for (LabResultEntity result : results) {
+            String key = result.getResultNumber() + "_" + result.getAnalyteName();
+            LabResultEntity current = latest.get(key);
+            if (current == null || result.getVersion() > current.getVersion()) {
+                latest.put(key, result);
+            }
+        }
+        return latest.values().stream()
+                .filter(result -> result.getStatus() == com.joprelys.backend.lab.infrastructure.persistence.LabResultStatus.VALIDATED)
+                .collect(Collectors.toList());
     }
 }

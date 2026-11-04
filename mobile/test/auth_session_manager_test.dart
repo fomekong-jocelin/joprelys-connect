@@ -1,8 +1,13 @@
 import 'package:cookie_jar/cookie_jar.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:joprelys_mobile/core/network/api_exception.dart';
+import 'package:joprelys_mobile/core/security/local_session_data_purger.dart';
+import 'package:joprelys_mobile/features/auth/application/auth_controller.dart';
+import 'package:joprelys_mobile/features/auth/application/auth_providers.dart';
 import 'package:joprelys_mobile/features/auth/application/auth_session_manager.dart';
+import 'package:joprelys_mobile/features/auth/application/auth_session_scope.dart';
 import 'package:joprelys_mobile/features/auth/data/auth_api.dart';
 import 'package:joprelys_mobile/features/auth/data/auth_session_store.dart';
 import 'package:joprelys_mobile/features/auth/domain/professional_session.dart';
@@ -215,6 +220,171 @@ void main() {
       expect(gateway.refreshCalls, 0);
     },
   );
+
+  group('session expiry', () {
+    test('a refresh timeout keeps the session and signals nothing', () async {
+      final stored = session('expired', now, expiresAt: now);
+      final store = MemoryAuthSessionStore()..session = stored;
+      final purger = RecordingPurger();
+      final gateway = FakeAuthGateway()
+        ..refreshError = const ApiException(
+          kind: ApiFailureKind.timeout,
+          code: 'REQUEST_TIMEOUT',
+          message: 'REQUEST_TIMEOUT',
+          retryable: true,
+        );
+      final manager = AuthSessionManager(
+        store: store,
+        authApi: gateway,
+        cookieJar: CookieJar(),
+        localDataPurgers: [purger],
+        clock: () => now,
+      );
+      addTearDown(manager.dispose);
+      var expirations = 0;
+      manager.sessionExpirations.listen((_) => expirations += 1);
+
+      await expectLater(
+        manager.refresh(rejectedAccessToken: 'expired'),
+        throwsA(isA<ApiException>()),
+      );
+      await Future<void>.delayed(Duration.zero);
+
+      expect(store.session, same(stored));
+      expect(purger.calls, 0);
+      expect(expirations, 0);
+    });
+
+    test(
+      'a refused refresh purges local data and signals expiry once',
+      () async {
+        final store = MemoryAuthSessionStore()
+          ..session = session('expired', now, expiresAt: now);
+        final purger = RecordingPurger();
+        final gateway = FakeAuthGateway()
+          ..refreshError = const ApiException(
+            kind: ApiFailureKind.unauthenticated,
+            code: 'UNAUTHORIZED',
+            message: 'UNAUTHORIZED',
+            statusCode: 401,
+          );
+        final manager = AuthSessionManager(
+          store: store,
+          authApi: gateway,
+          cookieJar: CookieJar(),
+          localDataPurgers: [purger],
+          clock: () => now,
+        );
+        addTearDown(manager.dispose);
+        var expirations = 0;
+        manager.sessionExpirations.listen((_) => expirations += 1);
+
+        await expectLater(
+          manager.refresh(rejectedAccessToken: 'expired'),
+          throwsA(isA<ApiException>()),
+        );
+        // The recovery interceptor then expires the (already cleared) session.
+        await manager.expire();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(store.session, isNull);
+        expect(purger.calls, greaterThanOrEqualTo(1));
+        expect(expirations, 1);
+      },
+    );
+
+    test(
+      'every purger runs and expiry is signalled even if one fails',
+      () async {
+        final store = MemoryAuthSessionStore()
+          ..session = session('active', now);
+        final purger = RecordingPurger();
+        final manager = AuthSessionManager(
+          store: store,
+          authApi: FakeAuthGateway(),
+          cookieJar: CookieJar(),
+          localDataPurgers: [FailingPurger(), purger],
+          clock: () => now,
+        );
+        addTearDown(manager.dispose);
+        var expirations = 0;
+        manager.sessionExpirations.listen((_) => expirations += 1);
+
+        await expectLater(manager.expire(), throwsA(isA<StateError>()));
+        await Future<void>.delayed(Duration.zero);
+
+        expect(store.session, isNull);
+        expect(purger.calls, 1);
+        expect(expirations, 1);
+      },
+    );
+
+    test('logout purges feature data with the session', () async {
+      final store = MemoryAuthSessionStore()..session = session('active', now);
+      final purger = RecordingPurger();
+      final manager = AuthSessionManager(
+        store: store,
+        authApi: FakeAuthGateway(),
+        cookieJar: CookieJar(),
+        localDataPurgers: [purger],
+        clock: () => now,
+      );
+      addTearDown(manager.dispose);
+
+      await manager.logout();
+
+      expect(store.session, isNull);
+      expect(purger.calls, 1);
+    });
+
+    test(
+      'AuthController leaves the session and resets its scope on expiry',
+      () async {
+        final store = MemoryAuthSessionStore()
+          ..session = session('active', now);
+        final manager = AuthSessionManager(
+          store: store,
+          authApi: FakeAuthGateway(),
+          cookieJar: CookieJar(),
+          clock: () => now,
+        );
+        addTearDown(manager.dispose);
+        final container = ProviderContainer(
+          overrides: [authSessionManagerProvider.overrideWithValue(manager)],
+        );
+        addTearDown(container.dispose);
+        container.listen(authSessionScopeProvider, (_, _) {});
+
+        final restored = await container.read(authControllerProvider.future);
+        expect(restored.status, AuthStatus.authenticated);
+        expect(container.read(authSessionScopeProvider), isNotNull);
+
+        await manager.expire();
+        await Future<void>.delayed(Duration.zero);
+
+        final state = container.read(authControllerProvider).value;
+        expect(state?.status, AuthStatus.unauthenticated);
+        expect(state?.errorCode, AuthController.sessionExpiredCode);
+        expect(container.read(authSessionScopeProvider), isNull);
+      },
+    );
+  });
+}
+
+final class RecordingPurger implements LocalSessionDataPurger {
+  int calls = 0;
+
+  @override
+  Future<void> purgeLocalSessionData() async {
+    calls += 1;
+  }
+}
+
+final class FailingPurger implements LocalSessionDataPurger {
+  @override
+  Future<void> purgeLocalSessionData() async {
+    throw StateError('purge failed');
+  }
 }
 
 ProfessionalSession session(

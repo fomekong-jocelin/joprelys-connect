@@ -1,7 +1,8 @@
 import { signal } from '@angular/core';
 import { TestBed } from '@angular/core/testing';
 import { Router } from '@angular/router';
-import { firstValueFrom, Observable, of } from 'rxjs';
+import { HttpErrorResponse } from '@angular/common/http';
+import { firstValueFrom, Observable, of, throwError } from 'rxjs';
 import { RbacApiService } from '../clinic/rbac/rbac-api.service';
 import { AuthSession } from './auth.models';
 import { AuthSessionRecoveryService } from './auth-session-recovery.service';
@@ -22,9 +23,9 @@ describe('roleGuard', () => {
     sessionSignal = signal<AuthSession | null>(null);
     mockRouter = {
       parseUrl: vi.fn((url: string) => url),
-      createUrlTree: vi.fn((_commands: unknown[], options: { queryParams: Record<string, string> }) => {
+      createUrlTree: vi.fn((commands: string[], options: { queryParams: Record<string, string> }) => {
         const params = new URLSearchParams(options.queryParams).toString();
-        return `/?${params}`;
+        return `${commands.join('/')}?${params}`;
       }),
     };
     mockTokenStorage = {
@@ -74,7 +75,7 @@ describe('roleGuard', () => {
       data: { expectedRoles: ['PATIENT'] },
     } as any, { url: '/patient/dashboard' } as any));
 
-    expect(result).toBe('/?mode=patient&returnUrl=%2Fpatient%2Fdashboard');
+    expect(result).toBe('/patient/login?returnUrl=%2Fpatient%2Fdashboard');
     expect(mockRecovery.refreshAccessToken).not.toHaveBeenCalled();
   });
 
@@ -86,8 +87,49 @@ describe('roleGuard', () => {
       data: { expectedRoles: ['PATIENT'] },
     } as any, { url: '/patient/dashboard' } as any));
 
-    expect(result).toBe('/?mode=patient&returnUrl=%2Fpatient%2Fdashboard');
+    expect(result).toBe('/patient/login?returnUrl=%2Fpatient%2Fdashboard');
     expect(mockRbacApi.ensureMyAccess).not.toHaveBeenCalled();
+  });
+
+  it('should send a professional route without a recoverable session to the login page with its return URL', async () => {
+    mockRecovery.refreshAccessToken.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 401 })));
+
+    const result$ = TestBed.runInInjectionContext(() =>
+      roleGuard({ data: { expectedPermissions: ['CLINICAL_WRITE'] } } as any, { url: '/clinic/consultation/visit-9' } as any),
+    ) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe('/login?returnUrl=%2Fclinic%2Fconsultation%2Fvisit-9');
+  });
+
+  it.each([0, 502, 503])('should show the server unavailable state instead of an empty shell (HTTP %i)', async (status) => {
+    mockRecovery.refreshAccessToken.mockReturnValue(throwError(() => new HttpErrorResponse({ status })));
+
+    const result$ = TestBed.runInInjectionContext(() =>
+      roleGuard({ data: { expectedPermissions: ['PATIENT_READ'] } } as any, { url: '/patients' } as any),
+    ) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe('/server-unavailable?returnUrl=%2Fpatients');
+  });
+
+  it('should not grant access when the refresh fails for an unexpected reason', async () => {
+    mockRecovery.refreshAccessToken.mockReturnValue(throwError(() => new Error('AUTH_REFRESH_CONCURRENT')));
+
+    const result$ = TestBed.runInInjectionContext(() =>
+      roleGuard({ data: { expectedPermissions: ['PATIENT_READ'] } } as any, { url: '/patients' } as any),
+    ) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe('/login?returnUrl=%2Fpatients');
+  });
+
+  it('should distinguish an unreachable access service from a missing permission', async () => {
+    sessionSignal.set(session('MEDECIN'));
+    mockRbacApi.ensureMyAccess.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 503 })));
+
+    const result$ = TestBed.runInInjectionContext(() => roleGuard({
+      data: { expectedPermissions: ['PATIENT_READ'] },
+    } as any, { url: '/patients' } as any)) as Observable<boolean | string>;
+
+    expect(await firstValueFrom(result$)).toBe('/server-unavailable?returnUrl=%2Fpatients');
   });
 
   it('should reject a professional route configured with roles only', () => {

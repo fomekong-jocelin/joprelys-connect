@@ -111,7 +111,7 @@
 
             @if (user.currentUser) {
               <app-ui-alert tone="info">
-                {{ t('rbac.users.selfGuard', 'Vous configurez votre propre compte. Le rôle Administrateur clinique reste obligatoirement maintenu.') }}
+                {{ t('rbac.users.selfReadOnly', 'Vous ne pouvez pas modifier vos propres rôles : un autre administrateur de l’établissement doit le faire.') }}
               </app-ui-alert>
             }
 
@@ -152,7 +152,7 @@
               <button
                 type="button"
                 class="ui-button ui-button-primary"
-                [disabled]="saving() || selectedUserRoleIds().length === 0"
+                [disabled]="saving() || user.currentUser || selectedUserRoleIds().length === 0"
                 (click)="saveUserRoles()"
               >
                 {{ saving() ? t('common.saving', 'Enregistrement…') : t('rbac.users.save', 'Enregistrer les rôles') }}
