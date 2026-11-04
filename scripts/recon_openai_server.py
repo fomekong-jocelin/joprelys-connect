@@ -46,7 +46,10 @@ def main():
         print("[ERREUR] DIAG_PASS manquant.", file=sys.stderr)
         sys.exit(1)
     client = paramiko.SSHClient()
-    client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+    client.load_system_host_keys()
+    # Refuse unknown host keys: a spoofed server would otherwise receive the SSH password.
+    # Add the server key once to ~/.ssh/known_hosts after checking its fingerprint out of band.
+    client.set_missing_host_key_policy(paramiko.RejectPolicy())
     client.connect(hostname=HOST, port=PORT, username=USER, password=PASSWD,
                    look_for_keys=False, allow_agent=False, timeout=20,
                    banner_timeout=20, auth_timeout=20)
