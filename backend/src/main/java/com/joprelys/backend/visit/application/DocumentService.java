@@ -321,6 +321,20 @@ public class DocumentService {
                 doc.getRevocationReason());
     }
 
+    /**
+     * Annule le document s'il est encore valide ; ne fait rien s'il est déjà annulé, révoqué ou remplacé.
+     * Utilisé par les flux métier (annulation d'ordonnance) qui ne doivent pas échouer sur un document déjà retiré.
+     */
+    @Transactional
+    public void cancelDocumentIfValid(UUID documentId, String reason, UUID actorId) {
+        boolean valid = medicalDocumentRepository.findById(documentId)
+                .map(doc -> doc.getStatus() == DocumentStatus.VALID)
+                .orElse(false);
+        if (valid) {
+            cancelDocument(documentId, reason, actorId);
+        }
+    }
+
     @Transactional
     public MedicalDocumentEntity generatePrescriptionDocument(UUID prescriptionId, UUID actorUserId) {
         // 1. Charger la prescription

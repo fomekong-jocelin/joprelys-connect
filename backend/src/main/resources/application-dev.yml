@@ -12,3 +12,11 @@ spring:
             enable: ${MAIL_SSL_ENABLED:false}
           starttls:
             enable: ${MAIL_STARTTLS_ENABLED:false}
+
+joprelys:
+  security:
+    jwt:
+      # Développement local uniquement : sans JOPRELYS_JWT_SECRET, un secret aléatoire (256 bits) est tiré à chaque
+      # démarrage. Aucun secret n'est versionné ; les jetons d'accès deviennent invalides au redémarrage et le
+      # client les renouvelle avec son refresh token (indépendant de ce secret).
+      secret: ${JOPRELYS_JWT_SECRET:${random.value}${random.value}}

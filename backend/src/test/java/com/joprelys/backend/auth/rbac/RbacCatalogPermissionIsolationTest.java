@@ -40,6 +40,19 @@ class RbacCatalogPermissionIsolationTest {
 
         assertThat(roles.get(RbacCatalog.ROLE_ADMIN_JOPRELYS).assignable()).isFalse();
         assertThat(roles.get(RbacCatalog.ROLE_SUPER_ADMIN).assignable()).isFalse();
+        assertThat(roles.get(RbacCatalog.ROLE_AUDITEUR).assignable()).isFalse();
+    }
+
+    @Test
+    void crossTenantAuditReadIsAPlatformOnlyCapability() {
+        assertThat(RbacCatalog.platformPermissionCodes())
+                .contains(RbacCatalog.PERMISSION_AUDIT_CROSS_TENANT_READ);
+        assertThat(RbacCatalog.platformRoleCodes()).contains(RbacCatalog.ROLE_AUDITEUR);
+        rolesByCode().values().stream()
+                .filter(role -> role.permissions().contains(RbacCatalog.PERMISSION_AUDIT_CROSS_TENANT_READ))
+                .forEach(role -> assertThat(role.assignable())
+                        .as("rôle %s porteur de la lecture d'audit multi-établissements", role.code())
+                        .isFalse());
     }
 
     @Test

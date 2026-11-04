@@ -144,6 +144,31 @@ class EmergencyControllerTest {
     }
 
     @Test
+    void triageLevelOutsideTheScaleAndImplausibleVitalsAreRefused() throws Exception {
+        jdbcTemplate.update("DELETE FROM emergencies");
+        String template = """
+                {"patientId": "%s", "arrivalMode": "AMBULANCE", "triageLevel": "%s",
+                 "hemodynamicStatus": "STABLE", "chiefComplaint": "Douleur thoracique", "initialHr": %d}
+                """;
+
+        mockMvc.perform(post("/api/emergencies")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(template.formatted(patient.getId(), "URGENT", 90)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/emergencies")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(template.formatted(patient.getId(), "ORANGE", 900)))
+                .andExpect(status().isBadRequest());
+        mockMvc.perform(post("/api/emergencies")
+                        .header("Authorization", bearer(doctorToken))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(template.formatted(patient.getId(), "ORANGE", 0)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
     void shouldExposeProvisionalClinicalIdentityWithoutThirdPartyEvidence() throws Exception {
         TenantContext.setTenantId(organization.getId());
         PatientEntity provisionalPatient = patientRepository.save(PatientEntity.provisionalEmergency(
@@ -289,6 +314,23 @@ class EmergencyControllerTest {
                         .header("Authorization", bearer(doctorToken))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"Erreur de dossier : homonyme\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("ACTIVE"));
+    }
+
+    @Test
+    void aNonPhysicianCannotDeclareADeathThroughTheEmergencyOrientation() throws Exception {
+        UserAccountEntity admin = new UserAccountEntity(
+                "admin.clinique@joprelys.local", "Administrateur clinique", "ADMIN_CLINIQUE", "passhash");
+        admin.setOrganizationId(organization.getId());
+        String adminToken = jwtService.createToken(userAccountRepository.save(admin)).value();
+
+        mockMvc.perform(post("/api/emergencies/" + emergency.getId() + "/stabilize")
+                        .header("Authorization", bearer(adminToken))
+                        .param("orientation", "DEATH"))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(get("/api/patients/" + patient.getId()).header("Authorization", bearer(doctorToken)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
     }

@@ -40,6 +40,7 @@ public class PatientDeathService {
     private final HospitalizationRepository hospitalizationRepository;
     private final AppointmentRepository appointmentRepository;
     private final AuditService auditService;
+    private final com.joprelys.backend.consultation.application.MedicalSigningPolicy signingPolicy;
 
     public PatientDeathService(
             PatientCanonicalResolver canonicalResolver,
@@ -47,17 +48,21 @@ public class PatientDeathService {
             VisitRepository visitRepository,
             HospitalizationRepository hospitalizationRepository,
             AppointmentRepository appointmentRepository,
-            AuditService auditService) {
+            AuditService auditService,
+            com.joprelys.backend.consultation.application.MedicalSigningPolicy signingPolicy) {
         this.canonicalResolver = canonicalResolver;
         this.emergencyRepository = emergencyRepository;
         this.visitRepository = visitRepository;
         this.hospitalizationRepository = hospitalizationRepository;
         this.appointmentRepository = appointmentRepository;
         this.auditService = auditService;
+        this.signingPolicy = signingPolicy;
     }
 
     @Transactional
     public PatientEntity declareDeath(UUID patientId, DeathDeclaration declaration, UUID actorId, UUID actorOrganizationId) {
+        // Le constat de décès est un acte médical, quel que soit le chemin d'appel (urgences ou dossier) : CLIN-07.
+        signingPolicy.requirePhysicianFor(actorId, "Le constat de décès est réservé à un médecin.");
         var context = canonicalResolver.resolve(patientId);
         PatientEntity patient = context.canonicalPatient();
         if (patient.isDeceased()) {
@@ -124,6 +129,30 @@ public class PatientDeathService {
         auditService.logSuccess(actorId, actorOrganizationId, patient.getId(), "PATIENT", patient.getId(),
                 "PATIENT_DEATH_REVOKED", "Déclaration du " + revokedDeceasedAt + " annulée : " + normalizedReason);
         return patient;
+    }
+
+    /**
+     * Refuse tout acte de soin (délivrance, administration, demande d'examen) pour un patient décédé,
+     * y compris quand l'acte vise un dossier fusionné dans le dossier canonique (CLIN-13).
+     */
+    @Transactional(readOnly = true)
+    public void rejectCareIfDeceased(UUID patientId) {
+        if (patientId != null) {
+            rejectIfDeceased(canonicalResolver.resolve(patientId).canonicalPatient());
+        }
+    }
+
+    /** Refuse un acte daté après l'heure du décès ; les actes antérieurs peuvent encore être tracés. */
+    @Transactional(readOnly = true)
+    public void rejectCareAfterDeath(UUID patientId, Instant actAt) {
+        if (patientId == null) {
+            return;
+        }
+        PatientEntity patient = canonicalResolver.resolve(patientId).canonicalPatient();
+        if (patient.isDeceased() && patient.getDeceasedAt() != null && actAt.isAfter(patient.getDeceasedAt())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Le patient est déclaré décédé : aucun acte postérieur à l'heure du décès ne peut être tracé.");
+        }
     }
 
     /** Refuse l'ouverture d'un nouvel épisode pour un patient décédé. */

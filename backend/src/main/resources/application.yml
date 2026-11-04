@@ -1,3 +1,10 @@
+server:
+  # SEC-05 : l'IP cliente (rate limiting, audit) est résolue par Tomcat (RemoteIpValve).
+  # X-Forwarded-For / X-Forwarded-Proto ne sont pris en compte que si la connexion provient
+  # d'un proxy interne de confiance (server.tomcat.remoteip.internal-proxies, par défaut les
+  # plages privées 10/8, 172.16/12, 192.168/16, 127/8…). À restreindre à l'IP du reverse proxy.
+  forward-headers-strategy: native
+
 spring:
   application:
     name: joprelys-backend
@@ -106,7 +113,9 @@ joprelys:
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
       audience: ${JOPRELYS_JWT_AUDIENCE:joprelys-clinic}
-      secret: ${JOPRELYS_JWT_SECRET:snMVSBygC5IUa+4aF3dOcjZ/UVlmb8UIYbfu7dFKu2SE6kZ/mJUg5fsNMbS1MCcfwU1XiqR1OA5Tga+UpPwcPA==}
+      # No default: the signing secret must come from the environment or a vault.
+      # The dev profile (used by `mvnw spring-boot:run`) draws a random secret at each startup.
+      secret: ${JOPRELYS_JWT_SECRET:}
       ttl-minutes: ${JOPRELYS_JWT_TTL_MINUTES:120}
   seed:
     admin:

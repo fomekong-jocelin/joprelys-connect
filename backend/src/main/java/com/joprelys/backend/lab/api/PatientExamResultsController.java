@@ -9,6 +9,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -31,10 +32,14 @@ public class PatientExamResultsController {
     @PreAuthorize("hasAnyAuthority('LAB_ORDER_READ', 'PATIENT_PORTAL_ACCESS')")
     public ResponseEntity<?> exportResults(
             @PathVariable("id") UUID patientId,
-            @RequestParam(value = "format", defaultValue = "json") String format) {
+            @RequestParam(value = "format", defaultValue = "json") String format,
+            Authentication authentication) {
 
         accessPolicy.validateAccess(patientId, "lab_results");
-        List<LabResultResponse> results = labResultService.getPatientResults(patientId);
+        // A patient only ever receives biologically validated results, never drafts.
+        List<LabResultResponse> results = isPatient(authentication)
+                ? labResultService.getPatientPublishedResults(patientId)
+                : labResultService.getPatientResults(patientId);
 
         if ("csv".equalsIgnoreCase(format)) {
             StringBuilder csv = new StringBuilder();
@@ -62,6 +67,11 @@ public class PatientExamResultsController {
         }
 
         return ResponseEntity.ok(results);
+    }
+
+    private static boolean isPatient(Authentication authentication) {
+        return authentication != null && authentication.getAuthorities().stream()
+                .anyMatch(authority -> "ROLE_PATIENT".equals(authority.getAuthority()));
     }
 
     private String escapeCsv(String val) {

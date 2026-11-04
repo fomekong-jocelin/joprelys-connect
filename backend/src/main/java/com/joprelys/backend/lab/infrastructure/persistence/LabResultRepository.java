@@ -18,8 +18,6 @@ public interface LabResultRepository extends JpaRepository<LabResultEntity, UUID
 
 	long countByResultNumberStartingWith(String prefix);
 
-	List<LabResultEntity> findByPatientIdAndInterpretationOrderByCreatedAtDesc(UUID patientId, String interpretation);
-
 	@org.springframework.data.jpa.repository.Query(value = "SELECT nextval('lab_result_number_seq')", nativeQuery = true)
 	Long getNextResultNumberSequenceValue();
 }

@@ -47,10 +47,8 @@ public class DemoRequestService implements RegisterDemoRequest {
         String userAgent = null;
 
         if (httpRequest != null) {
-            ip = httpRequest.getHeader("X-Forwarded-For");
-            if (ip == null || ip.isBlank()) {
-                ip = httpRequest.getRemoteAddr();
-            }
+            // IP résolue par le conteneur (proxys de confiance uniquement), jamais l'en-tête brut.
+            ip = httpRequest.getRemoteAddr();
             userAgent = httpRequest.getHeader("User-Agent");
         }
 

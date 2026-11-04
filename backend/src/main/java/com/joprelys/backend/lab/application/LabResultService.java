@@ -36,6 +36,8 @@ import org.springframework.web.server.ResponseStatusException;
 @Service
 public class LabResultService {
 
+	private static final org.slf4j.Logger LOG = org.slf4j.LoggerFactory.getLogger(LabResultService.class);
+
 	private final LabOrderRepository labOrderRepository;
 	private final LabResultRepository labResultRepository;
 	private final LabOrderService labOrderService;
@@ -104,7 +106,8 @@ public class LabResultService {
 				request.examRequestNumber(),
 				actor.getDisplayName(),
 				actor.getId(),
-				request.status(),
+				// Sans statut explicite, une saisie reste un brouillon : seule une validation volontaire publie (CLIN-05).
+				request.status() != null ? request.status() : LabResultStatus.DRAFT,
 				request.sampleCollectedAt(),
 				request.resultAt(),
 				request.validatedAt(),
@@ -368,21 +371,38 @@ public class LabResultService {
 				document.setVersion(1);
 			}
 			return medicalDocumentRepository.save(document).getId();
-		} catch (Exception exception) {
+		} catch (java.io.IOException | java.security.NoSuchAlgorithmException | RuntimeException exception) {
+			// Le résultat reste enregistré ; l'absence de document vérifiable doit être visible en exploitation.
+			LOG.error("Lab result document could not be created for lab order {}", labOrder.getId(), exception);
 			return null;
 		}
 	}
 
+	/**
+	 * Message au patient gradué selon l'interprétation validée (CLIN-04) : seule une valeur critique déclenche
+	 * une notification d'urgence ; une valeur simplement anormale invite à en parler avec son médecin.
+	 */
 	private void notifyPatient(LabOrderEntity labOrder, LabResultUploadRequest request) {
-		boolean hasCritical = request.results().stream()
-				.anyMatch(result -> "CRITICAL".equals(result.interpretation()) || "ABNORMAL".equals(result.interpretation()));
-		String title = hasCritical
-				? "Résultats d'analyses disponibles — Valeur critique"
-				: "Résultats d'analyses disponibles";
-		String type = hasCritical ? "EMERGENCY" : "INFO";
-		String message = hasCritical
-				? "Vos résultats d'analyses sont disponibles. Une ou plusieurs valeurs nécessitent une attention médicale immédiate."
-				: "Vos résultats d'analyses pour la demande " + labOrder.getExamRequestNumber() + " sont disponibles.";
+		boolean hasCritical = request.results().stream().anyMatch(result -> "CRITICAL".equals(result.interpretation()));
+		boolean hasAbnormal = request.results().stream().anyMatch(result -> "ABNORMAL".equals(result.interpretation()));
+		String available = "Vos résultats d'analyses pour la demande " + labOrder.getExamRequestNumber() + " sont disponibles.";
+		String title;
+		String message;
+		String type;
+		if (hasCritical) {
+			title = "Résultats d'analyses disponibles — à revoir rapidement avec un médecin";
+			message = available + " Une valeur doit être revue rapidement avec un médecin : contactez votre médecin ou l'établissement."
+					+ " En cas de malaise ou de symptômes inquiétants, rendez-vous sans attendre aux urgences.";
+			type = "EMERGENCY";
+		} else if (hasAbnormal) {
+			title = "Résultats d'analyses disponibles";
+			message = available + " Certaines valeurs sont en dehors des valeurs habituelles : parlez-en avec votre médecin.";
+			type = "INFO";
+		} else {
+			title = "Résultats d'analyses disponibles";
+			message = available;
+			type = "INFO";
+		}
 		notificationService.sendNotification(labOrder.getPatient().getId(), title, message, type);
 	}
 

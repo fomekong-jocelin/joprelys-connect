@@ -6,6 +6,7 @@ import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventEntity
 import com.joprelys.backend.auth.infrastructure.persistence.AuthAuditEventRepository;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.security.OtpChallengeStore;
 import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
 import com.joprelys.backend.auth.session.application.IssuedAuthSession;
 import com.joprelys.backend.auth.session.application.SessionClientMetadata;
@@ -14,11 +15,10 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationReposi
 import com.joprelys.backend.notification.application.AccountMailService;
 import java.security.SecureRandom;
 import java.time.Clock;
-import java.time.Instant;
+import java.time.Duration;
 import java.util.Arrays;
 import java.util.Locale;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.Optional;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -29,7 +29,10 @@ public class AuthenticationService {
 
     private static final String GENERIC_LOGIN_FAILURE = "Invalid email or password";
     private static final int MAX_OTP_ATTEMPTS = 3;
+    private static final Duration OTP_TTL = Duration.ofMinutes(5);
     private static final String PATIENT_ROLE = "PATIENT";
+    /** Mot de passe factice : son hachage égalise le temps de réponse d'un e-mail inconnu (SEC-05). */
+    private static final String TIMING_EQUALIZER_SECRET = "joprelys-unknown-account-timing-equalizer";
 
     private final UserAccountRepository userAccountRepository;
     private final AuthAuditEventRepository authAuditEventRepository;
@@ -38,8 +41,9 @@ public class AuthenticationService {
     private final Clock clock;
     private final OrganizationRepository organizationRepository;
     private final SecureRandom secureRandom;
-    private final Map<String, StaffOtpData> staffOtpMap = new ConcurrentHashMap<>();
+    private final OtpChallengeStore staffOtpChallenges;
     private final AccountMailService accountMailService;
+    private volatile String timingEqualizerHash;
 
     public AuthenticationService(
             UserAccountRepository userAccountRepository,
@@ -57,6 +61,7 @@ public class AuthenticationService {
         this.organizationRepository = organizationRepository;
         this.accountMailService = accountMailService;
         this.secureRandom = new SecureRandom();
+        this.staffOtpChallenges = new OtpChallengeStore(clock, OTP_TTL, MAX_OTP_ATTEMPTS, Duration.ZERO);
     }
 
     @Transactional
@@ -69,10 +74,10 @@ public class AuthenticationService {
         assertOrganizationActive(user, email, auditIpAddress);
         assertProfessionalAccount(user, email, auditIpAddress);
 
-        staffOtpMap.remove(email);
+        staffOtpChallenges.invalidate(email);
         String code = String.format("%06d", secureRandom.nextInt(1_000_000));
         accountMailService.sendLoginCode(user.getEmail(), user.getDisplayName(), code);
-        staffOtpMap.put(email, new StaffOtpData(code, clock.instant(), 0));
+        staffOtpChallenges.issue(email, code);
         return AuthenticationOutcome.otpChallenge(
                 user.getEmail(),
                 user.getDisplayName(),
@@ -109,15 +114,26 @@ public class AuthenticationService {
             String email,
             String password,
             String auditIpAddress) {
-        UserAccountEntity user = userAccountRepository.findByEmail(email)
-                .filter(UserAccountEntity::isEnabled)
-                .filter(account -> passwordEncoder.matches(password, account.getPasswordHash()))
-                .orElse(null);
-        if (user != null) {
-            return user;
+        Optional<UserAccountEntity> candidate = userAccountRepository.findByEmail(email)
+                .filter(UserAccountEntity::isEnabled);
+        if (candidate.isPresent() && passwordEncoder.matches(password, candidate.get().getPasswordHash())) {
+            return candidate.get();
+        }
+        if (candidate.isEmpty()) {
+            // Même coût BCrypt qu'un compte existant : pas d'énumération par temps de réponse.
+            passwordEncoder.matches(password, timingEqualizerHash());
         }
         audit(email, auditIpAddress, false, "BAD_CREDENTIALS");
         throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
+    }
+
+    private String timingEqualizerHash() {
+        String hash = timingEqualizerHash;
+        if (hash == null) {
+            hash = passwordEncoder.encode(TIMING_EQUALIZER_SECRET);
+            timingEqualizerHash = hash;
+        }
+        return hash;
     }
 
     private void assertOrganizationActive(
@@ -143,39 +159,30 @@ public class AuthenticationService {
         if (!hasRole(user, PATIENT_ROLE)) {
             return;
         }
-        staffOtpMap.remove(email);
+        staffOtpChallenges.invalidate(email);
         audit(email, auditIpAddress, false, "PATIENT_LOGIN_CHANNEL_REQUIRED");
         throw new BadCredentialsException(GENERIC_LOGIN_FAILURE);
     }
 
     private void validateOtp(String email, String submittedCode) {
-        StaffOtpData otpData = staffOtpMap.get(email);
-        if (otpData == null) {
-            throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_NO_ACTIVE_REQUEST,
+        OtpChallengeStore.Verification verification = staffOtpChallenges.verify(email, submittedCode);
+        switch (verification.outcome()) {
+            case VERIFIED -> {
+                // Code valide et consommé atomiquement.
+            }
+            case NO_ACTIVE_CHALLENGE -> throw new StaffOtpRejectedException(
+                    StaffOtpRejectedException.Reason.OTP_NO_ACTIVE_REQUEST,
                     "Aucune demande de connexion active pour cet e-mail.", 0);
-        }
-        if (otpData.isExpired(clock.instant())) {
-            staffOtpMap.remove(email);
-            throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_EXPIRED,
+            case EXPIRED -> throw new StaffOtpRejectedException(
+                    StaffOtpRejectedException.Reason.OTP_EXPIRED,
                     "Le code de sécurité a expiré.", 0);
-        }
-        if (otpData.code().equals(submittedCode)) {
-            staffOtpMap.remove(email);
-            return;
-        }
-        registerFailedOtpAttempt(email, otpData);
-    }
-
-    private void registerFailedOtpAttempt(String email, StaffOtpData otpData) {
-        int newAttempts = otpData.attempts() + 1;
-        if (newAttempts >= MAX_OTP_ATTEMPTS) {
-            staffOtpMap.remove(email);
-            throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_TOO_MANY_ATTEMPTS,
+            case TOO_MANY_ATTEMPTS -> throw new StaffOtpRejectedException(
+                    StaffOtpRejectedException.Reason.OTP_TOO_MANY_ATTEMPTS,
                     "Trop de tentatives infructueuses. Veuillez régénérer un code.", 0);
+            case INCORRECT -> throw new StaffOtpRejectedException(
+                    StaffOtpRejectedException.Reason.OTP_INCORRECT,
+                    "Code de sécurité incorrect.", verification.remainingAttempts());
         }
-        staffOtpMap.put(email, new StaffOtpData(otpData.code(), otpData.createdAt(), newAttempts));
-        throw new StaffOtpRejectedException(StaffOtpRejectedException.Reason.OTP_INCORRECT,
-                "Code de sécurité incorrect.", MAX_OTP_ATTEMPTS - newAttempts);
     }
 
     private static boolean hasRole(UserAccountEntity user, String roleCode) {
@@ -198,13 +205,6 @@ public class AuthenticationService {
     }
 
     String getStaffOtpCodeForTesting(String email) {
-        StaffOtpData data = staffOtpMap.get(normalizeEmail(email));
-        return data != null ? data.code() : null;
-    }
-
-    private record StaffOtpData(String code, Instant createdAt, int attempts) {
-        private boolean isExpired(Instant now) {
-            return createdAt.plusSeconds(300).isBefore(now);
-        }
+        return staffOtpChallenges.activeCodeForTesting(normalizeEmail(email)).orElse(null);
     }
 }

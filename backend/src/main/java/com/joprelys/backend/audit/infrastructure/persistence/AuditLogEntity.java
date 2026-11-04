@@ -3,10 +3,16 @@ package com.joprelys.backend.audit.infrastructure.persistence;
 import jakarta.persistence.*;
 import java.time.Instant;
 import java.util.UUID;
+import org.springframework.data.domain.Persistable;
 
+/**
+ * Journal d'audit immuable. L'identifiant est préassigné : {@link Persistable} indique à
+ * Spring Data qu'une nouvelle entrée doit être insérée ({@code persist}) et non fusionnée
+ * ({@code merge}, qui déclencherait un SELECT préalable inutile).
+ */
 @Entity
 @Table(name = "audit_logs")
-public class AuditLogEntity {
+public class AuditLogEntity implements Persistable<UUID> {
 
 	@Id
 	private UUID id;
@@ -44,6 +50,9 @@ public class AuditLogEntity {
 	@Column(name = "created_at", nullable = false)
 	private Instant createdAt;
 
+	@Transient
+	private boolean newEntry = true;
+
 	public AuditLogEntity() {
 	}
 
@@ -74,6 +83,18 @@ public class AuditLogEntity {
 		}
 	}
 
+	@PostLoad
+	@PostPersist
+	void markPersisted() {
+		this.newEntry = false;
+	}
+
+	@Override
+	public boolean isNew() {
+		return newEntry;
+	}
+
+	@Override
 	public UUID getId() {
 		return id;
 	}

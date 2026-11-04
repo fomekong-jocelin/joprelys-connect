@@ -5,8 +5,10 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
-import java.util.stream.Collectors;
-
+/**
+ * Simulated AllôPharma teletransmission. Only the prescription number is logged: the prescription content
+ * (patient, medicines, dosages) is health data and never goes to the logs (SEC-11).
+ */
 @Component
 public class AlloPharmaClient {
 
@@ -14,25 +16,6 @@ public class AlloPharmaClient {
 
 	public boolean transmit(PrescriptionEntity prescription) {
 		log.info("Simulating teletransmission to AllôPharma for prescription: {}", prescription.getPrescriptionNumber());
-
-		// Building simulated JSON payload
-		String drugItemsJson = prescription.getItems().stream()
-				.map(item -> String.format("{\"drugName\":\"%s\",\"dosage\":\"%s\",\"posology\":\"%s\",\"quantity\":\"%s\"}",
-						escapeJson(item.getDrugName()),
-						escapeJson(item.getDosage()),
-						escapeJson(item.getPosology()),
-						escapeJson(item.getQuantity())))
-				.collect(Collectors.joining(","));
-
-		String payload = String.format(
-				"{\"prescriptionNumber\":\"%s\",\"doctorName\":\"%s\",\"organizationId\":\"%s\",\"items\":[%s]}",
-				escapeJson(prescription.getPrescriptionNumber()),
-				escapeJson(prescription.getConsultation().getDoctor().getDisplayName()),
-				prescription.getOrganizationId(),
-				drugItemsJson
-		);
-
-		log.info("AllôPharma Payload Sent: {}", payload);
 
 		// Simulate success / failure
 		if (prescription.getPrescriptionNumber() != null && prescription.getPrescriptionNumber().endsWith("999")) {
@@ -42,10 +25,5 @@ public class AlloPharmaClient {
 
 		log.info("AllôPharma Teletransmission SUCCESS");
 		return true;
-	}
-
-	private String escapeJson(String value) {
-		if (value == null) return "";
-		return value.replace("\"", "\\\"");
 	}
 }

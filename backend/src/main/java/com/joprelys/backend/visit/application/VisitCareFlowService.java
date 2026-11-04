@@ -20,14 +20,17 @@ public class VisitCareFlowService implements VisitCareFlowUseCase {
 	private final VisitRepository visitRepository;
 	private final UserAccountRepository userAccountRepository;
 	private final AuditService auditService;
+	private final ClinicalWriteScopePolicy clinicalWriteScopePolicy;
 
 	public VisitCareFlowService(
 			VisitRepository visitRepository,
 			UserAccountRepository userAccountRepository,
-			AuditService auditService) {
+			AuditService auditService,
+			ClinicalWriteScopePolicy clinicalWriteScopePolicy) {
 		this.visitRepository = visitRepository;
 		this.userAccountRepository = userAccountRepository;
 		this.auditService = auditService;
+		this.clinicalWriteScopePolicy = clinicalWriteScopePolicy;
 	}
 
 	@Override
@@ -35,6 +38,7 @@ public class VisitCareFlowService implements VisitCareFlowUseCase {
 	public VisitEntity startConsultation(UUID visitId, String practitionerEmail, boolean takeOver) {
 		VisitEntity visit = requireActiveVisit(visitId);
 		UserAccountEntity practitioner = requirePractitioner(practitionerEmail);
+		clinicalWriteScopePolicy.requireSameOrganization(visit, practitioner);
 
 		boolean heldByColleague = visit.isInConsultationWithAnotherPractitioner(practitioner.getId());
 		if (heldByColleague && !takeOver) {
@@ -61,6 +65,7 @@ public class VisitCareFlowService implements VisitCareFlowUseCase {
 	public VisitEntity releaseConsultation(UUID visitId, String practitionerEmail) {
 		VisitEntity visit = requireActiveVisit(visitId);
 		UserAccountEntity practitioner = requirePractitioner(practitionerEmail);
+		clinicalWriteScopePolicy.requireSameOrganization(visit, practitioner);
 
 		if (!practitioner.getId().equals(visit.getConsultingPractitionerId())) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
@@ -82,6 +87,9 @@ public class VisitCareFlowService implements VisitCareFlowUseCase {
 
 	@Override
 	public void ensureConsultationOwnership(VisitEntity visit, UUID practitionerId, String practitionerName) {
+		UserAccountEntity practitioner = userAccountRepository.findById(practitionerId)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Praticien introuvable."));
+		clinicalWriteScopePolicy.requireSameOrganization(visit, practitioner);
 		if (visit.isInConsultationWithAnotherPractitioner(practitionerId)) {
 			throw new ResponseStatusException(HttpStatus.CONFLICT,
 					"Patient en consultation chez " + visit.getConsultingPractitionerName()

@@ -9,6 +9,11 @@ import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.Di
 import com.joprelys.backend.emergency.triage.domain.EmergencyTriageVocabulary.ExposureStatus;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.AssertTrue;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -25,6 +30,7 @@ public record CreateEmergencyRequest(
 
         @NotBlank(message = "Le niveau de triage est obligatoire.")
         @Size(max = 20)
+        @Pattern(regexp = "RED|ORANGE|YELLOW|GREEN", message = "Le niveau de triage doit être RED, ORANGE, YELLOW ou GREEN.")
         String triageLevel,
 
         @NotBlank(message = "L'état hémodynamique est obligatoire.")
@@ -34,12 +40,16 @@ public record CreateEmergencyRequest(
         @NotBlank(message = "Le motif est obligatoire.")
         String chiefComplaint,
 
+        @Min(value = 0, message = "La tension systolique doit être comprise entre 0 et 300 mmHg.") @Max(value = 300, message = "La tension systolique doit être comprise entre 0 et 300 mmHg.")
         Integer initialBpSystolic,
 
+        @Min(value = 0, message = "La tension diastolique doit être comprise entre 0 et 200 mmHg.") @Max(value = 200, message = "La tension diastolique doit être comprise entre 0 et 200 mmHg.")
         Integer initialBpDiastolic,
 
+        @Min(value = 0, message = "La fréquence cardiaque doit être comprise entre 0 et 300 bpm.") @Max(value = 300, message = "La fréquence cardiaque doit être comprise entre 0 et 300 bpm.")
         Integer initialHr,
 
+        @DecimalMin(value = "20.0", message = "La température doit être comprise entre 20 et 45 °C.") @DecimalMax(value = "45.0", message = "La température doit être comprise entre 20 et 45 °C.")
         BigDecimal initialTemp,
 
         @Size(max = 160)

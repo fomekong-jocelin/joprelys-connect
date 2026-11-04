@@ -1,13 +1,19 @@
 package com.joprelys.backend.auth.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.joprelys.backend.auth.application.PasswordRecoveryService;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountEntity;
 import com.joprelys.backend.auth.infrastructure.persistence.UserAccountRepository;
+import com.joprelys.backend.auth.security.OtpChallengeStore;
+import com.joprelys.backend.auth.session.application.IssueAuthSessionUseCase;
+import com.joprelys.backend.auth.session.application.IssuedAuthSession;
+import com.joprelys.backend.auth.session.application.SessionClientMetadata;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
 import com.joprelys.backend.notification.application.AccountMailService;
@@ -24,7 +30,6 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.lang.reflect.Field;
-import java.util.Map;
 
 @SpringBootTest
 @AutoConfigureMockMvc
@@ -51,6 +56,9 @@ public class PasswordRecoveryControllerTest {
 
     @Autowired
     private JdbcTemplate jdbcTemplate;
+
+    @Autowired
+    private IssueAuthSessionUseCase issueAuthSessionUseCase;
 
     private OrganizationEntity orgActive;
     private OrganizationEntity orgInactive;
@@ -174,6 +182,31 @@ public class PasswordRecoveryControllerTest {
     }
 
     @Test
+    void givenActiveSessions_whenResetPassword_thenAllSessionsAreRevokedAndResetIsAudited() throws Exception {
+        jdbcTemplate.update("DELETE FROM audit_logs WHERE action = 'PASSWORD_RESET'");
+        IssuedAuthSession session = issueAuthSessionUseCase.issue(
+                userActive, new SessionClientMetadata("WEB", "JUnit", "127.0.0.0/24"));
+        mockMvc.perform(get("/api/rbac/me").header("Authorization", "Bearer " + session.accessToken()))
+                .andExpect(status().isOk());
+
+        String otp = passwordRecoveryService.generateAndSendOtp("medecin@joprelys.local");
+        mockMvc.perform(post("/api/public/auth/password-recovery/reset")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email": "medecin@joprelys.local", "otpCode": "%s", "newPassword": "nouveauMotDePasse789"}
+                                """.formatted(otp)))
+                .andExpect(status().isOk());
+
+        assertEquals("PASSWORD_RESET", jdbcTemplate.queryForObject(
+                "SELECT revocation_reason FROM auth_sessions WHERE id = ?", String.class, session.sessionId()));
+        assertEquals(1, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM audit_logs WHERE action = 'PASSWORD_RESET' AND resource_id = ?",
+                Integer.class, userActive.getId()));
+        mockMvc.perform(get("/api/rbac/me").header("Authorization", "Bearer " + session.accessToken()))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void givenInvalidOtp_whenResetPassword_thenBadRequest() throws Exception {
         passwordRecoveryService.generateAndSendOtp("medecin@joprelys.local");
 
@@ -238,21 +271,15 @@ public class PasswordRecoveryControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    @SuppressWarnings("unchecked")
     private String getOtpFromService(String email) {
         try {
             Object target = org.springframework.test.util.AopTestUtils.getTargetObject(passwordRecoveryService);
-            Field field = PasswordRecoveryService.class.getDeclaredField("otpMap");
+            Field field = PasswordRecoveryService.class.getDeclaredField("recoveryChallenges");
             field.setAccessible(true);
-            Map<String, ?> map = (Map<String, ?>) field.get(target);
-            if (map == null) return null;
-            Object otpData = map.get(email);
-            if (otpData == null) return null;
-            Field codeField = otpData.getClass().getDeclaredField("code");
-            codeField.setAccessible(true);
-            return (String) codeField.get(otpData);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+            OtpChallengeStore store = (OtpChallengeStore) field.get(target);
+            return store.activeCodeForTesting(email).orElse(null);
+        } catch (ReflectiveOperationException e) {
+            throw new IllegalStateException(e);
         }
     }
 }

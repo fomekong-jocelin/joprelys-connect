@@ -61,6 +61,11 @@ public class ConsultationService {
 
 		UserAccountEntity doctor = userAccountRepository.findByEmail(doctorEmail)
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Médecin introuvable."));
+		// Le compte rendu de consultation (diagnostic, conclusion) est un acte médical (CLIN-08).
+		if (!MedicalSigningPolicy.isPhysician(doctor)) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"La consultation médicale est rédigée par un médecin. Utilisez les transmissions infirmières pour vos observations.");
+		}
 
 		visitCareFlow.ensureConsultationOwnership(visit, doctor.getId(), doctor.getDisplayName());
 		visitRepository.save(visit);

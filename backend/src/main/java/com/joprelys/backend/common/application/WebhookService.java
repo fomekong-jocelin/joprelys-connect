@@ -82,7 +82,9 @@ public class WebhookService {
         var webhooks = webhookRepository.findByOrganizationIdAndStatus(organizationId, "ACTIVE");
         for (var webhook : webhooks) {
             if (webhook.getEventTypes().contains(eventType)) {
-                log.info("[WEBHOOK MOCK] Event: {} | URL: {} | Payload: {}", eventType, webhook.getUrl(), payload);
+                // SEC-11 : le payload peut contenir des données patient ; l'URL peut porter un jeton.
+                log.info("[WEBHOOK MOCK] Event: {} | webhook={} | payloadLength={}",
+                        eventType, webhook.getId(), payload == null ? 0 : payload.length());
             }
         }
     }

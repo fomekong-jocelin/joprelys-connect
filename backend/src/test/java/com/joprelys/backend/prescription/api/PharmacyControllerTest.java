@@ -1,5 +1,7 @@
 package com.joprelys.backend.prescription.api;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -430,6 +432,52 @@ public class PharmacyControllerTest {
                 .content("""
                     {"prescriptionNumber":"ORD-20260703-000001","pinCode":"1234","reviewNotes":"Review"}
                     """)).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void unknownPrescriptionAnswersLikeAWrongPin() throws Exception {
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/verify")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content("""
+                    {"prescriptionNumber":"ORD-20260703-999999","pinCode":"1234"}
+                    """))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void nonPositiveDispensedQuantityIsRejected() throws Exception {
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                .header("Authorization", "Bearer " + pharmacistToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(dispenseBody().replace("\"quantityDispensed\":1", "\"quantityDispensed\":-10")))
+                .andExpect(status().isBadRequest());
+        assertEquals(0, dispensationItemCount());
+    }
+
+    @Test
+    void deceasedPatientCannotReceiveADispensation() throws Exception {
+        jdbcTemplate.update("UPDATE patients SET deceased_at = ? WHERE id = ?",
+                java.sql.Timestamp.from(Instant.now().minus(1, ChronoUnit.HOURS)), patient.getId());
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                .header("Authorization", "Bearer " + pharmacistToken)
+                .contentType(MediaType.APPLICATION_JSON).content(dispenseBody()))
+                .andExpect(status().isConflict());
+        assertEquals(0, dispensationItemCount());
+    }
+
+    @Test
+    void substitutionForbiddenByThePrescriberIsRefused() throws Exception {
+        jdbcTemplate.update("UPDATE prescription_items SET substitution_allowed = FALSE WHERE id = ?", item1.getId());
+        mockMvc.perform(post("/api/public/pharmacy/prescriptions/dispense")
+                .header("Authorization", "Bearer " + pharmacistToken)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(dispenseBody().replace("\"quantityDispensed\":1", "\"quantityDispensed\":1,\"substitutedWith\":\"Efferalgan 1g\"")))
+                .andExpect(status().isConflict());
+        assertEquals(0, dispensationItemCount());
+    }
+
+    private int dispensationItemCount() {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM dispensation_items", Integer.class);
     }
 
     private String dispenseBody() {

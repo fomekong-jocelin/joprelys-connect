@@ -206,11 +206,27 @@ public class PatientPortalControllerTest {
                     "birthDate": "%s"
                 }
                 """.formatted(patientA.getGlobalPatientNumber(), patientA.getBirthDate().toString());
+        String unknownPatientJson = """
+                {
+                    "globalPatientNumber": "DPU-JOP-INEXISTANT",
+                    "phone": "%s",
+                    "birthDate": "%s"
+                }
+                """.formatted(patientA.getPhone(), patientA.getBirthDate().toString());
+        String genericRefusal = "Les informations fournies ne permettent pas d'envoyer un code de connexion. "
+                + "Vérifiez-les ou contactez votre établissement de santé.";
 
+        // SEC-06 : même statut et même message, que le dossier existe ou non.
         mockMvc.perform(post("/api/public/patient/auth/otp")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(json))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value(genericRefusal));
+        mockMvc.perform(post("/api/public/patient/auth/otp")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(unknownPatientJson))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.detail").value(genericRefusal));
     }
 
     @Test
@@ -318,6 +334,22 @@ public class PatientPortalControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fullName").value("Jean Patient A"))
                 .andExpect(jsonPath("$.emergencyAccessActive").value(true));
+    }
+
+    @Test
+    void givenMissingBlankOrVagueReason_whenTriggerEmergencyAccess_thenBadRequestAndNoAccessGranted() throws Exception {
+        for (String body : new String[] {"{}", "{\"reason\": \"   \"}", "{\"reason\": \"urgence\"}",
+                "{\"reason\": \"" + "x".repeat(501) + "\"}"}) {
+            mockMvc.perform(post("/api/patients/" + patientA.getId() + "/emergency-access")
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .content(body)
+                    .header("Authorization", "Bearer " + tokenMedecinB))
+                    .andExpect(status().isBadRequest());
+        }
+
+        mockMvc.perform(get("/api/patients/" + patientA.getId())
+                .header("Authorization", "Bearer " + tokenMedecinB))
+                .andExpect(status().isForbidden());
     }
 
     @Test

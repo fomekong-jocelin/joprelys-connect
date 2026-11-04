@@ -276,6 +276,31 @@ public class ConsultationControllerTest {
     }
 
     @Test
+    void givenMedecinBWithEmergencyAccess_whenSaveConsultationOnVisitA_thenWriteOutOfScopeAndNothingPersisted()
+            throws Exception {
+        mockMvc.perform(post("/api/patients/" + patientA.getId() + "/emergency-access")
+                        .header("Authorization", "Bearer " + tokenMedecinB)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"Patient inconscient admis aux urgences\"}"))
+                .andExpect(status().isCreated());
+        mockMvc.perform(get("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinB))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
+                        .header("Authorization", "Bearer " + tokenMedecinB)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"symptoms\":\"Écriture inter-établissement\",\"diagnosis\":\"Refusée\"}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error.code").value("CLINICAL_WRITE_OUT_OF_SCOPE"));
+
+        org.junit.jupiter.api.Assertions.assertEquals(0, jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM consultations WHERE visit_id = ?", Integer.class, visitA.getId()));
+        org.junit.jupiter.api.Assertions.assertNull(jdbcTemplate.queryForObject(
+                "SELECT consulting_practitioner_id FROM visits WHERE id = ?", UUID.class, visitA.getId()));
+    }
+
+    @Test
     void closingVisitSealsConsultationAndRejectsEditsEvenIfVisitIsReopened() throws Exception {
         mockMvc.perform(post("/api/visits/" + visitA.getId() + "/consultation")
                         .header("Authorization", "Bearer " + tokenMedecinA)
