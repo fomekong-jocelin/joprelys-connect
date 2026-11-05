@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-04T15:32:58.035Z",
+        "reason": "DESIGN.md typography tokens define Inter as the body font of the existing design system (pre-existing, not changed in this session)"
+      }
+    ]
+  }
+}
