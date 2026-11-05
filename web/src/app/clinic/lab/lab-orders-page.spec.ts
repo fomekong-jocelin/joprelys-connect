@@ -209,7 +209,7 @@ describe('LabOrdersPageComponent', () => {
     dialog.confirm.mockResolvedValueOnce(false);
     const component = fixture.componentInstance;
     component.resultForm.patchValue({ validatorName: 'Dr Bio' });
-    component.results.at(0).patchValue({ analyteName: 'Glycemie', value: '0.95' });
+    component.results.at(0).patchValue({ analyteName: 'Glycemie', value: '0.95', interpretation: 'NORMAL' });
 
     await component.submitResults(labOrder);
 
@@ -217,10 +217,21 @@ describe('LabOrdersPageComponent', () => {
     expect(component.isSubmitting()).toBe(false);
   });
 
-  it('should save a draft without asking for validation confirmation', async () => {
+  it('should not presume a normal interpretation: the result form stays invalid until one is chosen', async () => {
     const component = fixture.componentInstance;
     component.resultForm.patchValue({ validatorName: 'Dr Bio', status: 'DRAFT' });
     component.results.at(0).patchValue({ analyteName: 'Glycemie', value: '0.95' });
+
+    expect(component.results.at(0).get('interpretation')?.value).toBe('');
+    expect(component.resultForm.invalid).toBe(true);
+    await component.submitResults(labOrder);
+    expect(labApi.uploadResults).not.toHaveBeenCalled();
+  });
+
+  it('should save a draft without asking for validation confirmation', async () => {
+    const component = fixture.componentInstance;
+    component.resultForm.patchValue({ validatorName: 'Dr Bio', status: 'DRAFT' });
+    component.results.at(0).patchValue({ analyteName: 'Glycemie', value: '0.95', interpretation: 'NORMAL' });
 
     await component.submitResults(labOrder);
 
@@ -233,7 +244,7 @@ describe('LabOrdersPageComponent', () => {
     component.selectOrder(structuredLabOrder);
     component.selectItem(structuredLabOrder.items![1]);
     component.resultForm.patchValue({ validatorName: 'Dr Bio' });
-    component.results.at(0).patchValue({ analyteName: 'CRP', value: '12' });
+    component.results.at(0).patchValue({ analyteName: 'CRP', value: '12', interpretation: 'NORMAL' });
 
     await component.submitResults(structuredLabOrder);
 
@@ -260,7 +271,7 @@ describe('LabOrdersPageComponent', () => {
     labApi.uploadResults.mockReturnValueOnce(throwError(() => ({ error: { detail: 'Erreur de validation' } })));
     const component = fixture.componentInstance;
     component.resultForm.patchValue({ validatorName: 'Dr Bio' });
-    component.results.at(0).patchValue({ analyteName: 'CRP', value: '12' });
+    component.results.at(0).patchValue({ analyteName: 'CRP', value: '12', interpretation: 'NORMAL' });
 
     await component.submitResults(labOrder);
     fixture.detectChanges();

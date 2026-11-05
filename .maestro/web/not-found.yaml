@@ -1,0 +1,11 @@
+# Recette AUDIT-20261104 : page 404 explicite au lieu d'un écran vide.
+url: ${BASE_URL}
+tags:
+  - recette
+  - smoke
+---
+- openLink: ${BASE_URL}/une-page-qui-nexiste-pas
+- extendedWaitUntil:
+    visible: ".*(Page introuvable|Page not found).*"
+    timeout: 15000
+- assertVisible: ".*(Retour à l'accueil|Back to home).*"

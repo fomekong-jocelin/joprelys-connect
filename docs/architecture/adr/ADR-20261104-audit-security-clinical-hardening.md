@@ -1,6 +1,6 @@
 # ADR — Durcissement sécurité et sécurité clinique issu de l'audit du 2026-11-04
 
-Date : 2026-11-04. Statut : **proposé** : à valider par un médecin référent, le pharmacien responsable et le DPO avant fusion.
+Date : 2026-11-04. Statut : **proposé**. Fusionné dans `main` le 2026-11-04 à la demande du porteur du projet. Relecture clinique technique faite (voir [CLINICAL-REVIEW](../../features/audit-20261104-full/CLINICAL-REVIEW.md)). **Validation formelle requise** par un médecin référent, le pharmacien responsable et le DPO (questions Q-R1 à Q-R6).
 
 Référence : [AUDIT-20261104](../../features/audit-20261104-full/AUDIT-REPORT.md), ticket [AUDIT-20261104](../../ai/tickets/AUDIT-20261104-FULL-SECURITY-CLINICAL-UX.md). Prolonge [ADR-20261017](ADR-20261017-journey-coherence-decisions.md).
 
@@ -18,6 +18,7 @@ L'audit complet du 2026-11-04 relève des chemins où une permission technique (
 | D-04 | Aucun soin après le décès : délivrance, validation pharmaceutique et demande d'examen refusées ; une administration datée **après l'heure du décès** est refusée (une administration antérieure peut encore être tracée a posteriori). Une administration ne peut pas être datée de plus de 5 minutes dans le futur. | CLIN-13, CLIN-09 |
 | D-05 | Une demande d'examen et sa visite concernent **le même patient** (identité canonique en cas de fusion), sinon 400. | CLIN-11 |
 | D-06 | PIN d'ordonnance : 6 chiffres tirés de `SecureRandom` pour les nouvelles ordonnances (les PIN à 4 chiffres existants restent valides jusqu'à expiration). Tentatives **persistées et réservées atomiquement** avant comparaison (3 essais, puis verrouillage de 15 minutes, conservé au redémarrage) ; comparaison en temps constant ; réponse 401 identique pour un numéro inconnu et un PIN faux. Migration `V121`. | SEC-01, FA-39 |
+| D-08 | Une interprétation de biologie **absente ou inconnue n'est jamais présumée normale** : elle reste `NOT_INTERPRETED` et s'affiche en neutre. La saisie labo n'a plus d'interprétation présélectionnée. L'import FHIR lit les codes HL7 v3 `ObservationInterpretation`, et l'API JSON partenaire refuse une valeur inconnue (400). `LOW`, `HIGH` et `ABNORMAL` déclenchent le message patient « hors valeurs de référence ». | Relecture clinique RC-01 à RC-06 |
 | D-07 | Le secret de signature JWT n'a plus de valeur par défaut hors profil `dev` ; l'application refuse de démarrer avec le secret publié dans l'historique Git. | Secret par défaut versionné |
 
 ## Conséquences

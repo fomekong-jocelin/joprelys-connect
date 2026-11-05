@@ -156,11 +156,27 @@ public class FhirDiagnosticReportParser {
         return text != null ? text.asText() : null;
     }
 
+    /**
+     * Lit le code HL7 v3 de {@code interpretation[0].coding}, puis un texte égal à une valeur canonique.
+     * Une interprétation absente ou non reconnue reste {@code NOT_INTERPRETED} : jamais présumée normale.
+     */
     private String extractInterpretation(JsonNode obs) {
         JsonNode arr = obs.get("interpretation");
-        if (arr == null || !arr.isArray() || arr.isEmpty()) return "NORMAL";
-        JsonNode text = arr.get(0).get("text");
-        return text != null ? text.asText() : "NORMAL";
+        if (arr == null || !arr.isArray() || arr.isEmpty()) return LabInterpretation.NOT_INTERPRETED.name();
+        JsonNode first = arr.get(0);
+        JsonNode codings = first.get("coding");
+        if (codings != null && codings.isArray()) {
+            for (JsonNode coding : codings) {
+                JsonNode code = coding.get("code");
+                if (code != null && LabInterpretation.fromHl7Code(code.asText()) != LabInterpretation.NOT_INTERPRETED) {
+                    return LabInterpretation.fromHl7Code(code.asText()).name();
+                }
+            }
+        }
+        JsonNode text = first.get("text");
+        if (text == null) return LabInterpretation.NOT_INTERPRETED.name();
+        LabInterpretation byName = LabInterpretation.fromCanonical(text.asText()).orElse(LabInterpretation.NOT_INTERPRETED);
+        return byName != LabInterpretation.NOT_INTERPRETED ? byName.name() : LabInterpretation.fromHl7Code(text.asText()).name();
     }
 
     private String extractNote(JsonNode obs) {

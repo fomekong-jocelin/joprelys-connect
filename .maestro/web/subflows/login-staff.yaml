@@ -1,0 +1,31 @@
+# Connexion du personnel avec OTP lu dans MailDev. Variables : BASE_URL, EMAIL, PASSWORD.
+url: ${BASE_URL}
+---
+- openLink: ${BASE_URL}/login
+- extendedWaitUntil:
+    visible:
+      css: "#staff-email"
+    timeout: 20000
+- tapOn:
+    css: "#staff-email"
+- inputText: ${EMAIL}
+- tapOn:
+    css: "input[autocomplete='current-password']"
+- inputText: ${PASSWORD}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible:
+      css: "#staff-otp"
+    timeout: 20000
+- runScript:
+    file: ../scripts/maildev-otp.js
+    env:
+      EMAIL: ${EMAIL}
+- assertTrue: ${output.otp.length == 6}
+- tapOn:
+    css: "#staff-otp"
+- inputText: ${output.otp}
+- pressKey: Enter
+- extendedWaitUntil:
+    visible: ".*(Tableau de bord|Dashboard).*"
+    timeout: 20000

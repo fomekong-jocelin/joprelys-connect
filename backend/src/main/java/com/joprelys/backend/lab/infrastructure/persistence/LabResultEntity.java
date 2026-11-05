@@ -221,7 +221,8 @@ public class LabResultEntity {
 		this.value = value;
 		this.unit = unit;
 		this.referenceRange = referenceRange;
-		this.interpretation = interpretation != null ? interpretation : "NORMAL";
+		// Une interprétation absente n'est jamais présumée normale (relecture clinique 2026-11-04).
+		this.interpretation = interpretation != null && !interpretation.isBlank() ? interpretation : "NOT_INTERPRETED";
 		this.comment = comment;
 		this.pdfFilePath = pdfFilePath;
 		this.sampleCollectedAt = sampleCollectedAt;

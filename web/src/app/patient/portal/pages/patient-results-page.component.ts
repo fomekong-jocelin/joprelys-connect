@@ -6,6 +6,7 @@ import { I18nService } from '../../../core/i18n/i18n.service';
 import { ToastService } from '../../../shared/ui/toast.service';
 
 import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
+import { labInterpretationKey, labInterpretationTone } from '../../../shared/lab/lab-interpretation';
 interface GroupedResult {
   resultNumber: string;
   examRequestNumber: string;
@@ -265,38 +266,27 @@ export class PatientResultsPageComponent implements OnInit {
   }
 
   getInterpretationLabel(inter?: string): string {
-    if (!inter) return this.t('lab.interpretation.NORMAL');
-    switch (inter.toUpperCase()) {
-      case 'LOW':
-        return this.t('lab.interpretation.LOW');
-      case 'HIGH':
-        return this.t('lab.interpretation.HIGH');
-      case 'CRITICAL':
-        return this.t('lab.interpretation.CRITICAL');
-      default:
-        return this.t('lab.interpretation.NORMAL');
-    }
+    return this.t(labInterpretationKey(inter));
   }
 
   getInterpretationClasses(inter?: string): Record<string, boolean> {
-    if (!inter) {
-      return {
-        'bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 text-[var(--text-secondary)] border-[var(--app-border)]/50': true
-      };
-    }
-    switch (inter.toUpperCase()) {
-      case 'LOW':
-      case 'HIGH':
+    switch (labInterpretationTone(inter)) {
+      case 'outside':
         return {
           'bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-300 border-amber-100 dark:border-amber-900/30': true
         };
-      case 'CRITICAL':
+      case 'critical':
         return {
           'bg-rose-50 dark:bg-rose-950/20 text-rose-700 dark:text-rose-300 border-rose-100 dark:border-rose-900/30': true
         };
-      default:
+      case 'normal':
         return {
           'bg-emerald-50 dark:bg-emerald-950/20 text-[var(--brand-success-text)] border-emerald-100 dark:border-emerald-900/30': true
+        };
+      default:
+        // Non interprété : neutre, jamais présenté comme normal.
+        return {
+          'bg-[var(--app-surface-muted)] dark:bg-[var(--bg-input)]/40 text-[var(--text-secondary)] border-[var(--app-border)]/50': true
         };
     }
   }

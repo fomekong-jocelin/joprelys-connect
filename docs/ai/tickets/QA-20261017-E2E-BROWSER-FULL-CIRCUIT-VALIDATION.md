@@ -53,7 +53,7 @@ Exécuter en temps réel dans le navigateur (Playwright) un test de bout en bout
 ## 3. Détail pas-à-pas des constatations QA
 
 ### 3.1 Authentification & Second Facteur (OTP)
-- **Action** : Saisie de `qa.admin@joprelys.local` + `Re12#He10@2021!`.
+- **Action** : Saisie de `qa.admin@joprelys.local` et de son mot de passe local (masqué le 2026-11-04 : un mot de passe ne se versionne pas).
 - **Réaction système** : Formulaire basculé sur le challenge OTP à 6 chiffres avec bouton « ← Retour à l'étape précédente ».
 - **Interception** : Code `576531` reçu par MailDev et extrait en 100 ms via `get-latest-otp.ps1`.
 - **Validation** : Saisie du code et redirection immédiate vers `/dashboard`.

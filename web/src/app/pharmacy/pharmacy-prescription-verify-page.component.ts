@@ -58,7 +58,7 @@ import { AppDatePipe } from '../shared/formatting/app-date.pipe';
               </label>
 
               @if (errorMessage()) {
-                <div class="border p-3 text-sm font-semibold"
+                <div class="border p-3 text-sm font-semibold" role="alert"
                      style="border-color: color-mix(in srgb, var(--brand-danger) 34%, transparent); border-radius: var(--radius-brand-md); color: var(--brand-danger); background: color-mix(in srgb, var(--brand-danger) 9%, var(--app-surface));">
                   {{ errorMessage() }}
                 </div>
@@ -156,6 +156,9 @@ import { AppDatePipe } from '../shared/formatting/app-date.pipe';
                           <tr>
                             <td>
                               <strong style="color: var(--text-primary)">{{ item.drugName }}</strong>
+                              @if (posologyLine(item); as posology) {
+                                <span class="mt-1 block text-xs font-semibold" style="color: var(--text-secondary)">{{ posology }}</span>
+                              }
                               @if (item.instructions) {
                                 <span class="mt-1 block text-xs" style="color: var(--text-muted)">{{ item.instructions }}</span>
                               }
@@ -327,7 +330,13 @@ export class PharmacyPrescriptionVerifyPageComponent {
       : this.t(`pharmacy.status.${status}`);
   }
 
+  /** Posologie prescrite telle que transmise par le backend : le pharmacien en a besoin pour délivrer et conseiller. */
+  posologyLine(item: PharmacyVerifyItem): string {
+    return item.posology?.trim()
+      || [item.route, item.frequency, item.duration].map((part) => part?.trim()).filter(Boolean).join(' · ');
+  }
+
   substitutionLabel(item: PharmacyVerifyItem): string {
-    return item.substitutionAllowed ? this.t('common.active') : this.t('common.inactive');
+    return item.substitutionAllowed ? this.t('pharmacy.substitutionAllowed') : this.t('pharmacy.substitutionNotAllowed');
   }
 }
