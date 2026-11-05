@@ -12,6 +12,10 @@ export interface PharmacyVerifyItem {
   quantityAlreadyDispensed: number;
   substitutionAllowed: boolean;
   instructions?: string;
+  posology?: string;
+  route?: string;
+  frequency?: string;
+  duration?: string;
 }
 
 export interface PharmacyVerifyResponse {

@@ -28,6 +28,30 @@ class FhirDiagnosticReportParserTest {
     // -------------------------------------------------------------------------
 
     @Test
+    void interpretationUsesHl7CodesAndIsNeverPresumedNormal() {
+        String fhirJson = """
+                {
+                  "resourceType": "DiagnosticReport",
+                  "subject": { "reference": "ServiceRequest/REQ-2024-002" },
+                  "result": [
+                    { "code": { "text": "Potassium" }, "valueQuantity": { "value": 6.9, "unit": "mmol/L" },
+                      "interpretation": [ { "coding": [ { "system": "http://terminology.hl7.org/CodeSystem/v3-ObservationInterpretation", "code": "HH" } ] } ] },
+                    { "code": { "text": "Sodium" }, "valueQuantity": { "value": 131, "unit": "mmol/L" },
+                      "interpretation": [ { "coding": [ { "code": "L" } ], "text": "Bas" } ] },
+                    { "code": { "text": "Calcium" }, "valueQuantity": { "value": 2.3, "unit": "mmol/L" } },
+                    { "code": { "text": "Chlore" }, "valueQuantity": { "value": 100, "unit": "mmol/L" },
+                      "interpretation": [ { "text": "plutôt correct" } ] }
+                  ]
+                }
+                """;
+
+        LabResultUploadRequest result = parser.parse(fhirJson, "Dr. Martin");
+
+        assertThat(result.results()).extracting("interpretation")
+                .containsExactly("CRITICAL", "LOW", "NOT_INTERPRETED", "NOT_INTERPRETED");
+    }
+
+    @Test
     void parseShouldExtractAnalytesFromValidFhirJson() {
         String fhirJson = """
                 {

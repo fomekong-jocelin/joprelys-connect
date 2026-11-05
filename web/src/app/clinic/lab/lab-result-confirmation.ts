@@ -1,6 +1,7 @@
 import { I18nService } from '../../core/i18n/i18n.service';
 import { interpolate } from '../../core/i18n/interpolate';
 import { ConfirmDialogOptions } from '../../shared/ui/dialog.service';
+import { labInterpretationKey } from '../../shared/lab/lab-interpretation';
 
 export interface LabResultConfirmationLine {
   readonly analyteName: string;
@@ -25,7 +26,7 @@ export function labResultConfirmation(i18n: I18nService, summary: LabResultConfi
       analyte: line.analyteName.trim(),
       value: line.value.trim(),
       unit: line.unit.trim(),
-      interpretation: i18n.t(`lab.interpretation.${line.interpretation}`),
+      interpretation: i18n.t(labInterpretationKey(line.interpretation)),
     }).trim())
     .join('\n');
 

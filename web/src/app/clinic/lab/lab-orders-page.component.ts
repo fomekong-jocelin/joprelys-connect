@@ -1,5 +1,6 @@
 import { Component, computed, inject, signal } from '@angular/core';
 import { FormArray, FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { LAB_INTERPRETATIONS } from '../../shared/lab/lab-interpretation';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppDatePipe } from '../../shared/formatting/app-date.pipe';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
@@ -308,11 +309,11 @@ import { labResultConfirmation } from './lab-result-confirmation';
                           <input class="ui-input lab-input" formControlName="value" [placeholder]="t('lab.value')" />
                           <input class="ui-input lab-input" formControlName="unit" [placeholder]="t('lab.unit')" />
                           <input class="ui-input lab-input" formControlName="referenceRange" [placeholder]="t('lab.referenceRange')" />
-                          <select class="ui-select lab-input" formControlName="interpretation">
-                            <option value="NORMAL">{{ t('lab.interpretation.NORMAL') }}</option>
-                            <option value="LOW">{{ t('lab.interpretation.LOW') }}</option>
-                            <option value="HIGH">{{ t('lab.interpretation.HIGH') }}</option>
-                            <option value="CRITICAL">{{ t('lab.interpretation.CRITICAL') }}</option>
+                          <select class="ui-select lab-input" formControlName="interpretation" [attr.aria-label]="t('lab.interpretation.label')" required>
+                            <option value="" disabled>{{ t('lab.interpretation.choose') }}</option>
+                            @for (code of interpretationChoices; track code) {
+                              <option [value]="code">{{ t('lab.interpretation.' + code) }}</option>
+                            }
                           </select>
                         </div>
                       }
@@ -464,6 +465,8 @@ export class LabOrdersPageComponent {
     'VALIDATED',
     'CANCELLED'
   ];
+
+  readonly interpretationChoices = LAB_INTERPRETATIONS;
 
   readonly resultForm = this.fb.nonNullable.group({
     validatorName: ['', Validators.required],
@@ -733,7 +736,8 @@ export class LabOrdersPageComponent {
       value: ['', Validators.required],
       unit: [''],
       referenceRange: [''],
-      interpretation: ['NORMAL'],
+      // Aucune interprétation présumée : le laboratoire la choisit explicitement (relecture clinique 2026-11-04).
+      interpretation: ['', Validators.required],
       comment: [''],
     });
   }

@@ -125,6 +125,7 @@ public class LabResultService {
 	}
 
 	private void upload(LabResultUploadRequest request, UUID actorId) {
+		requireKnownInterpretations(request.results());
 		LabOrderEntity labOrder = labOrderRepository.findByExamRequestNumber(request.examRequestNumber())
 				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Demande d'examen introuvable."));
 
@@ -188,7 +189,7 @@ public class LabResultService {
 					resultItem.value(),
 					resultItem.unit(),
 					resultItem.referenceRange(),
-					resultItem.interpretation(),
+					interpretationOf(resultItem).name(),
 					resultItem.comment(),
 					pdfFilePath,
 					request.sampleCollectedAt(),
@@ -383,9 +384,11 @@ public class LabResultService {
 	 * une notification d'urgence ; une valeur simplement anormale invite à en parler avec son médecin.
 	 */
 	private void notifyPatient(LabOrderEntity labOrder, LabResultUploadRequest request) {
-		boolean hasCritical = request.results().stream().anyMatch(result -> "CRITICAL".equals(result.interpretation()));
-		boolean hasAbnormal = request.results().stream().anyMatch(result -> "ABNORMAL".equals(result.interpretation()));
-		String available = "Vos résultats d'analyses pour la demande " + labOrder.getExamRequestNumber() + " sont disponibles.";
+		List<LabInterpretation> interpretations = request.results().stream().map(LabResultService::interpretationOf).toList();
+		boolean hasCritical = interpretations.contains(LabInterpretation.CRITICAL);
+		boolean hasAbnormal = interpretations.stream().anyMatch(LabInterpretation::isOutsideReference);
+		String available = "Vos résultats d'analyses pour la demande " + labOrder.getExamRequestNumber()
+				+ " sont disponibles dans votre espace patient.";
 		String title;
 		String message;
 		String type;
@@ -396,7 +399,8 @@ public class LabResultService {
 			type = "EMERGENCY";
 		} else if (hasAbnormal) {
 			title = "Résultats d'analyses disponibles";
-			message = available + " Certaines valeurs sont en dehors des valeurs habituelles : parlez-en avec votre médecin.";
+			message = available + " Certaines valeurs sont en dehors des valeurs de référence du laboratoire."
+					+ " Une valeur hors de ces limites n'est pas forcément anormale pour vous : parlez-en avec votre médecin.";
 			type = "INFO";
 		} else {
 			title = "Résultats d'analyses disponibles";
@@ -404,6 +408,17 @@ public class LabResultService {
 			type = "INFO";
 		}
 		notificationService.sendNotification(labOrder.getPatient().getId(), title, message, type);
+	}
+
+	private static void requireKnownInterpretations(List<LabResultItem> results) {
+		if (results != null && results.stream().anyMatch(item -> LabInterpretation.fromCanonical(item.interpretation()).isEmpty())) {
+			throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+					"Interprétation inconnue : utilisez NORMAL, LOW, HIGH, ABNORMAL, CRITICAL ou NOT_INTERPRETED.");
+		}
+	}
+
+	private static LabInterpretation interpretationOf(LabResultItem item) {
+		return LabInterpretation.fromCanonical(item.interpretation()).orElse(LabInterpretation.NOT_INTERPRETED);
 	}
 
 	@Transactional(readOnly = true)

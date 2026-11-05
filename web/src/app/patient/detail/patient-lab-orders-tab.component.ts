@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { catchError, forkJoin, map, of } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { LoadErrorComponent } from '../../shared/ui/load-error.component';
+import { labInterpretationKey, labInterpretationTone } from '../../shared/lab/lab-interpretation';
 import { PatientDetailComponent } from '../patient-detail.component';
 import { PatientApiService } from '../patient-api.service';
 import { LabOrder, LabResult } from '../patient.models';
@@ -139,7 +140,7 @@ import { LabOrder, LabResult } from '../patient.models';
                       [style.background-color]="getInterpretationColor(res.interpretation) + '15'"
                       [style.color]="getInterpretationColor(res.interpretation)"
                     >
-                      {{ res.interpretation }}
+                      {{ interpretationLabel(res.interpretation) }}
                     </span>
                   </div>
 
@@ -358,19 +359,22 @@ export class PatientLabOrdersTabComponent implements OnInit {
   }
 
   getInterpretationColor(interpretation: string): string {
-    // Lire les variables CSS dynamiques selon le thème actif (light/dark)
-    const root = document.documentElement;
-    const style = getComputedStyle(root);
-    switch (interpretation) {
-      case 'ELEVE':
+    // Variables CSS du thème actif (clair/sombre). Une interprétation inconnue reste neutre, jamais verte.
+    const style = getComputedStyle(document.documentElement);
+    switch (labInterpretationTone(interpretation)) {
+      case 'outside':
         return style.getPropertyValue('--chart-high').trim() || '#d97706';
-      case 'CRITIQUE':
+      case 'critical':
         return style.getPropertyValue('--chart-critical').trim() || '#dc2626';
-      case 'BAS':
-        return style.getPropertyValue('--chart-low').trim() || '#0b91b2';
-      default:
+      case 'normal':
         return style.getPropertyValue('--chart-normal').trim() || '#009730';
+      default:
+        return style.getPropertyValue('--text-muted').trim() || '#5b6c82';
     }
+  }
+
+  interpretationLabel(interpretation: string): string {
+    return this.i18n.t(labInterpretationKey(interpretation));
   }
 
   formatDoctorName(name?: string): string {

@@ -205,7 +205,7 @@ public class LabIntegrationControllerTest {
 				      "value": "1.45",
 				      "unit": "g/L",
 				      "referenceRange": "0.70 - 1.10",
-				      "interpretation": "ELEVE",
+				      "interpretation": "HIGH",
 				      "comment": "Patient à jeun"
 				    }
 				  ],
@@ -234,7 +234,7 @@ public class LabIntegrationControllerTest {
 		assertEquals("Glucose à jeun", res.getAnalyteName());
 		assertEquals("1.45", res.getValue());
 		assertEquals("g/L", res.getUnit());
-		assertEquals("ELEVE", res.getInterpretation());
+		assertEquals("HIGH", res.getInterpretation());
 		assertEquals("Dr. Jean Biologiste", res.getValidatorName());
 		assertNotNull(res.getPdfFilePath());
 
@@ -263,11 +263,48 @@ public class LabIntegrationControllerTest {
 		assertEquals(1, notificationCount("INFO"));
 		assertEquals(0, notificationCount("EMERGENCY"));
 
+		// HIGH et LOW (valeurs du formulaire de saisie) sont hors valeurs de référence, comme ABNORMAL.
+		uploadSingleResult("HIGH");
+		assertEquals(2, notificationCount("INFO"));
+		assertEquals(2, jdbcTemplate.queryForObject(
+				"SELECT COUNT(*) FROM notifications WHERE patient_id = ? AND message LIKE '%valeurs de référence%'",
+				Integer.class, patient.getId()));
+
 		uploadSingleResult("CRITICAL");
 		assertEquals(1, notificationCount("EMERGENCY"));
 		String message = jdbcTemplate.queryForObject(
 				"SELECT message FROM notifications WHERE patient_id = ? AND type = 'EMERGENCY'", String.class, patient.getId());
 		assertTrue(message.contains("urgences"));
+	}
+
+	@Test
+	void unknownInterpretationIsRefusedAndAbsentInterpretationIsNeverStoredAsNormal() throws Exception {
+		TenantContext.setTenantId(org.getId());
+		mockMvc.perform(post("/api/public/lab-integration/upload")
+						.header("X-API-KEY", "lab-partner-secret-token")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(resultPayload("\"interpretation\": \"PLUTOT_BON\"")))
+				.andExpect(status().isBadRequest());
+
+		TenantContext.setTenantId(org.getId());
+		mockMvc.perform(post("/api/public/lab-integration/upload")
+						.header("X-API-KEY", "lab-partner-secret-token")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content(resultPayload("\"comment\": \"sans interprétation\"")))
+				.andExpect(status().isCreated());
+		assertEquals("NOT_INTERPRETED", jdbcTemplate.queryForObject(
+				"SELECT interpretation FROM lab_results WHERE lab_order_id = ? ORDER BY version DESC LIMIT 1",
+				String.class, labOrder.getId()));
+	}
+
+	private String resultPayload(String interpretationField) {
+		return """
+				{"examRequestNumber": "%s", "validatorName": "Dr. Jean Biologiste", "status": "VALIDATED",
+				 "sampleCollectedAt": "2026-07-03T07:30:00Z", "resultAt": "2026-07-03T10:00:00Z",
+				 "validatedAt": "2026-07-03T10:15:00Z",
+				 "results": [{"analyteName": "Potassium", "value": "4.1", "unit": "mmol/L",
+				              "referenceRange": "3.5 - 5.0", %s}]}
+				""".formatted(labOrder.getExamRequestNumber(), interpretationField);
 	}
 
 	private void uploadSingleResult(String interpretation) throws Exception {
@@ -355,7 +392,7 @@ public class LabIntegrationControllerTest {
 				      "value": "1.45",
 				      "unit": "g/L",
 				      "referenceRange": "0.70 - 1.10",
-				      "interpretation": "ELEVE",
+				      "interpretation": "HIGH",
 				      "comment": "Patient à jeun"
 				    }
 				  ],
@@ -392,7 +429,7 @@ public class LabIntegrationControllerTest {
 				      "value": "1.35",
 				      "unit": "g/L",
 				      "referenceRange": "0.70 - 1.10",
-				      "interpretation": "ELEVE",
+				      "interpretation": "HIGH",
 				      "comment": "Patient à jeun"
 				    }
 				  ],
