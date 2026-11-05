@@ -1,0 +1,247 @@
+<div
+  class="fixed inset-0 z-[60] flex min-w-0 items-end justify-center overflow-x-hidden p-3 sm:items-center sm:p-4"
+  (keydown.escape)="close()"
+  (click)="close()"
+>
+  <div class="absolute inset-0 bg-[var(--overlay-bg)]" aria-hidden="true"></div>
+  <form
+    #panel
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="place-editor-title"
+    novalidate
+    class="relative flex max-h-[92vh] w-full min-w-0 max-w-lg flex-col overflow-x-hidden rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] shadow-[var(--shadow-panel)]"
+    (ngSubmit)="submit()"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="border-b border-[var(--app-border)] px-4 py-4 sm:px-5">
+      <h2 id="place-editor-title" class="break-words text-lg font-bold text-[var(--text-primary)]">{{ title() }}</h2>
+      @if (context()) {
+        <p class="mt-1 break-words text-sm text-[var(--text-secondary)]">{{ context() }}</p>
+      }
+    </header>
+
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-5">
+      @if (kind() === 'location' && !editing()) {
+        <fieldset class="min-w-0">
+          <legend class="text-sm font-semibold text-[var(--text-primary)]">{{ t('spatial.editor.location.type') }}</legend>
+          <div class="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            @for (type of locationTypes; track type) {
+              <label class="flex min-h-12 min-w-0 cursor-pointer items-start gap-3 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] p-3 transition-colors hover:bg-[var(--app-surface-muted)] has-[:checked]:border-[var(--brand-primary)] has-[:checked]:bg-[var(--brand-primary-subtle)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--brand-primary)]">
+                <input type="radio" name="nodeType" class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)] focus:outline-none" [value]="type" [checked]="nodeType() === type" (change)="nodeType.set(type)" />
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-[var(--text-primary)]">{{ t('spatial.locationType.' + type) }}</span>
+                  <span class="mt-0.5 block text-xs leading-5 text-[var(--text-secondary)]">{{ t('spatial.locationType.help.' + type) }}</span>
+                </span>
+              </label>
+            }
+          </div>
+        </fieldset>
+      }
+
+      @if (kind() === 'location' || kind() === 'space') {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="place-name">{{ t('spatial.editor.' + kind() + '.name') }}</label>
+          <input
+            id="place-name"
+            class="ui-input mt-1.5 w-full min-w-0"
+            name="name"
+            maxlength="120"
+            autocomplete="off"
+            [attr.aria-invalid]="submitted() && !!errors().name"
+            [attr.aria-describedby]="submitted() && errors().name ? 'place-name-error' : 'place-name-hint'"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+          />
+          @if (submitted() && errors().name) {
+            <p id="place-name-error" class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().name) }}</p>
+          } @else {
+            <p id="place-name-hint" class="mt-1 text-xs text-[var(--text-muted)]">{{ t('spatial.editor.' + kind() + '.nameHint') }}</p>
+          }
+        </div>
+      }
+
+      @if (kind() === 'space') {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="space-type">{{ t('spatial.editor.space.type') }}</label>
+          <select
+            id="space-type"
+            class="ui-select mt-1.5 w-full min-w-0"
+            name="spaceTypeCode"
+            [disabled]="inpatientLocked()"
+            [attr.aria-invalid]="submitted() && !!errors().spaceType"
+            [ngModel]="spaceTypeCode()"
+            (ngModelChange)="spaceTypeCode.set($event)"
+          >
+            @for (type of spaceTypes(); track type.code) {
+              <option [value]="type.code">{{ spaceTypeLabel(type) }}</option>
+            }
+          </select>
+          @if (submitted() && errors().spaceType) {
+            <p class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().spaceType) }}</p>
+          }
+        </div>
+
+        @if (inpatientCompatible()) {
+          <div class="min-w-0 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-3">
+            <label class="flex min-h-11 cursor-pointer items-start gap-3">
+              <input
+                type="checkbox"
+                name="enableInpatientProfile"
+                class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)]"
+                [disabled]="inpatientLocked()"
+                [ngModel]="enableInpatientProfile()"
+                (ngModelChange)="enableInpatientProfile.set($event)"
+              />
+              <span class="min-w-0">
+                <span class="block text-sm font-semibold text-[var(--text-primary)]">{{ t('spatial.editor.space.inpatient') }}</span>
+                <span class="mt-0.5 block text-xs leading-5 text-[var(--text-secondary)]">
+                  {{ t(inpatientLocked() ? 'spatial.editor.space.inpatientLocked' : 'spatial.editor.space.inpatientHelp') }}
+                </span>
+              </span>
+            </label>
+            @if (enableInpatientProfile()) {
+              <label class="mt-3 block text-sm font-semibold text-[var(--text-primary)]" for="comfort-level">{{ t('spatial.config.comfortLevel') }}</label>
+              <select id="comfort-level" class="ui-select mt-1.5 w-full min-w-0" name="comfortLevel" [ngModel]="comfortLevel()" (ngModelChange)="comfortLevel.set($event)">
+                @for (level of comfortLevels; track level) {
+                  <option [value]="level">{{ t('spatial.comfort.' + level) }}</option>
+                }
+              </select>
+            }
+          </div>
+        }
+      }
+
+      @if (kind() === 'location' || kind() === 'space') {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="place-parent">{{ t('spatial.editor.parent') }}</label>
+          <select id="place-parent" class="ui-select mt-1.5 w-full min-w-0" name="parentId" [ngModel]="parentId()" (ngModelChange)="parentId.set($event)">
+            <option value="">{{ t('spatial.editor.parentRoot') }}</option>
+            @for (location of parentOptions(); track location.id) {
+              <option [value]="location.id">{{ location.name }} · {{ t('spatial.locationType.' + location.nodeType) }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="place-code">{{ t('spatial.editor.code') }}</label>
+          <input
+            id="place-code"
+            class="ui-input mt-1.5 w-full min-w-0 font-mono uppercase"
+            name="code"
+            maxlength="64"
+            autocomplete="off"
+            spellcheck="false"
+            [attr.aria-invalid]="codeErrorVisible()"
+            [attr.aria-describedby]="codeErrorVisible() ? 'place-code-error' : 'place-code-hint'"
+            [ngModel]="code()"
+            (ngModelChange)="editCode($event)"
+          />
+          @if (codeErrorVisible()) {
+            <p id="place-code-error" class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().code) }}</p>
+          } @else {
+            <p id="place-code-hint" class="mt-1 text-xs text-[var(--text-muted)]">{{ t('spatial.editor.codeHint') }}</p>
+          }
+        </div>
+      }
+
+      @if (kind() === 'bed') {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="bed-number">{{ t('spatial.editor.bed.name') }}</label>
+          <input
+            id="bed-number"
+            class="ui-input mt-1.5 w-full min-w-0"
+            name="bedNumber"
+            maxlength="20"
+            autocomplete="off"
+            [attr.aria-invalid]="submitted() && !!errors().bedNumber"
+            [attr.aria-describedby]="submitted() && errors().bedNumber ? 'bed-number-error' : 'bed-number-hint'"
+            [ngModel]="name()"
+            (ngModelChange)="name.set($event)"
+          />
+          @if (submitted() && errors().bedNumber) {
+            <p id="bed-number-error" class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().bedNumber) }}</p>
+          } @else {
+            <p id="bed-number-hint" class="mt-1 text-xs text-[var(--text-muted)]">{{ t('spatial.editor.bed.nameHint') }}</p>
+          }
+        </div>
+      }
+
+      @if (kind() === 'assignment') {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="assignment-unit">{{ t('spatial.editor.assignment.unit') }}</label>
+          <select
+            id="assignment-unit"
+            class="ui-select mt-1.5 w-full min-w-0"
+            name="unitId"
+            [disabled]="editing()"
+            [attr.aria-invalid]="submitted() && !!errors().unit"
+            [ngModel]="unitId()"
+            (ngModelChange)="unitId.set($event)"
+          >
+            @for (unit of unitOptions(); track unit.id) {
+              <option [value]="unit.id">{{ unit.label }}</option>
+            }
+          </select>
+          @if (submitted() && errors().unit) {
+            <p class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().unit) }}</p>
+          }
+        </div>
+        <div class="grid min-w-0 grid-cols-1 gap-4 sm:grid-cols-2">
+          <div class="min-w-0">
+            <label class="text-sm font-semibold text-[var(--text-primary)]" for="assignment-from">{{ t('spatial.editor.assignment.from') }}</label>
+            <input id="assignment-from" type="datetime-local" class="ui-input mt-1.5 w-full min-w-0" name="validFrom" [attr.aria-invalid]="submitted() && !!errors().from" [ngModel]="validFrom()" (ngModelChange)="validFrom.set($event)" />
+            @if (submitted() && errors().from) {
+              <p class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().from) }}</p>
+            }
+          </div>
+          <div class="min-w-0">
+            <label class="text-sm font-semibold text-[var(--text-primary)]" for="assignment-to">{{ t('spatial.editor.assignment.to') }}</label>
+            <input id="assignment-to" type="datetime-local" class="ui-input mt-1.5 w-full min-w-0" name="validTo" [attr.aria-invalid]="submitted() && !!errors().order" [ngModel]="validTo()" (ngModelChange)="validTo.set($event)" />
+            @if (submitted() && errors().order) {
+              <p class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(errors().order) }}</p>
+            } @else {
+              <p class="mt-1 text-xs text-[var(--text-muted)]">{{ t('spatial.editor.assignment.toHint') }}</p>
+            }
+          </div>
+        </div>
+      }
+
+      @if (error(); as failure) {
+        <div class="ui-alert-danger text-sm" role="alert">
+          <p class="font-semibold">{{ failure.message }}</p>
+          @if (failure.detail) {
+            <p class="mt-1">{{ failure.detail }}</p>
+          }
+        </div>
+      }
+    </div>
+
+    <footer class="border-t border-[var(--app-border)] px-4 py-3 sm:px-5">
+      @if (confirmingRemoval()) {
+        <p class="text-sm text-[var(--text-primary)]" role="status">{{ t('spatial.editor.' + kind() + '.removeConfirm') }}</p>
+        <div class="mt-3 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+          <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" [disabled]="busy()" (click)="confirmingRemoval.set(false)">{{ t('common.cancel') }}</button>
+          <button type="button" class="ui-button ui-button-danger w-full sm:w-auto" [disabled]="busy()" (click)="remove.emit()">{{ t('spatial.editor.' + kind() + '.remove') }}</button>
+        </div>
+      } @else {
+        <div class="flex flex-col-reverse gap-2 sm:flex-row sm:items-center sm:justify-between">
+          @if (canRemove()) {
+            <button type="button" class="ui-button ui-button-ghost w-full text-[var(--brand-danger-text)] sm:w-auto" [disabled]="busy() || removalBlocked()" [attr.aria-describedby]="removalBlocked() ? 'place-removal-blocked' : null" (click)="confirmingRemoval.set(true)">
+              {{ t('spatial.editor.' + kind() + '.remove') }}
+            </button>
+          } @else {
+            <span></span>
+          }
+          <div class="flex flex-col-reverse gap-2 sm:flex-row">
+            <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" [disabled]="busy()" (click)="close()">{{ t('common.cancel') }}</button>
+            <button type="submit" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="busy()">{{ t(busy() ? 'common.saving' : 'common.save') }}</button>
+          </div>
+        </div>
+        @if (removalBlocked()) {
+          <p id="place-removal-blocked" class="mt-2 text-xs text-[var(--text-muted)]">{{ t('spatial.editor.bed.removeBlocked') }}</p>
+        }
+      }
+    </footer>
+  </form>
+</div>

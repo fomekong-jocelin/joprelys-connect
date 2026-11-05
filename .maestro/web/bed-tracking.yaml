@@ -1,0 +1,37 @@
+# Recette UX-20261105 S1 : « Suivi des lits » en vue globale.
+# Vérifie la synthèse, les filtres par état et l'affichage de toutes les chambres en une page.
+# Ne modifie aucun lit : seuls les filtres sont manipulés.
+# Variables : BASE_URL, EMAIL (compte avec HOSPITALIZATION_READ), PASSWORD.
+# Prérequis : l'établissement du compte a au moins une chambre d'hospitalisation avec des lits.
+url: ${BASE_URL}
+tags:
+  - recette
+  - bed-tracking
+---
+- runFlow:
+    file: subflows/login-staff.yaml
+    env:
+      EMAIL: ${EMAIL}
+- openLink: ${BASE_URL}/clinic/spatial
+- extendedWaitUntil:
+    visible: "Suivi des lits"
+    timeout: 15000
+- assertVisible: ".*lits? libres?"
+- assertVisible: "sur .* ouverts?.*occupation.*"
+# Plus de liste déroulante : toutes les chambres sont affichées directement.
+- assertNotVisible: "Sélectionner un espace"
+- assertVisible:
+    css: "main section h2[id^='room-']"
+
+# Filtre : un état choisi n'affiche que ses lits, un second appui revient à « Tous ».
+- tapOn:
+    css: "[role='group'] button[aria-pressed='false']:not([disabled])"
+- assertVisible:
+    css: "[role='group'] button[aria-pressed='true']"
+- tapOn:
+    css: "[role='group'] button[aria-pressed='true']"
+- assertVisible:
+    css: "[role='group'] button[aria-pressed='true']:first-child"
+
+- tapOn: "Actualiser"
+- assertVisible: "Mis à jour à .*"

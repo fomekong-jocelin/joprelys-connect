@@ -102,3 +102,31 @@ Toute mise à jour du statut du lit (passage de `FREE` à `OCCUPIED` au moment d
 ## 8. Impact version / SemVer
 
 - **MINOR bump** : Ajout d'une nouvelle fonctionnalité majeure rétrocompatible.
+
+## 9. Vue globale de l'occupation (UX-20261105-B, S1)
+
+### API
+| Méthode | Endpoint | Permission | Réponse |
+|---|---|---|---|
+| `GET` | `/api/spatial/inpatient-occupancy` | `HOSPITALIZATION_READ` | `List<SpaceOccupancyResponse>`. Contient les chambres actives à profil d'hospitalisation de l'établissement courant, triées par code, avec leurs lits triés par numéro. Les compteurs sont les mêmes que ceux de `GET /spaces/{id}/occupancy`. |
+
+### Backend
+- `InpatientOccupancyQuery` est le contrat ; `DefaultInpatientOccupancyQuery` l'implémente. `SpatialController` ne fait que déléguer.
+- 3 requêtes au lieu de N + 1 :
+  1. les chambres via `HospitalLocationConfigurationService.listSpaces`, qui fixe le tenant de l'utilisateur ;
+  2. les lits via `BedRepository.findBySpaceIdInOrderByBedNumberAsc` (`@TenantId`) ;
+  3. les affectations actives via `BedAssignmentRepository.findActiveBedIds`.
+- Les compteurs réutilisent `SpatialBedMetrics.calculate`, la même règle que la vue par chambre.
+- Tests :
+  - `SpatialControllerTest.shouldExposeEveryInpatientRoomOfTheTenantInOneRequest` : chambres d'un autre établissement et salles non hospitalières exclues, tri, compteurs ;
+  - `SpatialControllerAuthorizationTest`.
+
+### Web
+- `bed-display-state.ts` : fonctions pures `bedDisplayState` (3 axes → 1 état) et `bedActions` (actions permises selon l'état et les permissions), plus les styles d'état sous forme de jetons.
+- `bed-tile.component` : un lit, son état et ses actions. Le menu partagé `shared/ui/menu-button` est utilisé quand plusieurs choix existent.
+- `spatial-management-page.component` :
+  - charge tout avec `SpatialApiService.listInpatientOccupancy()` et calcule totaux, comptes par état et chambres visibles avec des `computed` ;
+  - rafraîchit sans squelette après une action ;
+  - traduit les erreurs (409 rafraîchit la liste, 403 a son propre message) ;
+  - annonce les changements dans une région `aria-live`.
+- Tests : `bed-display-state.spec`, `bed-tile.component.spec`, `spatial-management-page.component.spec`. Recette : `.maestro/web/bed-tracking.yaml`.

@@ -163,6 +163,11 @@ export class SpatialApiService {
     });
   }
 
+  /** Toutes les chambres d'hébergement actives de l'établissement, avec leurs lits, en une requête. */
+  listInpatientOccupancy(): Observable<SpaceOccupancyView[]> {
+    return this.http.get<SpaceOccupancyView[]>('/api/spatial/inpatient-occupancy');
+  }
+
   getSpaceOccupancy(spaceId: string): Observable<SpaceOccupancyView> {
     return this.http.get<SpaceOccupancyView>(`/api/spatial/spaces/${spaceId}/occupancy`);
   }

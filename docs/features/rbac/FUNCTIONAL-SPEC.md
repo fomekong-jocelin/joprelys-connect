@@ -35,3 +35,25 @@ Cette fonctionnalité garantit la cloisonnement et l'autorisation d'accès aux d
 1. **Visibilité conditionnelle** : Les menus d'administration ne sont visibles que pour `ADMIN_JOPRELYS`. Les actions de soin ne sont visibles que par les médecins et pharmaciens.
 2. **Cloisonnement strict** : Un utilisateur avec le rôle `PHARMACIEN` ou `MEDECIN` ne peut en aucun cas charger la page d'administration système.
 3. **Traduction / i18n** : Les messages d'accès refusé et les titres de rôles doivent supporter les langues française et anglaise (standards de la plateforme).
+
+## 6. Écran « Rôles et autorisations » (`/clinic/rbac`) — UX-20261105 S3
+
+But de l'écran : décider **ce que chaque personne peut voir et faire** dans l'établissement. Une personne reçoit
+un ou plusieurs rôles ; un rôle regroupe des autorisations. Trois onglets, dans l'ordre de fréquence d'usage :
+
+1. **Personnes** : recherche par nom ou e-mail (sans tenir compte des accents), liste avec les **noms** des rôles,
+   rôles à cocher (les autorisations s'additionnent), bouton « Enregistrer les rôles » actif seulement après une
+   modification. Au moins un rôle doit rester coché. Les **autorisations effectives** s'affichent par nom, regroupées
+   par domaine traduit, dans une section repliable. Le compte connecté est en **lecture seule** (pas
+   d'auto-élévation : la règle est appliquée par le serveur, l'écran ne fait que l'expliquer).
+2. **Rôles** : un rôle système est un **modèle en lecture seule** (un seul indicateur « Lecture seule ») qu'on peut
+   **dupliquer** ou remplacer par un rôle vide. Un rôle personnalisé se modifie : nom, code interne **proposé à partir
+   du nom** (modifiable, même règle que le serveur `[A-Z][A-Z0-9_]{2,63}`), description, « peut être donné aux
+   personnes », « rôle actif ». Les autorisations sont présentées par domaine repliable avec un compteur
+   « cochées / total », par nom et description, **sans code technique**.
+3. **Historique** : date au format `dd/MM/yyyy HH:mm`, changement en clair (« Rôle créé », « Rôles d'une personne
+   modifiés »…), détails. Une action inconnue reste lisible telle quelle.
+
+États : chargement (squelette), erreur traduite (+ précision du serveur quand l'écran est en français), liste vide,
+recherche sans résultat, succès annoncé, saisie conservée en cas d'échec d'enregistrement. Textes FR/EN dans
+`assets/i18n/features/rbac/`.

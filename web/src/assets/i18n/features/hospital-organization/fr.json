@@ -64,5 +64,7 @@
   "hospitalOrg.feedback.saved": "Unité enregistrée.",
   "hospitalOrg.feedback.activated": "Unité réactivée.",
   "hospitalOrg.feedback.deactivated": "Unité désactivée.",
-  "hospitalOrg.feedback.error": "Impossible de mettre à jour l'organisation hospitalière."
+  "hospitalOrg.feedback.error": "Impossible de mettre à jour l'organisation hospitalière.",
+  "hospitalOrg.actions.addUnit": "Ajouter une unité",
+  "hospitalOrg.feedback.groupCreated": "Unité enregistrée. Pour y ranger un service existant, cliquez sur « Modifier » sur ce service et choisissez-la dans « Rattaché à »."
 }

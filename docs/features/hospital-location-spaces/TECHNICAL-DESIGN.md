@@ -340,3 +340,18 @@ Le nouveau container Angular ne doit pas devenir un composant monolithique. Pré
 - inpatient/bed editor.
 
 Cible : composants <300 lignes, maximum 500 lignes selon les règles du projet.
+
+## 14. Écran « Chambres et lits » découpé (UX-20261105-B, S2)
+
+Le composant de 402 lignes, avec un gabarit de 238 lignes, est découpé :
+- `configuration/place-tree.ts` : fonctions pures `buildPlaceTree`, `currentAssignments`, `inactiveCount` et `isValidPlaceCode` (miroir de `CODE_PATTERN`).
+- `configuration/place-editor.component` : fenêtre de saisie unique pilotée par `PlaceEditorRequest`. Elle émet `PlaceSaveEvent` et `remove` et n'appelle jamais l'API.
+- `configuration/room-card.component` : une salle, ses services en cours et ses lits.
+- `spatial-configuration-page.component` : chargement (inchangé), traduction des appels API, erreurs.
+
+Le code proposé réutilise `suggestUnitCode` et `normalizeUnitCode` (`hospital-organization/org-unit-code.ts`). La règle spatiale (2 caractères minimum) est plus large que celle des unités, donc tout code proposé est valide.
+
+Aucun changement d'API ni de règle serveur.
+
+Tests : `place-tree.spec`, `place-editor.component.spec`, `spatial-configuration-page.component.spec`. Recette : `.maestro/web/rooms-and-beds.yaml`.
+

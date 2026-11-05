@@ -1,0 +1,38 @@
+# Recette UX-20261105-B S2 : écran « Chambres et lits » compréhensible.
+# Vérifie l'arbre des lieux, les actions nommées et la fenêtre de saisie guidée (code proposé).
+# N'enregistre rien : la fenêtre est fermée avec « Annuler ».
+# Variables : BASE_URL, EMAIL (administrateur clinique avec SPATIAL_CONFIGURATION_MANAGE), PASSWORD.
+# Prérequis : l'établissement du compte a au moins une salle configurée.
+url: ${BASE_URL}
+tags:
+  - recette
+  - rooms-and-beds
+---
+- runFlow:
+    file: subflows/login-staff.yaml
+    env:
+      EMAIL: ${EMAIL}
+- openLink: ${BASE_URL}/clinic/spatial/configuration
+- extendedWaitUntil:
+    visible: "Chambres et lits"
+    timeout: 15000
+- assertVisible: "Salles par lieu"
+- assertVisible: "Service :.*"
+# Plus d'énumérations brutes ni de surtitres techniques.
+- assertNotVisible: "HOSPITAL_ROOM"
+- assertNotVisible: "Rattachements service ↔ espace"
+
+# Fenêtre de saisie : nom expliqué, code proposé à partir du nom, validation après envoi.
+- tapOn:
+    css: "app-page-header button.ui-button-primary"
+- extendedWaitUntil:
+    visible: "Nom de la salle"
+    timeout: 5000
+- assertVisible: "Situé dans"
+- tapOn:
+    css: "#place-name"
+- inputText: "Chambre Recette 9"
+- assertVisible:
+    css: "#place-code"
+- tapOn: "Annuler"
+- assertNotVisible: "Nom de la salle"

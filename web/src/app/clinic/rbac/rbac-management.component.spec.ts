@@ -1,14 +1,17 @@
-import { TestBed } from '@angular/core/testing';
+import { HttpErrorResponse } from '@angular/common/http';
+import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { ActivatedRoute, convertToParamMap } from '@angular/router';
 import { of, throwError } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { RBAC_PERMISSIONS, RBAC_ROLES, RBAC_USERS, rbacI18nStub } from '../../../testing/rbac-fixtures';
 import { OrganizationApiService } from '../organizations/organization-api.service';
 import { Organization } from '../organizations/organizations.models';
 import { RbacApiService } from './rbac-api.service';
 import { RbacManagementComponent } from './rbac-management.component';
-import { RbacPermission, RbacRole, RbacUserAccess } from './rbac.models';
+import { RbacRole } from './rbac.models';
 
 describe('RbacManagementComponent', () => {
+  let fixture: ComponentFixture<RbacManagementComponent>;
   let component: RbacManagementComponent;
   let api: {
     listRoles: ReturnType<typeof vi.fn>;
@@ -23,58 +26,12 @@ describe('RbacManagementComponent', () => {
   };
   let organizationApi: { list: ReturnType<typeof vi.fn> };
   let route: { snapshot: { queryParamMap: ReturnType<typeof convertToParamMap> } };
-
-  const permissions: RbacPermission[] = [
-    { code: 'CASH_QUEUE_READ', domain: 'CAISSE', name: 'Consulter la file' },
-    { code: 'CASH_PAYMENT_COLLECT', domain: 'CAISSE', name: 'Encaisser' },
-  ];
-
-  const roles: RbacRole[] = [
-    {
-      id: 'role-admin',
-      code: 'ADMIN_CLINIQUE',
-      name: 'Administrateur clinique',
-      systemRole: true,
-      assignable: true,
-      enabled: true,
-      permissions: ['RBAC_MANAGE'],
-    },
-    {
-      id: 'role-cashier',
-      code: 'CAISSIER',
-      name: 'Caissier',
-      systemRole: true,
-      assignable: true,
-      enabled: true,
-      permissions: ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT'],
-    },
-  ];
-
-  const users: RbacUserAccess[] = [
-    {
-      id: 'user-admin',
-      email: 'admin@test.local',
-      displayName: 'Admin clinique',
-      enabled: true,
-      currentUser: true,
-      roles: ['ADMIN_CLINIQUE'],
-      permissions: ['RBAC_MANAGE'],
-    },
-    {
-      id: 'user-cashier',
-      email: 'cashier@test.local',
-      displayName: 'Caissier test',
-      enabled: true,
-      currentUser: false,
-      roles: ['CAISSIER'],
-      permissions: ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT'],
-    },
-  ];
+  let i18n: ReturnType<typeof rbacI18nStub>;
 
   const organization: Organization = {
     id: 'org-clinic-1',
-    name: 'Clinique Saint Jean',
-    email: 'contact@saint-jean.test',
+    name: 'Clinique de test',
+    email: 'contact@clinique.test',
     city: 'Douala',
     status: 'ACTIVE',
     createdAt: '2026-07-11T00:00:00Z',
@@ -83,13 +40,14 @@ describe('RbacManagementComponent', () => {
     responsibleName: 'Direction',
     apiEnabled: true,
   };
+  const custom = RBAC_ROLES[2];
 
   beforeEach(() => {
     sessionStorage.clear();
     api = {
-      listRoles: vi.fn(() => of(roles)),
-      listPermissions: vi.fn(() => of(permissions)),
-      listUsers: vi.fn(() => of(users)),
+      listRoles: vi.fn(() => of(RBAC_ROLES)),
+      listPermissions: vi.fn(() => of(RBAC_PERMISSIONS)),
+      listUsers: vi.fn(() => of(RBAC_USERS)),
       ensureMyAccess: vi.fn(() => of({ userId: 'user-admin', roles: ['ADMIN_CLINIQUE'], permissions: ['RBAC_MANAGE'] })),
       listAudit: vi.fn(() => of([])),
       replaceUserRoles: vi.fn(),
@@ -99,6 +57,7 @@ describe('RbacManagementComponent', () => {
     };
     organizationApi = { list: vi.fn(() => of([organization])) };
     route = { snapshot: { queryParamMap: convertToParamMap({}) } };
+    i18n = rbacI18nStub();
 
     TestBed.configureTestingModule({
       imports: [RbacManagementComponent],
@@ -106,34 +65,36 @@ describe('RbacManagementComponent', () => {
         { provide: RbacApiService, useValue: api },
         { provide: ActivatedRoute, useValue: route },
         { provide: OrganizationApiService, useValue: organizationApi },
-        { provide: I18nService, useValue: { t: (_key: string, fallback?: string) => fallback ?? _key } },
+        { provide: I18nService, useValue: i18n },
       ],
     });
-    TestBed.overrideComponent(RbacManagementComponent, { set: { template: '' } });
-
-    component = TestBed.createComponent(RbacManagementComponent).componentInstance;
+    TestBed.overrideComponent(RbacManagementComponent, {
+      set: { imports: [], template: '' },
+    });
+    fixture = TestBed.createComponent(RbacManagementComponent);
+    component = fixture.componentInstance;
   });
 
-  it('should load the requested audit tab once after resolving the workspace', () => {
+  it('loads the requested audit tab once after resolving the workspace', () => {
     route.snapshot.queryParamMap = convertToParamMap({ tab: 'audit' });
     component.ngOnInit();
+
     expect(component.activeTab()).toBe('audit');
     expect(api.listAudit).toHaveBeenCalledTimes(1);
     expect(component.loading()).toBe(false);
   });
 
-  it('should load roles, permissions and users with an initial selection', () => {
-    component.loadWorkspace();
+  it('loads roles, permissions and people of the facility', () => {
+    component.ngOnInit();
 
-    expect(component.roles()).toEqual(roles);
-    expect(component.permissions()).toEqual(permissions);
-    expect(component.users()).toEqual(users);
-    expect(component.selectedUserId()).toBe('user-admin');
-    expect(component.selectedRoleId()).toBe('role-admin');
+    expect(component.roles()).toEqual(RBAC_ROLES);
+    expect(component.permissions()).toEqual(RBAC_PERMISSIONS);
+    expect(component.users()).toEqual(RBAC_USERS);
+    expect(api.listRoles).toHaveBeenCalledWith(undefined);
     expect(component.loading()).toBe(false);
   });
 
-  it('should let a platform administrator select the clinic scope', () => {
+  it('lets a platform administrator choose the facility scope', () => {
     api.ensureMyAccess.mockReturnValue(of({
       userId: 'platform-admin',
       roles: ['ADMIN_JOPRELYS'],
@@ -148,87 +109,80 @@ describe('RbacManagementComponent', () => {
     expect(api.listUsers).toHaveBeenCalledWith(organization.id);
   });
 
-  it('should keep the current user roles read-only (no self-escalation)', () => {
-    component.roles.set(roles);
-    component.users.set(users);
-    component.selectUser(users[0]);
-    const before = component.selectedUserRoleIds();
+  it('saves the roles of a person and confirms it', () => {
+    const updated = { ...RBAC_USERS[1], roles: ['CAISSIER', 'ADMIN_CLINIQUE'] };
+    api.replaceUserRoles.mockReturnValue(of(updated));
+    component.ngOnInit();
 
-    expect(component.isRoleDisabled(users[0], roles[0])).toBe(true);
-    expect(component.isRoleDisabled(users[0], roles[1])).toBe(true);
-    component.toggleUserRole('role-cashier');
-    expect(component.selectedUserRoleIds()).toEqual(before);
+    component.saveUserRoles({ userId: 'user-cashier', roleIds: ['role-cashier', 'role-admin'] });
 
-    component.saveUserRoles();
-    expect(api.replaceUserRoles).not.toHaveBeenCalled();
-  });
-
-  it('should let an administrator change the roles of another user', () => {
-    api.replaceUserRoles.mockReturnValue(of({ ...users[1], roles: ['CAISSIER', 'ADMIN_CLINIQUE'] }));
-    component.roles.set(roles);
-    component.users.set(users);
-    component.selectUser(users[1]);
-
-    expect(component.isRoleDisabled(users[1], roles[0])).toBe(false);
-    component.toggleUserRole('role-admin');
-    component.saveUserRoles();
-
-    expect(api.replaceUserRoles).toHaveBeenCalledWith(users[1].id, ['role-cashier', 'role-admin'], undefined);
-  });
-
-  it('should prepare an editable custom copy of a system role', () => {
-    component.roles.set(roles);
-    component.selectRole(roles[1]);
-
-    component.duplicateSelectedRole();
-
-    expect(component.selectedRoleId()).toBeNull();
-    expect(component.isEditingSystemRole()).toBe(false);
-    expect(component.roleCode()).toBe('CAISSIER_CUSTOM');
-    expect(component.roleName()).toBe('Caissier personnalisé');
-    expect(component.selectedPermissionCodes()).toEqual(['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT']);
-    expect(component.success()).toContain('La copie est prête');
-  });
-
-  it('should create a custom role with the selected permissions', () => {
-    const created: RbacRole = {
-      id: 'role-custom',
-      code: 'CAISSE_SUPERVISEUR',
-      name: 'Superviseur caisse',
-      description: 'Contrôle la caisse.',
-      systemRole: false,
-      assignable: true,
-      enabled: true,
-      permissions: ['CASH_QUEUE_READ'],
-    };
-    api.createRole.mockReturnValue(of(created));
-    component.roles.set(roles);
-    component.newRole();
-    component.roleCode.set('CAISSE_SUPERVISEUR');
-    component.roleName.set('Superviseur caisse');
-    component.roleDescription.set('Contrôle la caisse.');
-    component.selectedPermissionCodes.set(['CASH_QUEUE_READ']);
-
-    component.saveRole();
-
-    expect(api.createRole).toHaveBeenCalledWith({
-      code: 'CAISSE_SUPERVISEUR',
-      name: 'Superviseur caisse',
-      description: 'Contrôle la caisse.',
-      assignable: true,
-      permissionCodes: ['CASH_QUEUE_READ'],
-    }, undefined);
-    expect(component.roles()).toContainEqual(created);
-    expect(component.selectedRoleId()).toBe('role-custom');
+    expect(api.replaceUserRoles).toHaveBeenCalledWith('user-cashier', ['role-cashier', 'role-admin'], undefined);
+    expect(component.users()[1]).toEqual(updated);
+    expect(component.success()).toBe('rbac.userRolesSaved');
     expect(component.saving()).toBe(false);
   });
 
-  it('should expose a readable error when workspace loading fails', () => {
-    api.listRoles.mockReturnValue(throwError(() => ({ error: { detail: 'Accès refusé' } })));
+  it('creates a role and adds it to the list', () => {
+    const created: RbacRole = { ...custom, id: 'role-new', code: 'AGENT_ACCUEIL', name: 'Agent d’accueil' };
+    api.createRole.mockReturnValue(of(created));
+    component.ngOnInit();
+    const request = { code: 'AGENT_ACCUEIL', name: 'Agent d’accueil', assignable: true, permissionCodes: ['CASH_QUEUE_READ'] };
 
-    component.loadWorkspace();
+    component.saveRole({ id: null, request });
 
-    expect(component.error()).toBe('Accès refusé');
+    expect(api.createRole).toHaveBeenCalledWith(request, undefined);
+    expect(component.roles()).toContainEqual(created);
+    expect(component.success()).toBe('rbac.roleSaved');
+  });
+
+  it('updates a role then replaces its permissions', () => {
+    const changed: RbacRole = { ...custom, permissions: ['CASH_QUEUE_READ', 'CASH_PAYMENT_COLLECT'] };
+    api.updateRole.mockReturnValue(of(custom));
+    api.replaceRolePermissions.mockReturnValue(of(changed));
+    component.ngOnInit();
+    const request = { code: custom.code, name: custom.name, assignable: true, enabled: true };
+
+    component.saveRole({ id: custom.id, request, permissionCodes: changed.permissions });
+
+    expect(api.updateRole).toHaveBeenCalledWith(custom.id, request, undefined);
+    expect(api.replaceRolePermissions).toHaveBeenCalledWith(custom.id, changed.permissions, undefined);
+    expect(component.roles().find((role) => role.id === custom.id)).toEqual(changed);
+  });
+
+  it('keeps the input and explains a refused change', () => {
+    api.replaceUserRoles.mockReturnValue(throwError(() => new HttpErrorResponse({
+      status: 403,
+      error: { detail: 'Un administrateur ne peut pas modifier ses propres rôles.' },
+    })));
+    component.ngOnInit();
+
+    component.saveUserRoles({ userId: 'user-cashier', roleIds: ['role-admin'] });
+
+    expect(component.error()).toBe('rbac.forbidden Un administrateur ne peut pas modifier ses propres rôles.');
+    expect(component.users()).toEqual(RBAC_USERS);
+    expect(component.saving()).toBe(false);
+  });
+
+  it('shows the translated load error without the French server detail in English', () => {
+    i18n.locale.set('en');
+    api.listRoles.mockReturnValue(throwError(() => new HttpErrorResponse({ status: 500, error: { detail: 'Erreur interne' } })));
+
+    component.ngOnInit();
+
+    expect(component.error()).toBe('rbac.loadError');
     expect(component.loading()).toBe(false);
+  });
+
+  it('moves between tabs with the arrow keys', () => {
+    component.ngOnInit();
+    const tablist = document.createElement('div');
+    const event = new KeyboardEvent('keydown', { key: 'ArrowLeft', cancelable: true });
+    Object.defineProperty(event, 'currentTarget', { value: tablist });
+
+    component.moveTab(event);
+
+    expect(component.activeTab()).toBe('audit');
+    expect(event.defaultPrevented).toBe(true);
+    expect(api.listAudit).toHaveBeenCalledTimes(1);
   });
 });

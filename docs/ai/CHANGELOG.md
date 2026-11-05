@@ -8,6 +8,13 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **UX-20261105-B — Écrans d'administration clinique compréhensibles** (Added / Changed) :
+  - Organisation hospitalière : « Ajouter une unité » propose toujours les 4 niveaux (pôle, département, service, unité de soins), même quand des services existent.
+  - Suivi des lits : une seule page montre toutes les chambres et leurs lits, avec une synthèse « N lits libres sur M ouverts · occupation X % », un état lisible par lit, des filtres par état et des actions nommées. Nouvel endpoint en lecture seule `GET /api/spatial/inpatient-occupancy` (`HOSPITALIZATION_READ`, isolé par établissement, 3 requêtes au lieu d'une par chambre).
+  - Chambres et lits : arbre des lieux avec leurs salles, services rattachés et lits ; énumérations traduites ; fenêtre unique avec code proposé, validation en ligne et erreurs dans la fenêtre.
+  - Rôles et autorisations : onglets Personnes, Rôles et Historique ; recherche de personne ; autorisations affichées par nom et par domaine, sans code ; rôle système dupliqué en un clic avec code proposé ; historique en clair. Textes FR/EN dans `features/rbac`.
+  - Aucune règle métier déplacée côté front. Ticket : `docs/ai/tickets/UX-20261105-CLINIC-ADMIN-SCREENS-CLARITY.md`.
+
 - **UX-20261105-HOSPITAL-ORGANIZATION-CLARITY — Organisation hospitalière : un écran qu'on comprend** (Changed) :
   - Le sous-titre dit à quoi sert l'écran : créer les services, puis y affecter personnel, chambres et patients hospitalisés.
   - Les unités s'affichent en arbre : un service apparaît sous son pôle ou son département, une unité de soins sous son service. Une légende rappelle que seul le service est indispensable.

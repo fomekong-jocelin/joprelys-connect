@@ -1,0 +1,124 @@
+<app-shell>
+  <app-page-header [title]="t('spatial.tracking.title')" [subtitle]="t('spatial.tracking.subtitle')">
+    @if (rooms().length > 0 || loadError()) {
+      <button type="button" class="ui-button ui-button-secondary" [disabled]="loading() || refreshing()" (click)="load()">
+        <span class="inline-flex" [class]="refreshing() ? 'motion-safe:animate-spin' : ''" aria-hidden="true"><app-ui-icon name="arrow-path" /></span>
+        {{ t('spatial.tracking.refresh') }}
+      </button>
+    }
+    @if (canConfigure()) {
+      <a routerLink="/clinic/spatial/configuration" class="ui-button ui-button-secondary">
+        <app-ui-icon name="building" aria-hidden="true" /> {{ t('spatial.tracking.configure') }}
+      </a>
+    }
+  </app-page-header>
+
+  <main class="app-container min-w-0 space-y-4 overflow-x-hidden pb-12">
+    <p class="sr-only" aria-live="polite">{{ announcement() }}</p>
+
+    @if (loading()) {
+      <div class="space-y-4" aria-busy="true" [attr.aria-label]="t('spatial.tracking.loading')">
+        <div class="ui-card h-36 motion-safe:animate-pulse"></div>
+        @for (room of [1, 2]; track room) {
+          <div class="ui-card space-y-3 p-4">
+            <div class="h-4 w-40 rounded-[var(--radius-brand-xs)] bg-[var(--app-surface-muted)] motion-safe:animate-pulse"></div>
+            <div class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-4">
+              @for (bed of [1, 2, 3, 4]; track bed) {
+                <div class="h-20 rounded-[var(--radius-brand-md)] bg-[var(--app-surface-muted)] motion-safe:animate-pulse"></div>
+              }
+            </div>
+          </div>
+        }
+      </div>
+    } @else if (loadError(); as errorKey) {
+      <app-ui-load-error [message]="t(errorKey)" [testId]="'spatial-load-error'" [retrying]="refreshing()" (retry)="load()" />
+    } @else if (rooms().length === 0) {
+      <section class="ui-card-muted px-6 py-12 text-center">
+        <app-ui-icon name="bed" class="text-3xl text-[var(--text-muted)]" aria-hidden="true" />
+        <h2 class="mt-3 text-base font-bold text-[var(--text-primary)]">{{ t('spatial.tracking.empty.title') }}</h2>
+        <p class="mx-auto mt-1 max-w-prose text-sm text-[var(--text-secondary)]">{{ t('spatial.tracking.empty.detail') }}</p>
+        @if (canConfigure()) {
+          <a routerLink="/clinic/spatial/configuration" class="ui-button ui-button-primary mt-5">{{ t('spatial.tracking.empty.action') }}</a>
+        }
+      </section>
+    } @else {
+      <section class="ui-card p-4 sm:p-5" [attr.aria-label]="t('spatial.tracking.summaryLabel')">
+        <div class="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+          <p class="min-w-0">
+            <span class="text-4xl font-bold tabular-nums text-[var(--brand-success-text)]">{{ totals().free }}</span>
+            <span class="ml-2 text-lg font-semibold text-[var(--text-primary)]">{{ plural('spatial.tracking.freeLabel', totals().free) }}</span>
+            <span class="block text-sm text-[var(--text-secondary)]">
+              {{ plural('spatial.tracking.openTotal', totals().open) }} · {{ format('spatial.tracking.occupancy', { rate: occupancyRate() }) }}
+            </span>
+          </p>
+          @if (loadedAt()) {
+            <p class="text-xs text-[var(--text-muted)]">{{ loadedAtLabel() }}</p>
+          }
+        </div>
+
+        <div class="mt-4 flex flex-wrap gap-2" role="group" [attr.aria-label]="t('spatial.tracking.filterLabel')">
+          <button
+            type="button"
+            class="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-brand-sm)] border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            [class]="stateFilter() === 'ALL' ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-subtle)] text-[var(--text-primary)]' : 'border-[var(--app-border)] bg-[var(--app-surface)] text-[var(--text-secondary)]'"
+            [attr.aria-pressed]="stateFilter() === 'ALL'"
+            (click)="stateFilter.set('ALL')"
+          >
+            {{ t('spatial.tracking.filter.ALL') }}
+            <span class="tabular-nums text-[var(--text-primary)]">{{ stateCounts().ALL }}</span>
+          </button>
+          @for (state of filterStates; track state) {
+            <button
+              type="button"
+              class="inline-flex min-h-11 items-center gap-2 rounded-[var(--radius-brand-sm)] border px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)] disabled:cursor-default disabled:opacity-60"
+              [class]="stateFilter() === state ? 'border-[var(--brand-primary)] bg-[var(--brand-primary-subtle)] text-[var(--text-primary)]' : stateStyles[state].pill"
+              [attr.aria-pressed]="stateFilter() === state"
+              [disabled]="stateCounts()[state] === 0 && stateFilter() !== state"
+              (click)="setFilter(state)"
+            >
+              <app-ui-icon [name]="stateStyles[state].icon" aria-hidden="true" />
+              {{ t('spatial.tracking.filter.' + state) }}
+              <span class="tabular-nums text-[var(--text-primary)]">{{ stateCounts()[state] }}</span>
+            </button>
+          }
+        </div>
+      </section>
+
+      @if (bedActionError(); as actionError) {
+        <p class="ui-alert-danger text-sm" role="alert" data-testid="bed-action-error">{{ actionError }}</p>
+      }
+
+      @for (view of visibleRooms(); track view.room.spaceId) {
+        <section class="ui-card p-4" [attr.aria-labelledby]="'room-' + view.room.spaceId">
+          <div class="mb-3 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+            <h2 [id]="'room-' + view.room.spaceId" class="min-w-0 break-words text-base font-bold text-[var(--text-primary)]">{{ view.room.spaceName }}</h2>
+            <p class="text-sm text-[var(--text-secondary)]">
+              {{ plural('spatial.tracking.roomFree', view.room.availableBeds, { total: view.room.installedBeds }) }}
+            </p>
+          </div>
+          @if (view.beds.length === 0) {
+            <p class="text-sm text-[var(--text-muted)]">{{ t('spatial.tracking.roomEmpty') }}</p>
+          } @else {
+            <ul class="grid grid-cols-1 gap-3 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              @for (bed of view.beds; track bed.id) {
+                <li class="min-w-0">
+                  <app-bed-tile
+                    [bed]="bed"
+                    [permissions]="permissions()"
+                    [busy]="pendingBedId() !== null"
+                    (act)="onBedAction(bed, $event)"
+                  />
+                </li>
+              }
+            </ul>
+          }
+        </section>
+      } @empty {
+        <section class="ui-card-muted px-6 py-10 text-center">
+          <p class="text-sm text-[var(--text-secondary)]">{{ t('spatial.tracking.noMatch') }}</p>
+          <button type="button" class="ui-button ui-button-secondary mt-4" (click)="stateFilter.set('ALL')">{{ t('spatial.tracking.showAll') }}</button>
+        </section>
+      }
+    }
+  </main>
+</app-shell>

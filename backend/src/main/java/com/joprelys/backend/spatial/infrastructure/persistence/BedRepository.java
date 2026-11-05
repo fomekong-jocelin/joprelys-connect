@@ -1,5 +1,6 @@
 package com.joprelys.backend.spatial.infrastructure.persistence;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -12,6 +13,8 @@ import org.springframework.transaction.annotation.Transactional;
 public interface BedRepository extends JpaRepository<BedEntity, UUID> {
 
     List<BedEntity> findBySpaceId(UUID spaceId);
+
+    List<BedEntity> findBySpaceIdInOrderByBedNumberAsc(Collection<UUID> spaceIds);
 
     long countBySpaceId(UUID spaceId);
 

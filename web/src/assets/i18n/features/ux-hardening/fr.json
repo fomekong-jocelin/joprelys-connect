@@ -67,6 +67,5 @@
   "common.reject": "Rejeter",
   "common.delete": "Supprimer",
   "preRegistrations.rejectTitle": "Rejeter la demande ?",
-  "duplicates.primarySelection": "Dossier à conserver comme principal",
-  "rbac.users.selfReadOnly": "Vous ne pouvez pas modifier vos propres rôles : un autre administrateur de l’établissement doit le faire."
+  "duplicates.primarySelection": "Dossier à conserver comme principal"
 }

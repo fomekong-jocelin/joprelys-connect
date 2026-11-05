@@ -83,6 +83,7 @@ export class I18nService {
         accessRemediation: this.optionalDictionary(`/assets/i18n/features/access-remediation/${lang}.json`),
         publicSelfRegistration: this.optionalDictionary(`/assets/i18n/features/public-self-registration/${lang}.json`),
         uxHardening: this.optionalDictionary(`/assets/i18n/features/ux-hardening/${lang}.json`),
+        rbac: this.optionalDictionary(`/assets/i18n/features/rbac/${lang}.json`),
       }));
 
       this.dictionary.set({
@@ -113,6 +114,7 @@ export class I18nService {
         ...dictionaries.accessRemediation,
         ...dictionaries.publicSelfRegistration,
         ...dictionaries.uxHardening,
+        ...dictionaries.rbac,
       });
       this.loaded.update(state => ({ ...state, [lang]: true }));
     } catch {
