@@ -18,6 +18,13 @@ class SpatialControllerAuthorizationTest {
     }
 
     @Test
+    void inpatientOccupancyOverviewShouldRequireHospitalizationReadPermission() throws NoSuchMethodException {
+        assertPermission(
+                SpatialController.class.getMethod("listInpatientOccupancy"),
+                "hasAuthority('HOSPITALIZATION_READ')");
+    }
+
+    @Test
     void bedStateHistoryShouldRequireHospitalizationReadPermission() throws NoSuchMethodException {
         assertPermission(
                 SpatialController.class.getMethod("getBedStateHistory", UUID.class),

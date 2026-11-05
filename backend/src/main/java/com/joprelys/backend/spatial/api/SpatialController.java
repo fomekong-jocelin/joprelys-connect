@@ -2,6 +2,7 @@ package com.joprelys.backend.spatial.api;
 
 import com.joprelys.backend.spatial.api.HospitalLocationDtos.FacilitySpaceResponse;
 import com.joprelys.backend.spatial.application.HospitalLocationConfigurationService;
+import com.joprelys.backend.spatial.application.InpatientOccupancyQuery;
 import com.joprelys.backend.spatial.application.SpatialService;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedCapacityStatus;
 import com.joprelys.backend.spatial.infrastructure.persistence.BedReadinessStatus;
@@ -27,12 +28,15 @@ public class SpatialController {
 
     private final SpatialService spatialService;
     private final HospitalLocationConfigurationService locationConfigurationService;
+    private final InpatientOccupancyQuery inpatientOccupancyQuery;
 
     public SpatialController(
             SpatialService spatialService,
-            HospitalLocationConfigurationService locationConfigurationService) {
+            HospitalLocationConfigurationService locationConfigurationService,
+            InpatientOccupancyQuery inpatientOccupancyQuery) {
         this.spatialService = spatialService;
         this.locationConfigurationService = locationConfigurationService;
+        this.inpatientOccupancyQuery = inpatientOccupancyQuery;
     }
 
     @GetMapping("/inpatient-spaces")
@@ -42,6 +46,12 @@ public class SpatialController {
         return locationConfigurationService.listSpaces(organizationId, null, false).stream()
                 .filter(space -> space.inpatientProfile() && space.active())
                 .toList();
+    }
+
+    @GetMapping("/inpatient-occupancy")
+    @PreAuthorize("hasAuthority('HOSPITALIZATION_READ')")
+    public List<SpaceOccupancyResponse> listInpatientOccupancy() {
+        return inpatientOccupancyQuery.listInpatientOccupancy();
     }
 
     @GetMapping("/spaces/{id}/occupancy")

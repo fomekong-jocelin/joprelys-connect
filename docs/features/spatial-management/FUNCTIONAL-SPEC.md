@@ -85,8 +85,31 @@ L'objectif de la gestion spatiale est de fournir une cartographie en temps réel
 | Thème light/dark | Oui (les statuts colorés des lits doivent s'adapter au thème sombre) |
 | Composants réutilisables | Oui (composant Grid/Badge d'occupation de lits) |
 
+## 12. Suivi des lits en vue globale (UX-20261105-B, S1)
+
+- **But** : savoir d'un coup d'œil où se trouvent les lits libres et lesquels préparer, sans choisir une chambre après l'autre.
+- **Écran** (`/clinic/spatial`) : une synthèse « N lits libres sur M lits ouverts · occupation X % », puis toutes les chambres d'hospitalisation actives, chacune avec ses lits.
+- **Un état par lit** :
+  - Un lit occupé est toujours affiché « Occupé ».
+  - Sinon : Fermé, puis En nettoyage, puis En maintenance.
+  - Sinon : Libre si le serveur le déclare disponible, Indisponible dans le cas contraire.
+- **Filtres** : un bouton par état, avec son nombre de lits. Il n'affiche que les chambres concernées et un second appui revient à « Tous ». Un état sans lit est désactivé.
+- **Actions** (selon les permissions `BED_CLEANING_MANAGE`, `BED_MAINTENANCE_MANAGE`, `BED_OPERATIONAL_STATUS_MANAGE`) :
+  - lit libre : menu « Changer l'état » (nettoyage, maintenance, fermeture) ;
+  - lit en nettoyage ou en maintenance : bouton direct pour terminer ;
+  - lit fermé : « Rouvrir le lit » ;
+  - lit occupé : aucune action ;
+  - la fermeture est confirmée et rappelle le nombre de lits libres restant.
+- **États** :
+  - chargement : squelette ;
+  - aucune chambre : lien vers la configuration ;
+  - échec : message et « Réessayer » ;
+  - conflit (le lit a changé entre-temps) : message, puis la liste est rafraîchie ;
+  - toujours : « Actualiser » et l'heure de mise à jour.
+
 ## 11. Historique des mises à jour
 
 | Date | Auteur | Changement |
 |---|---|---|
 | 2026-07-08 | Antigravity | Création initiale |
+| 2026-11-05 | Claude | § 12 : suivi des lits en vue globale (UX-20261105-B S1) |

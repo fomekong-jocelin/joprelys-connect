@@ -218,6 +218,48 @@ public class SpatialControllerTest {
     }
 
     @Test
+    void shouldExposeEveryInpatientRoomOfTheTenantInOneRequest() throws Exception {
+        OrganizationEntity otherOrg = organizationRepository.save(new OrganizationEntity(
+                "Autre clinique " + UUID.randomUUID().toString().substring(0, 8),
+                "other-" + UUID.randomUUID().toString().substring(0, 8) + "@joprelys.local",
+                "654321", "Street Other", "Yaoundé"));
+        TenantContext.setTenantId(org.getId());
+        try {
+            FacilitySpaceEntity secondRoom = spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                    org.getId(), null, "ROOM_11_OVERVIEW", "Chambre 11", "HOSPITAL_ROOM"));
+            inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
+                    secondRoom.getId(), org.getId(), "HOSPITAL_ROOM", "STANDARD"));
+            bedRepository.saveAndFlush(new BedEntity(secondRoom, "Lit 11-A"));
+            spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                    org.getId(), null, "WAITING_OVERVIEW", "Salle d'attente", "WAITING_ROOM"));
+        } finally {
+            TenantContext.clear();
+        }
+        TenantContext.setTenantId(otherOrg.getId());
+        try {
+            FacilitySpaceEntity foreignRoom = spaceRepository.saveAndFlush(new FacilitySpaceEntity(
+                    otherOrg.getId(), null, "ROOM_FOREIGN", "Chambre étrangère", "HOSPITAL_ROOM"));
+            inpatientSpaceProfileRepository.saveAndFlush(new InpatientSpaceProfileEntity(
+                    foreignRoom.getId(), otherOrg.getId(), "HOSPITAL_ROOM", "STANDARD"));
+            bedRepository.saveAndFlush(new BedEntity(foreignRoom, "Lit X"));
+        } finally {
+            TenantContext.clear();
+        }
+
+        mockMvc.perform(get("/api/spatial/inpatient-occupancy")
+                        .header("Authorization", "Bearer " + tokenDoctor))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].spaceName").value("Chambre 10"))
+                .andExpect(jsonPath("$[0].installedBeds").value(3))
+                .andExpect(jsonPath("$[0].occupiedBeds").value(2))
+                .andExpect(jsonPath("$[0].availableBeds").value(1))
+                .andExpect(jsonPath("$[0].beds[0].bedNumber").value("Lit 10-A"))
+                .andExpect(jsonPath("$[1].spaceName").value("Chambre 11"))
+                .andExpect(jsonPath("$[1].availableBeds").value(1));
+    }
+
+    @Test
     void occupancyShouldOnlyCountOperationallyAvailableBeds() throws Exception {
         TenantContext.setTenantId(org.getId());
         try {

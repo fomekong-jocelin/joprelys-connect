@@ -249,3 +249,24 @@ Contraintes :
 - affectations personnel : HOS-STAFF ;
 - mouvement patient complet : HOS-MOV ;
 - ABAC unité/relation de soin : HOS-RBAC reliquat.
+
+## Écran « Chambres et lits » (UX-20261105-B, S2)
+
+- **But dit en tête d'écran** : indiquer où se trouvent les salles, ajouter les lits des chambres d'hospitalisation et dire quel service utilise chaque salle.
+- **Arbre des lieux** : site › bâtiment › étage › zone (tous facultatifs).
+  - Chaque salle est rangée sous son lieu ; les salles sans lieu sont groupées sous « Directement dans l'établissement ».
+  - Les éléments désactivés sont masqués par défaut (« Afficher les éléments désactivés (N) »).
+- **Salle** :
+  - nom et type traduits ;
+  - « Service : » montre les rattachements en cours ou à venir, avec la période ; un appui ouvre le rattachement. Les rattachements terminés relèvent de l'historique ;
+  - pour une chambre, ses lits sont affichés avec leur état (`spatial.bedState.*`) ; un appui ouvre le lit ;
+  - actions nommées : « Modifier », « Rattacher à un service », « Ajouter un lit ».
+- **Fenêtre de saisie unique** (lieu, salle, lit, rattachement) :
+  - type de lieu expliqué ;
+  - « Situé dans » ne propose ni le lieu lui-même ni ses descendants ;
+  - code interne proposé à partir du nom et vérifié avec la règle du serveur ;
+  - erreurs affichées après un essai d'envoi ;
+  - pour une chambre qui a déjà un profil d'hospitalisation, le type et le choix « reçoit des patients hospitalisés » sont verrouillés (règle serveur).
+- **Désactiver ou supprimer** se fait depuis la fenêtre, avec une confirmation en deux temps. Un lit occupé ne peut pas être supprimé et l'écran l'explique.
+- **Erreurs** : message traduit selon le statut (403, 409, 400). La précision métier du serveur, rédigée en français, s'ajoute quand l'écran est en français.
+
