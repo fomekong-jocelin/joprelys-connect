@@ -49,5 +49,5 @@ Démarrer un serveur de messagerie local (MailDev) pour intercepter les emails t
 - Port SMTP : `1025` (LISTEN).
 - API REST : `http://localhost:1080/api/email` (HTTP 200 OK, boîte réinitialisée).
 - Test d'extraction OTP : validé via `scripts/get-latest-otp.ps1 -Email qa.admin@joprelys.local`.
-- Test Navigateur Playwright : Connexion réussie sur `http://localhost:4200/login` avec le mot de passe initialisé `Re12#He10@2021!`, validation OTP et atterrissage sur le tableau de bord (`/dashboard`) en tant que **QA Admin Clinique**.
+- Test Navigateur Playwright : Connexion réussie sur `http://localhost:4200/login` avec le mot de passe initialisé `[mot de passe masqué]`, validation OTP et atterrissage sur le tableau de bord (`/dashboard`) en tant que **QA Admin Clinique**.
 - Tests Maven : 13 tests `*Mail*Test` exécutés, 0 échec, 0 erreur.
