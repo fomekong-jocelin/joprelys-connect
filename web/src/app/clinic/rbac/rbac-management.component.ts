@@ -1,7 +1,7 @@
+import { HttpErrorResponse } from '@angular/common/http';
+import { Component, OnInit, inject, signal, viewChild } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
-import { CommonModule } from '@angular/common';
-import { Component, computed, inject, OnInit, signal } from '@angular/core';
-import { forkJoin, switchMap } from 'rxjs';
+import { Observable, forkJoin, switchMap } from 'rxjs';
 import { I18nService } from '../../core/i18n/i18n.service';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { AlertComponent } from '../../shared/ui/alert.component';
@@ -9,25 +9,35 @@ import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { OrganizationApiService } from '../organizations/organization-api.service';
 import { Organization } from '../organizations/organizations.models';
 import { RbacApiService } from './rbac-api.service';
+import { RbacAuditTableComponent } from './rbac-audit-table.component';
 import { RbacAuditEntry, RbacPermission, RbacRole, RbacUserAccess } from './rbac.models';
+import { RbacRoleEditorComponent, RoleSaveEvent } from './rbac-role-editor.component';
+import { RbacUsersPanelComponent, UserRolesSaveEvent } from './rbac-users-panel.component';
 
 const RBAC_ORGANIZATION_SCOPE_KEY = 'joprelys.rbac.organizationScope';
+export const RBAC_TABS = ['users', 'roles', 'audit'] as const;
+export type RbacTab = (typeof RBAC_TABS)[number];
 
+/** Rôles et autorisations : la page charge et enregistre ; chaque onglet porte sa propre saisie. */
 @Component({
   selector: 'app-rbac-management',
   standalone: true,
-  imports: [CommonModule, AppShellComponent, AlertComponent, PageHeaderComponent],
+  imports: [AppShellComponent, AlertComponent, PageHeaderComponent, RbacUsersPanelComponent, RbacRoleEditorComponent, RbacAuditTableComponent],
   templateUrl: './rbac-management.component.html',
-  styleUrl: './rbac-management.component.css',
 })
 export class RbacManagementComponent implements OnInit {
   private readonly api = inject(RbacApiService);
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly organizationApi = inject(OrganizationApiService);
   private readonly i18n = inject(I18nService);
+  private readonly usersPanel = viewChild(RbacUsersPanelComponent);
+  private readonly roleEditor = viewChild(RbacRoleEditorComponent);
 
-  readonly activeTab = signal<'users' | 'roles' | 'audit'>('users');
+  readonly t = (key: string) => this.i18n.t(key);
+  readonly tabs = RBAC_TABS;
+  readonly activeTab = signal<RbacTab>('users');
   readonly loading = signal(false);
+  readonly auditLoading = signal(false);
   readonly saving = signal(false);
   readonly error = signal<string | null>(null);
   readonly success = signal<string | null>(null);
@@ -41,52 +51,25 @@ export class RbacManagementComponent implements OnInit {
   readonly users = signal<RbacUserAccess[]>([]);
   readonly auditEntries = signal<RbacAuditEntry[]>([]);
 
-  readonly selectedUserId = signal<string | null>(null);
-  readonly selectedUserRoleIds = signal<string[]>([]);
-  readonly selectedRoleId = signal<string | null>(null);
-  readonly selectedPermissionCodes = signal<string[]>([]);
-
-  readonly roleCode = signal('');
-  readonly roleName = signal('');
-  readonly roleDescription = signal('');
-  readonly roleAssignable = signal(true);
-  readonly roleEnabled = signal(true);
-
-  readonly selectedOrganization = computed(() =>
-    this.organizations().find((organization) => organization.id === this.selectedOrganizationId()) ?? null,
-  );
-  readonly selectedUser = computed(() =>
-    this.users().find((user) => user.id === this.selectedUserId()) ?? null,
-  );
-  readonly selectedRole = computed(() =>
-    this.roles().find((role) => role.id === this.selectedRoleId()) ?? null,
-  );
-  readonly assignableRoles = computed(() =>
-    this.roles().filter((role) => role.assignable && role.enabled),
-  );
-  readonly groupedPermissions = computed(() => {
-    const groups = new Map<string, RbacPermission[]>();
-    for (const permission of this.permissions()) {
-      const items = groups.get(permission.domain) ?? [];
-      items.push(permission);
-      groups.set(permission.domain, items);
-    }
-    return [...groups.entries()].map(([domain, items]) => ({ domain, items }));
-  });
-  readonly isEditingSystemRole = computed(() => this.selectedRole()?.systemRole ?? false);
-
   ngOnInit(): void {
     if (this.route?.snapshot.queryParamMap.get('tab') === 'audit') this.activeTab.set('audit');
     this.bootstrapWorkspace();
   }
 
-  setTab(tab: 'users' | 'roles' | 'audit'): void {
+  setTab(tab: RbacTab): void {
     this.activeTab.set(tab);
-    this.error.set(null);
-    this.success.set(null);
-    if (tab === 'audit' && this.auditEntries().length === 0) {
-      this.loadAudit();
-    }
+    this.clearMessages();
+    if (tab === 'audit' && this.auditEntries().length === 0) this.loadAudit();
+  }
+
+  /** Flèches gauche/droite entre onglets (motif ARIA « tabs »). */
+  moveTab(event: KeyboardEvent): void {
+    const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!offset) return;
+    event.preventDefault();
+    const next = this.tabs[(this.tabs.indexOf(this.activeTab()) + offset + this.tabs.length) % this.tabs.length];
+    this.setTab(next);
+    (event.currentTarget as HTMLElement).querySelector<HTMLElement>(`#rbac-tab-${next}`)?.focus();
   }
 
   selectOrganization(organizationId: string): void {
@@ -95,9 +78,11 @@ export class RbacManagementComponent implements OnInit {
     try {
       sessionStorage.setItem(RBAC_ORGANIZATION_SCOPE_KEY, organizationId);
     } catch {
-      // Storage can be unavailable in hardened browsers or SSR tests.
+      // Le stockage peut être bloqué (navigation privée) : le choix vaut alors pour la page seulement.
     }
-    this.resetWorkspaceSelections();
+    this.roles.set([]);
+    this.users.set([]);
+    this.auditEntries.set([]);
     this.loadWorkspace();
   }
 
@@ -107,7 +92,6 @@ export class RbacManagementComponent implements OnInit {
       this.loading.set(false);
       return;
     }
-
     this.loading.set(true);
     this.error.set(null);
     forkJoin({
@@ -119,17 +103,11 @@ export class RbacManagementComponent implements OnInit {
         this.roles.set(roles);
         this.permissions.set(permissions);
         this.users.set(users);
-        if (!this.selectedUserId() && users.length > 0) {
-          this.selectUser(users[0]);
-        }
-        if (!this.selectedRoleId() && roles.length > 0) {
-          this.selectRole(roles[0]);
-        }
         this.loading.set(false);
         if (this.activeTab() === 'audit') this.loadAudit();
       },
-      error: (error) => {
-        this.error.set(this.errorMessage(error, this.t('rbac.loadError', 'Impossible de charger les droits d’accès.')));
+      error: (error: unknown) => {
+        this.error.set(this.errorMessage(error, 'rbac.loadError'));
         this.loading.set(false);
       },
     });
@@ -138,171 +116,61 @@ export class RbacManagementComponent implements OnInit {
   loadAudit(): void {
     const organizationId = this.scopeOrganizationId();
     if (this.platformAdministrator() && !organizationId) return;
-
-    this.loading.set(true);
+    this.auditLoading.set(true);
     this.api.listAudit(organizationId).subscribe({
       next: (entries) => {
         this.auditEntries.set(entries);
-        this.loading.set(false);
+        this.auditLoading.set(false);
       },
-      error: (error) => {
-        this.error.set(this.errorMessage(error, this.t('rbac.auditLoadError', 'Impossible de charger le journal RBAC.')));
-        this.loading.set(false);
-      },
-    });
-  }
-
-  selectUser(user: RbacUserAccess): void {
-    this.selectedUserId.set(user.id);
-    this.selectedUserRoleIds.set(
-      this.roles().filter((role) => user.roles.includes(role.code)).map((role) => role.id),
-    );
-    this.error.set(null);
-    this.success.set(null);
-  }
-
-  /** Le serveur refuse qu'un administrateur modifie ses propres rôles (anti-escalade, SEC-03). */
-  isRoleDisabled(user: RbacUserAccess, _role: RbacRole): boolean {
-    return Boolean(user.currentUser);
-  }
-
-  toggleUserRole(roleId: string): void {
-    if (this.selectedUser()?.currentUser) return;
-    this.selectedUserRoleIds.update((current) =>
-      current.includes(roleId) ? current.filter((id) => id !== roleId) : [...current, roleId],
-    );
-  }
-
-  saveUserRoles(): void {
-    const user = this.selectedUser();
-    if (!user || user.currentUser || this.selectedUserRoleIds().length === 0) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.success.set(null);
-    this.api.replaceUserRoles(user.id, this.selectedUserRoleIds(), this.scopeOrganizationId()).subscribe({
-      next: (updated) => {
-        this.users.update((users) => users.map((item) => item.id === updated.id ? updated : item));
-        this.selectUser(updated);
-        this.success.set(this.t('rbac.userRolesSaved', 'Les rôles de l’utilisateur ont été mis à jour.'));
-        this.saving.set(false);
-      },
-      error: (error) => {
-        this.error.set(this.errorMessage(error, this.t('rbac.saveError', 'La mise à jour des rôles a échoué.')));
-        this.saving.set(false);
+      error: (error: unknown) => {
+        this.error.set(this.errorMessage(error, 'rbac.auditLoadError'));
+        this.auditLoading.set(false);
       },
     });
   }
 
-  newRole(): void {
-    this.activeTab.set('roles');
-    this.selectedRoleId.set(null);
-    this.roleCode.set('');
-    this.roleName.set('');
-    this.roleDescription.set('');
-    this.roleAssignable.set(true);
-    this.roleEnabled.set(true);
-    this.selectedPermissionCodes.set([]);
-    this.error.set(null);
-    this.success.set(null);
+  saveUserRoles(event: UserRolesSaveEvent): void {
+    this.run(this.api.replaceUserRoles(event.userId, event.roleIds, this.scopeOrganizationId()), (updated: RbacUserAccess) => {
+      this.users.update((users) => users.map((user) => user.id === updated.id ? updated : user));
+      this.usersPanel()?.select(updated);
+      this.success.set(this.t('rbac.userRolesSaved'));
+    });
   }
 
-  selectRole(role: RbacRole): void {
-    this.selectedRoleId.set(role.id);
-    this.roleCode.set(role.code);
-    this.roleName.set(role.name);
-    this.roleDescription.set(role.description ?? '');
-    this.roleAssignable.set(role.assignable);
-    this.roleEnabled.set(role.enabled);
-    this.selectedPermissionCodes.set([...role.permissions]);
-    this.error.set(null);
-    this.success.set(null);
-  }
-
-  duplicateSelectedRole(): void {
-    const source = this.selectedRole();
-    if (!source) return;
-
-    this.activeTab.set('roles');
-    this.selectedRoleId.set(null);
-    this.roleCode.set(this.nextAvailableRoleCode(`${source.code}_CUSTOM`));
-    this.roleName.set(`${source.name} personnalisé`);
-    this.roleDescription.set(
-      source.description
-        ? `${source.description} Version personnalisée pour l’établissement.`
-        : `Rôle personnalisé basé sur ${source.name}.`,
-    );
-    this.roleAssignable.set(true);
-    this.roleEnabled.set(true);
-    this.selectedPermissionCodes.set([...source.permissions]);
-    this.error.set(null);
-    this.success.set(this.t(
-      'rbac.roles.duplicateReady',
-      'La copie est prête. Ajustez les permissions puis enregistrez le nouveau rôle.',
-    ));
-  }
-
-  togglePermission(permissionCode: string): void {
-    if (this.isEditingSystemRole()) return;
-    this.selectedPermissionCodes.update((current) =>
-      current.includes(permissionCode)
-        ? current.filter((code) => code !== permissionCode)
-        : [...current, permissionCode],
-    );
-  }
-
-  saveRole(): void {
-    if (!this.roleCode().trim() || !this.roleName().trim() || this.isEditingSystemRole()) return;
-    this.saving.set(true);
-    this.error.set(null);
-    this.success.set(null);
-    const selected = this.selectedRole();
+  saveRole(event: RoleSaveEvent): void {
     const organizationId = this.scopeOrganizationId();
-    if (!selected) {
-      this.api.createRole({
-        code: this.roleCode().trim(),
-        name: this.roleName().trim(),
-        description: this.roleDescription().trim() || undefined,
-        assignable: this.roleAssignable(),
-        permissionCodes: this.selectedPermissionCodes(),
-      }, organizationId).subscribe({
-        next: (created) => this.finishRoleSave(created),
-        error: (error) => this.failRoleSave(error),
-      });
-      return;
-    }
-
-    this.api.updateRole(selected.id, {
-      code: this.roleCode().trim(),
-      name: this.roleName().trim(),
-      description: this.roleDescription().trim() || undefined,
-      assignable: this.roleAssignable(),
-      enabled: this.roleEnabled(),
-    }, organizationId).pipe(
-      switchMap(() => this.api.replaceRolePermissions(
-        selected.id,
-        this.selectedPermissionCodes(),
-        organizationId,
-      )),
-    ).subscribe({
-      next: (updated) => this.finishRoleSave(updated),
-      error: (error) => this.failRoleSave(error),
+    const request: Observable<RbacRole> = event.id === null
+      ? this.api.createRole(event.request, organizationId)
+      : this.api.updateRole(event.id, event.request, organizationId)
+        .pipe(switchMap(() => this.api.replaceRolePermissions(event.id, event.permissionCodes, organizationId)));
+    this.run(request, (role: RbacRole) => {
+      this.roles.update((roles) => roles.some((item) => item.id === role.id)
+        ? roles.map((item) => item.id === role.id ? role : item)
+        : [...roles, role]);
+      this.roleEditor()?.select(role);
+      this.success.set(this.t('rbac.roleSaved'));
     });
   }
 
-  permissionChecked(code: string): boolean {
-    return this.selectedPermissionCodes().includes(code);
+  showNotice(message: string): void {
+    this.error.set(null);
+    this.success.set(message);
   }
 
-  userRoleChecked(roleId: string): boolean {
-    return this.selectedUserRoleIds().includes(roleId);
-  }
-
-  roleSummary(user: RbacUserAccess): string {
-    return user.roles.length > 0 ? user.roles.join(' · ') : this.t('rbac.noRole', 'Aucun rôle');
-  }
-
-  t(key: string, fallback: string): string {
-    return this.i18n.t(key, fallback);
+  private run<T>(request: Observable<T>, onSuccess: (result: T) => void): void {
+    if (this.saving()) return;
+    this.saving.set(true);
+    this.clearMessages();
+    request.subscribe({
+      next: (result) => {
+        this.saving.set(false);
+        onSuccess(result);
+      },
+      error: (error: unknown) => {
+        this.saving.set(false);
+        this.error.set(this.errorMessage(error, 'rbac.saveError'));
+      },
+    });
   }
 
   private bootstrapWorkspace(): void {
@@ -312,14 +180,11 @@ export class RbacManagementComponent implements OnInit {
       next: (access) => {
         const platform = access.permissions.includes('ORGANIZATION_MANAGE');
         this.platformAdministrator.set(platform);
-        if (platform) {
-          this.loadOrganizations();
-        } else {
-          this.loadWorkspace();
-        }
+        if (platform) this.loadOrganizations();
+        else this.loadWorkspace();
       },
-      error: (error) => {
-        this.error.set(this.errorMessage(error, this.t('rbac.loadError', 'Impossible de charger les droits d’accès.')));
+      error: (error: unknown) => {
+        this.error.set(this.errorMessage(error, 'rbac.loadError'));
         this.loading.set(false);
       },
     });
@@ -328,13 +193,12 @@ export class RbacManagementComponent implements OnInit {
   private loadOrganizations(): void {
     this.organizationApi.list().subscribe({
       next: (organizations) => {
-        const sorted = [...organizations].sort((left, right) => {
-          if (left.status !== right.status) return left.status === 'ACTIVE' ? -1 : 1;
-          return left.name.localeCompare(right.name);
-        });
+        const sorted = [...organizations].sort((left, right) => left.status !== right.status
+          ? (left.status === 'ACTIVE' ? -1 : 1)
+          : left.name.localeCompare(right.name));
         this.organizations.set(sorted);
-        const rememberedId = this.readRememberedOrganizationId();
-        const selected = sorted.find((organization) => organization.id === rememberedId)
+        const remembered = this.readRememberedOrganizationId();
+        const selected = sorted.find((organization) => organization.id === remembered)
           ?? sorted.find((organization) => organization.status === 'ACTIVE')
           ?? sorted[0]
           ?? null;
@@ -342,12 +206,12 @@ export class RbacManagementComponent implements OnInit {
         if (selected) {
           this.loadWorkspace();
         } else {
-          this.error.set(this.t('rbac.noOrganization', 'Aucun établissement n’est disponible pour l’administration des droits.'));
+          this.error.set(this.t('rbac.noOrganization'));
           this.loading.set(false);
         }
       },
-      error: (error) => {
-        this.error.set(this.errorMessage(error, this.t('rbac.organizationLoadError', 'Impossible de charger les établissements.')));
+      error: (error: unknown) => {
+        this.error.set(this.errorMessage(error, 'rbac.organizationLoadError'));
         this.loading.set(false);
       },
     });
@@ -365,49 +229,16 @@ export class RbacManagementComponent implements OnInit {
     return this.platformAdministrator() ? this.selectedOrganizationId() ?? undefined : undefined;
   }
 
-  private resetWorkspaceSelections(): void {
-    this.roles.set([]);
-    this.users.set([]);
-    this.auditEntries.set([]);
-    this.selectedUserId.set(null);
-    this.selectedUserRoleIds.set([]);
-    this.selectedRoleId.set(null);
-    this.selectedPermissionCodes.set([]);
-    this.newRole();
+  private clearMessages(): void {
+    this.error.set(null);
+    this.success.set(null);
   }
 
-  private nextAvailableRoleCode(baseCode: string): string {
-    const normalizedBase = baseCode.slice(0, 64);
-    const existingCodes = new Set(this.roles().map((role) => role.code));
-    if (!existingCodes.has(normalizedBase)) return normalizedBase;
-
-    let suffixNumber = 2;
-    while (suffixNumber < 10_000) {
-      const suffix = `_${suffixNumber}`;
-      const candidate = `${normalizedBase.slice(0, 64 - suffix.length)}${suffix}`;
-      if (!existingCodes.has(candidate)) return candidate;
-      suffixNumber += 1;
-    }
-    return `ROLE_${Date.now()}`.slice(0, 64);
-  }
-
-  private finishRoleSave(role: RbacRole): void {
-    this.roles.update((roles) => {
-      const exists = roles.some((item) => item.id === role.id);
-      return exists ? roles.map((item) => item.id === role.id ? role : item) : [...roles, role];
-    });
-    this.selectRole(role);
-    this.success.set(this.t('rbac.roleSaved', 'Le rôle et ses permissions ont été enregistrés.'));
-    this.saving.set(false);
-  }
-
-  private failRoleSave(error: unknown): void {
-    this.error.set(this.errorMessage(error, this.t('rbac.saveError', 'L’enregistrement a échoué.')));
-    this.saving.set(false);
-  }
-
-  private errorMessage(error: unknown, fallback: string): string {
-    const candidate = error as { error?: { detail?: string; message?: string } };
-    return candidate?.error?.detail ?? candidate?.error?.message ?? fallback;
+  /** Message traduit ; la précision métier du serveur (en français) s'y ajoute quand l'écran est en français. */
+  private errorMessage(error: unknown, fallbackKey: string): string {
+    const body = error instanceof HttpErrorResponse ? error.error as { detail?: unknown } | null : null;
+    const detail = this.i18n.locale() === 'fr' && typeof body?.detail === 'string' ? body.detail : '';
+    const message = this.t(error instanceof HttpErrorResponse && error.status === 403 ? 'rbac.forbidden' : fallbackKey);
+    return detail ? `${message} ${detail}` : message;
   }
 }

@@ -67,6 +67,5 @@
   "common.reject": "Reject",
   "common.delete": "Delete",
   "preRegistrations.rejectTitle": "Reject the request?",
-  "duplicates.primarySelection": "Record to keep as primary",
-  "rbac.users.selfReadOnly": "You cannot change your own roles: another administrator of the facility must do it."
+  "duplicates.primarySelection": "Record to keep as primary"
 }

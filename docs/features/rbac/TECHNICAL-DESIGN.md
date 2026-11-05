@@ -84,3 +84,22 @@ Tests du `roleGuard` sous Vitest :
 
 * **Bump** : MINOR
 * **Justification** : Ajout du support de contrôle d'accès multi-rôles et création des points d'accès restreints pour le cabinet clinique.
+
+## 6. Écran « Rôles et autorisations » — découpage front (UX-20261105 S3)
+
+Aucun changement d'API : le serveur reste maître des règles (auto-élévation interdite, format du code, droits
+`RBAC_MANAGE`). L'ancien composant monolithique (413 lignes + 283 lignes de CSS) est découpé :
+
+| Fichier | Responsabilité |
+|---|---|
+| `rbac-management.component.ts` | Page : périmètre (admin plateforme), chargement, enregistrements, messages, onglets ARIA (flèches gauche/droite). |
+| `rbac-users-panel.component.ts` | Onglet Personnes : recherche, brouillon des rôles cochés, autorisations effectives ; émet `save {userId, roleIds}`. |
+| `rbac-role-editor.component.ts` | Onglet Rôles : sélection, duplication, brouillon `RoleDraft`, code suggéré (`suggestUnitCode`), validation inline ; émet `save` (création ou mise à jour + permissions) et `notice`. |
+| `rbac-audit-table.component.ts` | Onglet Historique : libellés `rbac.audit.actions.*`, `appDate:'dateTime'`. |
+| `rbac-view.ts` | Fonctions pures : regroupement par domaine, autorisations effectives (code inconnu → domaine `OTHER`, jamais masqué), noms de rôles, recherche sans accents. |
+
+La page recharge la ligne enregistrée (réponse serveur) puis réinitialise le brouillon de l'onglet via `viewChild`.
+Une erreur d'enregistrement laisse le brouillon intact. Styles : Tailwind v4 et jetons du design system (rayon
+`--radius-brand-sm`), plus de feuille CSS dédiée. Tests : `rbac-view.spec.ts`, `rbac-users-panel.component.spec.ts`,
+`rbac-role-editor.component.spec.ts`, `rbac-audit-table.component.spec.ts`, `rbac-management.component.spec.ts`
+(données fictives `src/testing/rbac-fixtures.ts`) ; recette Maestro `.maestro/web/rbac.yaml`.

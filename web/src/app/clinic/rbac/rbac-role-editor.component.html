@@ -1,0 +1,150 @@
+<div class="grid min-w-0 grid-cols-1 items-start gap-4 lg:grid-cols-[minmax(16rem,22rem)_minmax(0,1fr)]">
+  <section class="ui-card min-w-0 overflow-hidden" [attr.aria-label]="t('rbac.roles.listLabel')">
+    <div class="flex items-center justify-between gap-2 border-b border-[var(--app-border)] p-3">
+      <p class="text-sm text-[var(--text-secondary)]">{{ t('rbac.roles.help') }}</p>
+      <button type="button" class="ui-button ui-button-secondary shrink-0" (click)="startNew()">{{ t('rbac.roles.new') }}</button>
+    </div>
+    <ul class="max-h-[60vh] min-w-0 overflow-y-auto">
+      @for (role of roles(); track role.id) {
+        <li class="border-b border-[var(--app-border)] last:border-b-0">
+          <button
+            type="button"
+            class="flex min-h-12 w-full min-w-0 items-center justify-between gap-3 px-3 py-2 text-left transition-colors hover:bg-[var(--app-surface-muted)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-[var(--brand-primary)]"
+            [class]="selectedRole()?.id === role.id ? 'bg-[var(--brand-primary-subtle)]' : ''"
+            [attr.aria-current]="selectedRole()?.id === role.id ? 'true' : null"
+            (click)="select(role)"
+          >
+            <span class="min-w-0 truncate text-sm font-semibold text-[var(--text-primary)]" [class.opacity-60]="!role.enabled">{{ role.name }}</span>
+            <span class="shrink-0 text-xs text-[var(--text-secondary)]">
+              {{ t(!role.enabled ? 'rbac.roles.disabled' : role.systemRole ? 'rbac.roles.system' : 'rbac.roles.custom') }}
+            </span>
+          </button>
+        </li>
+      }
+    </ul>
+  </section>
+
+  <section class="ui-card min-w-0 p-4 sm:p-5" aria-labelledby="rbac-role-title">
+    <div class="flex min-w-0 flex-wrap items-start justify-between gap-2">
+      <h2 id="rbac-role-title" class="min-w-0 break-words text-lg font-bold text-[var(--text-primary)]">
+        {{ selectedRole()?.name || t('rbac.roles.newTitle') }}
+      </h2>
+      @if (readOnly()) {
+        <span class="rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] px-2 py-0.5 text-xs font-semibold text-[var(--text-secondary)]">{{ t('rbac.roles.protected') }}</span>
+      }
+    </div>
+
+    @if (readOnly()) {
+      <div class="mt-4 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] bg-[var(--app-surface-muted)] p-4">
+        <p class="text-sm text-[var(--text-primary)]">{{ t('rbac.roles.systemHelp') }}</p>
+        <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+          <button type="button" class="ui-button ui-button-primary" (click)="duplicate()">{{ t('rbac.roles.duplicate') }}</button>
+          <button type="button" class="ui-button ui-button-ghost" (click)="startNew()">{{ t('rbac.roles.createBlank') }}</button>
+        </div>
+      </div>
+    } @else {
+      <form id="rbac-role-form" class="mt-4 grid min-w-0 grid-cols-1 gap-4 md:grid-cols-2" novalidate (submit)="$event.preventDefault(); submit()">
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="rbac-role-name">{{ t('rbac.roles.name') }}</label>
+          <input
+            id="rbac-role-name"
+            class="ui-input mt-1.5 w-full min-w-0"
+            maxlength="120"
+            autocomplete="off"
+            [attr.aria-invalid]="submitted() && !!nameError()"
+            [value]="form().name"
+            (input)="patch({ name: $any($event.target).value })"
+          />
+          @if (submitted() && nameError()) {
+            <p class="mt-1 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(nameError()) }}</p>
+          }
+        </div>
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="rbac-role-code">{{ t('rbac.roles.code') }}</label>
+          <input
+            id="rbac-role-code"
+            class="ui-input mt-1.5 w-full min-w-0 font-mono uppercase"
+            maxlength="64"
+            autocomplete="off"
+            spellcheck="false"
+            [attr.aria-invalid]="(submitted() || form().codeEdited) && !!codeError()"
+            [attr.aria-describedby]="'rbac-role-code-help'"
+            [value]="code()"
+            (input)="editCode($any($event.target).value)"
+          />
+          <p id="rbac-role-code-help" class="mt-1 text-xs" [class]="(submitted() || form().codeEdited) && codeError() ? 'font-semibold text-[var(--brand-danger-text)]' : 'text-[var(--text-muted)]'">
+            {{ t((submitted() || form().codeEdited) && codeError() ? codeError() : 'rbac.roles.codeHint') }}
+          </p>
+        </div>
+        <div class="min-w-0 md:col-span-2">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="rbac-role-description">{{ t('rbac.roles.description') }}</label>
+          <textarea
+            id="rbac-role-description"
+            class="ui-input mt-1.5 min-h-20 w-full min-w-0 resize-y py-2"
+            [value]="form().description"
+            (input)="patch({ description: $any($event.target).value })"
+          ></textarea>
+        </div>
+        <label class="flex min-h-11 cursor-pointer items-start gap-3">
+          <input type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)]" [checked]="form().assignable" (change)="patch({ assignable: $any($event.target).checked })" />
+          <span>
+            <span class="block text-sm font-semibold text-[var(--text-primary)]">{{ t('rbac.roles.assignable') }}</span>
+            <span class="block text-xs text-[var(--text-secondary)]">{{ t('rbac.roles.assignableHelp') }}</span>
+          </span>
+        </label>
+        @if (selectedRole()) {
+          <label class="flex min-h-11 cursor-pointer items-start gap-3">
+            <input type="checkbox" class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)]" [checked]="form().enabled" (change)="patch({ enabled: $any($event.target).checked })" />
+            <span>
+              <span class="block text-sm font-semibold text-[var(--text-primary)]">{{ t('rbac.roles.enabled') }}</span>
+              <span class="block text-xs text-[var(--text-secondary)]">{{ t('rbac.roles.enabledHelp') }}</span>
+            </span>
+          </label>
+        }
+      </form>
+    }
+
+    <h3 class="mt-6 text-base font-semibold text-[var(--text-primary)]">{{ t('rbac.permissions.title') }}</h3>
+    <p class="mt-1 text-sm text-[var(--text-secondary)]">{{ t(readOnly() ? 'rbac.permissions.readOnlyHelp' : 'rbac.permissions.help') }}</p>
+    <div class="mt-3 space-y-2">
+      @for (group of groups(); track group.domain) {
+        <details class="group rounded-[var(--radius-brand-sm)] border border-[var(--app-border)]">
+          <summary class="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-3 text-sm font-semibold text-[var(--text-primary)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--brand-primary)]">
+            {{ domainLabel(group.domain) }}
+            <span class="tabular-nums text-xs font-normal text-[var(--text-secondary)]">{{ checkedCount(group.items) }} / {{ group.items.length }}</span>
+          </summary>
+          <div class="grid min-w-0 grid-cols-1 gap-1 border-t border-[var(--app-border)] p-2 lg:grid-cols-2">
+            @for (permission of group.items; track permission.code) {
+              <label class="flex min-h-11 min-w-0 items-start gap-3 rounded-[var(--radius-brand-sm)] p-2 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-[var(--brand-primary)]" [class.cursor-pointer]="!readOnly()">
+                <input
+                  type="checkbox"
+                  class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)] focus:outline-none"
+                  [checked]="form().permissionCodes.includes(permission.code)"
+                  [disabled]="readOnly() || saving()"
+                  (change)="togglePermission(permission.code)"
+                />
+                <span class="min-w-0">
+                  <span class="block text-sm text-[var(--text-primary)]">{{ permission.name }}</span>
+                  @if (permission.description) {
+                    <span class="block text-xs leading-5 text-[var(--text-secondary)]">{{ permission.description }}</span>
+                  }
+                </span>
+              </label>
+            }
+          </div>
+        </details>
+      }
+    </div>
+
+    @if (!readOnly()) {
+      <div class="mt-5 flex flex-col gap-2 border-t border-[var(--app-border)] pt-4 sm:flex-row sm:items-center sm:justify-end">
+        @if (dirty()) {
+          <p class="text-sm text-[var(--text-secondary)]" role="status">{{ t('rbac.users.unsaved') }}</p>
+        }
+        <button type="submit" form="rbac-role-form" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="saving()">
+          {{ t(saving() ? 'common.saving' : 'rbac.roles.save') }}
+        </button>
+      </div>
+    }
+  </section>
+</div>

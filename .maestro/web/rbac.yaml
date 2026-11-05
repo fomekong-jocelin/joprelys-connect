@@ -1,0 +1,46 @@
+# Recette UX-20261105 S3 : « Rôles et autorisations » simplifié.
+# Vérifie les trois onglets (Personnes, Rôles, Historique), la recherche, la lecture seule
+# du compte connecté et la duplication d'un rôle système, sans rien enregistrer.
+# Variables : BASE_URL, EMAIL (administrateur d'établissement avec RBAC_MANAGE), PASSWORD.
+url: ${BASE_URL}
+tags:
+  - recette
+  - rbac
+---
+- runFlow:
+    file: subflows/login-staff.yaml
+    env:
+      EMAIL: ${EMAIL}
+- openLink: ${BASE_URL}/clinic/rbac
+- extendedWaitUntil:
+    visible: "Rôles et autorisations"
+    timeout: 15000
+
+# Personnes : le compte connecté s'ouvre en premier et reste en lecture seule.
+- assertVisible:
+    css: "[role='tab'][aria-selected='true']#rbac-tab-users"
+- assertVisible: "Vous ne pouvez pas modifier vos propres rôles.*"
+- assertVisible: "Autorisations effectives : .*"
+- tapOn:
+    css: "#rbac-user-search"
+- inputText: "zz-personne-inexistante"
+- assertVisible: "Personne ne correspond à cette recherche."
+- eraseText: 30
+
+# Rôles : un rôle système se duplique, la copie reçoit un code proposé à partir du nom.
+- tapOn:
+    css: "#rbac-tab-roles"
+- assertVisible: "Lecture seule"
+- tapOn: "Dupliquer ce rôle"
+- assertVisible: "La copie est prête.*"
+- assertVisible:
+    css: "#rbac-role-name"
+- assertVisible:
+    css: "#rbac-role-code"
+# Aucune sauvegarde : on revient à l'onglet Historique, la copie est abandonnée.
+
+# Historique : actions en clair, dates au format local.
+- tapOn:
+    css: "#rbac-tab-audit"
+- assertVisible: "Historique des changements"
+- assertNotVisible: "ROLE_CREATED"
