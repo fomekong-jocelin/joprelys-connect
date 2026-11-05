@@ -49,9 +49,14 @@ READY_FOR_REVIEW. Correctifs livrés sur la branche locale `fix/audit-20261104-s
   - MOB-01 et MOB-19 en partie ;
   - nom iOS.
 - [x] Documentation : rapport d'audit, spécification fonctionnelle, conception technique, ADR, EPIC-0030, `DESIGN.md` (contrastes), CHANGELOG, PROJECT-TRACKING.
-- [ ] Relecture clinique : libellés des notifications patient, règles de décès et d'administration.
-- [ ] Recette navigateur complète (backend lancé) et recette Maestro sur appareil : `FLAG_SECURE`, verrou pendant une dictée.
+- [x] Relecture clinique technique (2026-11-04) : [CLINICAL-REVIEW](../../features/audit-20261104-full/CLINICAL-REVIEW.md). RC-01 à RC-06 corrigés, décision D-08 ajoutée à l'ADR. **Validation formelle par un médecin référent toujours requise** (Q-R1 à Q-R6).
+- [ ] Recette navigateur complète et recette Maestro sur appareil (`FLAG_SECURE`, verrou pendant une dictée). Partiel au 2026-11-05 :
+  - base clonée `joprelys_recette_audit`, V121 appliquée sur PostgreSQL ;
+  - vérifiés : connexion avec OTP, clôture de consultation confirmée, PIN à 6 chiffres, 401 uniforme ;
+  - flows Maestro dans `.maestro/web/` : page 404 ✅, flow pharmacie corrigé mais pas encore passé jusqu'au bout (serveurs arrêtés faute de mémoire).
+  - Constats ouverts : ordonnance expirée restée `ACTIVE`, visite clôturée gardant l'étape « En consultation », heure d'arrivée sans date dans la file active.
 - [ ] Changer `JOPRELYS_JWT_SECRET` sur tout environnement qui a tourné avec l'ancien secret par défaut.
+- [ ] **Urgent** : changer le mot de passe exposé dans le dépôt GitHub public (documents versionnés depuis 2026-07-06). Il est réutilisé pour la base de production, la messagerie et l'accès serveur. Il est masqué dans les documents suivis, mais reste dans l'historique Git.
 - [x] PDF de test `storage/documents/DOC-20260702-000001.pdf` et `backend/storage/documents/DOC-20260702-000001.pdf` retirés de l'index Git (conservés sur disque, chemins déjà ignorés) ; `.claude/worktrees/` ajouté au `.gitignore`.
 - [x] Commits conventionnels et merge local dans `main` à la demande de l'utilisateur (2026-11-04). Push : non demandé, non fait.
 

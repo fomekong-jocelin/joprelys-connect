@@ -8,6 +8,23 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **Relecture clinique AUDIT-20261104 et premiers correctifs de recette** ([CLINICAL-REVIEW](../features/audit-20261104-full/CLINICAL-REVIEW.md), ADR-20261104 D-08) :
+  - **Biologie.**
+    - Une interprétation absente ou inconnue n'est plus jamais présentée comme normale : enum `LabInterpretation`, valeur `NOT_INTERPRETED`.
+    - Un résultat critique ne s'affiche plus en vert dans le dossier patient du personnel.
+    - La saisie labo n'a plus d'interprétation présélectionnée.
+    - L'import FHIR lit les codes HL7 v3.
+    - `LOW` et `HIGH` déclenchent le message patient « hors valeurs de référence ».
+  - **Pharmacie.**
+    - Le pharmacien voit la posologie, la voie, la fréquence et la durée prescrites.
+    - L'exemple de PIN est à 6 chiffres.
+    - L'erreur de vérification est annoncée aux lecteurs d'écran.
+    - La substitution s'affiche « Autorisée » ou « Non autorisée ».
+  - **Sécurité.** Mot de passe exposé masqué dans trois documents versionnés : **à changer partout**, le dépôt est public.
+  - **Recette.** Premiers flows Maestro web dans `.maestro/web/` (page 404, vérification pharmacie).
+  - **Contrat.** L'API JSON partenaire de résultats refuse une interprétation inconnue (400).
+  - **Tests.** Backend 1033 (0 échec, 9 ignorés), web 745, build et `i18n:check` OK.
+
 - **BREAKING CHANGE — AUDIT-20261104 : audit complet et correctifs de sécurité, de sécurité clinique et d'interface** ([rapport](../features/audit-20261104-full/AUDIT-REPORT.md), [ADR-20261104](../architecture/adr/ADR-20261104-audit-security-clinical-hardening.md), reste à faire dans [EPIC-0030](../pm/backlog/EPIC-0030-audit-20261104-remediation.md)) :
   - **Actes médicaux.**
     - La consultation, la décision de sortie et le constat de décès, y compris l'orientation « Décès » des urgences, sont réservés aux médecins (403).
