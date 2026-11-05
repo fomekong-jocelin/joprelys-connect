@@ -1,0 +1,14 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-11-05T15:13:49.332Z",
+        "reason": "DESIGN.md typography tokens define Inter as the body font; already accepted at repo root in commit fb5faefd (.impeccable/config.json), mirrored for the web/ project scope"
+      }
+    ]
+  }
+}
