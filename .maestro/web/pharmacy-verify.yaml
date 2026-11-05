@@ -1,0 +1,39 @@
+# Recette AUDIT-20261104 : PIN d'ordonnance (401 uniforme) et posologie visible par le pharmacien.
+# Variables : BASE_URL, PASSWORD, PRESCRIPTION_NUMBER, PIN.
+url: ${BASE_URL}
+tags:
+  - recette
+  - pharmacy
+---
+- runFlow:
+    file: subflows/login-staff.yaml
+    env:
+      EMAIL: pharmacien.trauma@joprelys.local
+- openLink: ${BASE_URL}/pharmacy/prescriptions
+- extendedWaitUntil:
+    visible:
+      css: "input[formcontrolname='prescriptionNumber']"
+    timeout: 15000
+- assertVisible:
+    css: "input[formcontrolname='pinCode'][placeholder*='482913']"
+- tapOn:
+    css: "input[formcontrolname='prescriptionNumber']"
+- inputText: ${PRESCRIPTION_NUMBER}
+- tapOn:
+    css: "input[formcontrolname='pinCode']"
+- inputText: "111111"
+- tapOn:
+    css: "form button[type='submit']"
+- assertVisible:
+    css: "[role='alert']"
+- tapOn:
+    css: "input[formcontrolname='pinCode']"
+- eraseText: 8
+- inputText: ${PIN}
+- tapOn:
+    css: "form button[type='submit']"
+- extendedWaitUntil:
+    visible: ".*Paracétamol.*"
+    timeout: 15000
+- assertVisible: '.*1 comprimé 3 fois par jour \(recette fictive\).*'
+- assertVisible: ".*(Autorisée|Allowed).*"
