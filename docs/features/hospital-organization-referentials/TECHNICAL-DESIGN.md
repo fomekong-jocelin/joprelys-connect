@@ -174,3 +174,14 @@ Création, mise à jour, activation et désactivation sont auditées via le serv
 - l'administration plateforme doit toujours sélectionner explicitement un établissement avant de lire ou modifier les unités.
 
 Mise à jour 2026-10-04 : voir docs/features/admin-panel-clinical-audit-fixes pour catalogues enrichis, gouvernance, migration V113 et preuves nouvelles.
+
+## 12. Découpage Angular (UX-20261105)
+
+| Fichier | Responsabilité |
+|---|---|
+| `hospital-organization-page.component.*` | Chargement, périmètre établissement, messages, arbre (gabarit récursif `ngTemplateOutlet`), référentiels repliés. |
+| `org-unit-editor.component.*` | Fenêtre de création/modification : état du formulaire en signaux, choix du niveau, validation en ligne, focus initial et retour du focus au déclencheur. Émet `save`, `deactivate`, `closed`. |
+| `hospital-organization-hierarchy.ts` | Fonctions pures : règles RF-06 (`canBeParent`, `allowedChildTypes`, `defaultChildType`), libellé affiché (RF-04), construction de l'arbre (unité orpheline remontée à la racine). |
+| `org-unit-code.ts` | Normalisation et motif identiques au serveur (`[A-Z][A-Z0-9_]{2,63}`), proposition de code lisible et unique. |
+
+Le serveur reste l'autorité : la proposition de code ne connaît que les unités chargées ; un code déjà pris par une unité inactive non affichée est refusé par l'API (409) et le message s'affiche dans la fenêtre. Aucun changement d'API.

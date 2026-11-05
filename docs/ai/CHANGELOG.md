@@ -8,6 +8,15 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **UX-20261105-HOSPITAL-ORGANIZATION-CLARITY — Organisation hospitalière : un écran qu'on comprend** (Changed) :
+  - Le sous-titre dit à quoi sert l'écran : créer les services, puis y affecter personnel, chambres et patients hospitalisés.
+  - Les unités s'affichent en arbre : un service apparaît sous son pôle ou son département, une unité de soins sous son service. Une légende rappelle que seul le service est indispensable.
+  - Chaque ligne propose au plus deux actions nommées (« Ajouter un service », « Ajouter une unité de soins », « Modifier ») ; la désactivation passe dans la fenêtre de modification.
+  - Les référentiels (types de services, spécialités) sont repliés en bas de page au lieu d'occuper les deux tiers de l'écran.
+  - Fenêtre de saisie : niveaux expliqués, code interne proposé à partir du nom (modifiable), validation en ligne, erreurs du serveur affichées dans la fenêtre.
+  - Design system : nouvelle variante `.ui-button-ghost` pour les actions répétées sur une liste.
+  - Front uniquement, aucun changement d'API. Ticket : `docs/ai/tickets/UX-20261105-HOSPITAL-ORGANIZATION-CLARITY.md`.
+
 - **HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION — Connexion : plus de retour silencieux à l'écran du code** (Fixed) :
   - Après un code valide, le bouton reste en chargement jusqu'à l'ouverture de la page ; un échec de navigation affiche un message clair, et un nouveau clic réessaie d'ouvrir la page sans renvoyer le code déjà consommé.
   - Un fichier JavaScript devenu introuvable après un déploiement provoque un unique rechargement de la page cible (`withNavigationErrorHandler`), sans boucle.

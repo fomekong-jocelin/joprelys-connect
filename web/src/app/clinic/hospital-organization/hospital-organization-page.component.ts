@@ -5,39 +5,42 @@ import { RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { ApiErrorI18nService } from '../../core/i18n/api-error-i18n.service';
 import { I18nService } from '../../core/i18n/i18n.service';
+import { interpolate } from '../../core/i18n/interpolate';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
-import { IconComponent } from '../../shared/ui/icon.component';
+import { IconComponent, UiIconName } from '../../shared/ui/icon.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { OrganizationApiService } from '../organizations/organization-api.service';
 import { Organization } from '../organizations/organizations.models';
 import { RbacApiService } from '../rbac/rbac-api.service';
 import { HospitalOrganizationApiService } from './hospital-organization-api.service';
+import { UNIT_LEVELS, buildUnitTree, unitDisplayName } from './hospital-organization-hierarchy';
 import {
   HospitalServiceCatalogEntry,
   MedicalSpecialtyCatalogEntry,
   OrganizationalUnit,
   OrganizationalUnitType,
-  SaveOrganizationalUnitPayload,
 } from './hospital-organization.models';
+import { OrgUnitEditorComponent, UnitEditorRequest, UnitSaveEvent } from './org-unit-editor.component';
 
-interface EditorState {
-  readonly id: string | null;
-  unitType: OrganizationalUnitType;
-  code: string;
-  parentId: string | null;
-  name: string;
-  serviceCatalogCode: string;
-}
-
-interface UnitRow {
-  readonly unit: OrganizationalUnit;
-  readonly depth: number;
-}
+const UNIT_ICONS: Readonly<Record<OrganizationalUnitType, UiIconName>> = {
+  POLE: 'building',
+  DEPARTMENT: 'folder-open',
+  SERVICE: 'stethoscope',
+  CARE_UNIT: 'bed',
+};
 
 @Component({
   selector: 'app-hospital-organization-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink, AppShellComponent, IconComponent, PageHeaderComponent],
+  imports: [
+    CommonModule,
+    FormsModule,
+    RouterLink,
+    AppShellComponent,
+    IconComponent,
+    PageHeaderComponent,
+    OrgUnitEditorComponent,
+  ],
   templateUrl: './hospital-organization-page.component.html',
 })
 export class HospitalOrganizationPageComponent implements OnInit {
@@ -47,6 +50,7 @@ export class HospitalOrganizationPageComponent implements OnInit {
   private readonly i18n = inject(I18nService);
   private readonly apiErrorI18n = inject(ApiErrorI18nService);
 
+  readonly levels = UNIT_LEVELS;
   readonly units = signal<OrganizationalUnit[]>([]);
   readonly serviceCatalog = signal<HospitalServiceCatalogEntry[]>([]);
   readonly specialtyCatalog = signal<MedicalSpecialtyCatalogEntry[]>([]);
@@ -57,10 +61,17 @@ export class HospitalOrganizationPageComponent implements OnInit {
   readonly busy = signal(false);
   readonly errorMessage = signal('');
   readonly successMessage = signal('');
-  readonly editor = signal<EditorState | null>(null);
+  readonly editor = signal<UnitEditorRequest | null>(null);
   readonly platformAdministrator = computed(() => this.rbacApi.hasPermission('ORGANIZATION_MANAGE'));
   readonly t = (key: string) => this.i18n.t(key);
-  readonly rows = computed<UnitRow[]>(() => this.flattenUnits(this.units()));
+  readonly tree = computed(() => buildUnitTree(this.units(), (unit) => this.unitLabel(unit)));
+  readonly scopeMissing = computed(() => this.platformAdministrator() && !this.selectedOrganizationId());
+  readonly empty = computed(() => !this.scopeMissing() && !this.loading() && this.units().length === 0);
+  readonly showHeaderAction = computed(() => !this.scopeMissing() && !this.empty());
+  readonly catalogSummary = computed(() => interpolate(this.t('hospitalOrg.catalogs.summary'), {
+    services: this.serviceCatalog().length,
+    specialties: this.specialtyCatalog().length,
+  }));
 
   ngOnInit(): void {
     this.loadCatalogs();
@@ -72,7 +83,7 @@ export class HospitalOrganizationPageComponent implements OnInit {
   }
 
   loadUnits(): void {
-    if (!this.canManageScope()) {
+    if (this.scopeMissing()) {
       this.loading.set(false);
       return;
     }
@@ -86,7 +97,8 @@ export class HospitalOrganizationPageComponent implements OnInit {
     });
   }
 
-  onOrganizationChange(): void {
+  onOrganizationChange(organizationId: string): void {
+    this.selectedOrganizationId.set(organizationId);
     this.units.set([]);
     this.clearMessages();
     this.loadUnits();
@@ -97,76 +109,34 @@ export class HospitalOrganizationPageComponent implements OnInit {
     this.loadUnits();
   }
 
-  rbacCanManageStaff(): boolean { return this.rbacApi.hasPermission('USER_MANAGE'); }
-
-  canManageScope(): boolean {
-    return !this.platformAdministrator() || this.selectedOrganizationId().length > 0;
+  canManageStaff(): boolean {
+    return !this.platformAdministrator() && this.rbacApi.hasPermission('USER_MANAGE');
   }
 
   openCreate(unitType: OrganizationalUnitType, parentId: string | null = null): void {
     this.clearMessages();
-    this.editor.set({
-      id: null,
-      unitType,
-      code: '',
-      parentId,
-      name: '',
-      serviceCatalogCode: '',
-    });
+    this.editor.set({ mode: 'create', unitType, parentId });
   }
 
   openEdit(unit: OrganizationalUnit): void {
     this.clearMessages();
-    this.editor.set({
-      id: unit.id,
-      unitType: unit.unitType,
-      code: unit.code,
-      parentId: unit.parentId,
-      name: unit.name ?? '',
-      serviceCatalogCode: unit.serviceCatalogCode ?? '',
-    });
+    this.editor.set({ mode: 'edit', unit });
   }
 
   closeEditor(): void {
-    if (!this.busy()) this.editor.set(null);
+    if (this.busy()) return;
+    this.editor.set(null);
+    this.errorMessage.set('');
   }
 
-  canSubmit(state: EditorState): boolean {
-    if (!state.code.trim()) return false;
-    if (state.unitType === 'SERVICE') return state.serviceCatalogCode.length > 0
-      && (!state.name.trim() || state.name.trim().length >= 2);
-    if (state.unitType === 'CARE_UNIT' && !state.parentId) return false;
-    return state.name.trim().length >= 2;
-  }
-
-  parentOptionsFor(state: EditorState): OrganizationalUnit[] {
-    return this.units().filter((unit) =>
-      unit.active && unit.id !== state.id && this.parentTypeAllowed(unit.unitType, state.unitType));
-  }
-
-  submit(): void {
-    const state = this.editor();
-    if (!state || !this.canSubmit(state)) return;
-
-    const payload: SaveOrganizationalUnitPayload = {
-      code: state.code.trim(),
-      unitType: state.unitType,
-      parentId: state.parentId || null,
-      name: state.name.trim() || null,
-      serviceCatalogCode: state.unitType === 'SERVICE' ? state.serviceCatalogCode : null,
-    };
+  save({ id, payload }: UnitSaveEvent): void {
     this.busy.set(true);
     this.clearMessages();
-    const request = state.id
-      ? this.api.updateUnit(state.id, payload, this.scopeOrganizationId())
+    const request = id
+      ? this.api.updateUnit(id, payload, this.scopeOrganizationId())
       : this.api.createUnit(payload, this.scopeOrganizationId());
     request.subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.editor.set(null);
-        this.successMessage.set(this.t('hospitalOrg.feedback.saved'));
-        this.loadUnits();
-      },
+      next: () => this.afterMutation('hospitalOrg.feedback.saved'),
       error: (error: HttpErrorResponse) => this.handleOperationError(error),
     });
   }
@@ -175,46 +145,36 @@ export class HospitalOrganizationPageComponent implements OnInit {
     this.busy.set(true);
     this.clearMessages();
     this.api.setActive(unit.id, active, this.scopeOrganizationId()).subscribe({
-      next: () => {
-        this.busy.set(false);
-        this.successMessage.set(this.t(active ? 'hospitalOrg.feedback.activated' : 'hospitalOrg.feedback.deactivated'));
-        this.loadUnits();
-      },
+      next: () => this.afterMutation(active ? 'hospitalOrg.feedback.activated' : 'hospitalOrg.feedback.deactivated'),
       error: (error: HttpErrorResponse) => this.handleOperationError(error),
     });
-  }
-
-  canAddChild(unit: OrganizationalUnit): boolean {
-    return unit.active && unit.unitType !== 'CARE_UNIT';
-  }
-
-  nextChildType(unit: OrganizationalUnit): OrganizationalUnitType {
-    if (unit.unitType === 'POLE') return 'DEPARTMENT';
-    if (unit.unitType === 'DEPARTMENT') return 'SERVICE';
-    return 'CARE_UNIT';
   }
 
   typeLabel(type: OrganizationalUnitType): string {
     return this.t(`hospitalOrg.unitType.${type}`);
   }
 
+  unitIcon(type: OrganizationalUnitType): UiIconName {
+    return UNIT_ICONS[type];
+  }
+
+  actionLabel(key: string, unitLabel: string): string {
+    return interpolate(this.t(key), { unit: unitLabel });
+  }
+
   unitLabel(unit: OrganizationalUnit): string {
-    if (unit.name?.trim()) return unit.name;
-    if (unit.unitType !== 'SERVICE') return unit.code;
-    const catalog = this.serviceCatalog().find((entry) => entry.code === unit.serviceCatalogCode);
-    return catalog ? this.serviceLabel(catalog) : unit.serviceCatalogCode ?? unit.code;
+    return unitDisplayName(unit, this.serviceCatalog(), this.i18n.locale());
   }
 
-  serviceLabel(entry: HospitalServiceCatalogEntry): string {
+  catalogLabel(entry: HospitalServiceCatalogEntry | MedicalSpecialtyCatalogEntry): string {
     return this.i18n.locale() === 'en' ? entry.nameEn : entry.nameFr;
   }
 
-  specialtyLabel(entry: MedicalSpecialtyCatalogEntry): string {
-    return this.i18n.locale() === 'en' ? entry.nameEn : entry.nameFr;
-  }
-
-  editorTitle(state: EditorState): string {
-    return this.t(state.id ? 'hospitalOrg.editor.edit' : 'hospitalOrg.editor.create');
+  private afterMutation(feedbackKey: string): void {
+    this.busy.set(false);
+    this.editor.set(null);
+    this.successMessage.set(this.t(feedbackKey));
+    this.loadUnits();
   }
 
   private loadCatalogs(): void {
@@ -229,37 +189,10 @@ export class HospitalOrganizationPageComponent implements OnInit {
         this.organizations.set(organizations);
         const preferred = organizations.find((organization) => organization.status === 'ACTIVE') ?? organizations[0];
         this.selectedOrganizationId.set(preferred?.id ?? '');
-        if (preferred) this.loadUnits(); else this.loading.set(false);
+        this.loadUnits();
       },
       error: (error: HttpErrorResponse) => this.handleError(error),
     });
-  }
-
-  private flattenUnits(units: OrganizationalUnit[]): UnitRow[] {
-    const children = new Map<string | null, OrganizationalUnit[]>();
-    for (const unit of units) {
-      const key = unit.parentId;
-      children.set(key, [...(children.get(key) ?? []), unit]);
-    }
-    for (const values of children.values()) {
-      values.sort((left, right) => this.unitLabel(left).localeCompare(this.unitLabel(right)));
-    }
-
-    const rows: UnitRow[] = [];
-    const visit = (parentId: string | null, depth: number) => {
-      for (const unit of children.get(parentId) ?? []) {
-        rows.push({ unit, depth });
-        visit(unit.id, depth + 1);
-      }
-    };
-    visit(null, 0);
-    return rows;
-  }
-
-  private parentTypeAllowed(parent: OrganizationalUnitType, child: OrganizationalUnitType): boolean {
-    if (parent === 'POLE') return child === 'DEPARTMENT' || child === 'SERVICE';
-    if (parent === 'DEPARTMENT') return child === 'SERVICE';
-    return parent === 'SERVICE' && child === 'CARE_UNIT';
   }
 
   private handleOperationError(error: HttpErrorResponse): void {
@@ -268,11 +201,7 @@ export class HospitalOrganizationPageComponent implements OnInit {
   }
 
   private handleError(error: HttpErrorResponse): void {
-    this.errorMessage.set(this.apiErrorI18n.message(
-      error,
-      'hospitalOrg.errors',
-      'hospitalOrg.feedback.error',
-    ));
+    this.errorMessage.set(this.apiErrorI18n.message(error, 'hospitalOrg.errors', 'hospitalOrg.feedback.error'));
     this.loading.set(false);
   }
 

@@ -1,0 +1,176 @@
+<div
+  class="fixed inset-0 z-[60] flex min-w-0 items-end justify-center overflow-x-hidden p-3 sm:items-center sm:p-4"
+  (keydown.escape)="close()"
+  (click)="close()"
+>
+  <div class="absolute inset-0 bg-[var(--overlay-bg)]" aria-hidden="true"></div>
+  <form
+    #panel
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="org-unit-editor-title"
+    novalidate
+    class="relative flex max-h-[92vh] w-full min-w-0 max-w-lg flex-col overflow-x-hidden rounded-[var(--radius-brand-md)] border border-[var(--app-border)] bg-[var(--app-surface)] shadow-[var(--shadow-panel)]"
+    (ngSubmit)="submit()"
+    (click)="$event.stopPropagation()"
+  >
+    <header class="border-b border-[var(--app-border)] px-4 py-4 sm:px-5">
+      <h2 id="org-unit-editor-title" class="break-words text-lg font-bold text-[var(--text-primary)]">{{ title() }}</h2>
+      @if (editedUnit(); as unit) {
+        <p class="mt-1 break-words text-sm text-[var(--text-secondary)]">{{ unitLabel(unit) }} · {{ typeLabel(unit.unitType) }}</p>
+      }
+    </header>
+
+    <div class="min-h-0 flex-1 space-y-5 overflow-y-auto px-4 py-5 sm:px-5">
+      @if (levelChoices().length > 1) {
+        <fieldset class="min-w-0">
+          <legend class="text-sm font-semibold text-[var(--text-primary)]">{{ t('hospitalOrg.fields.level') }}</legend>
+          <div class="mt-2 grid min-w-0 grid-cols-1 gap-2 sm:grid-cols-2">
+            @for (level of levelChoices(); track level) {
+              <label
+                class="flex min-h-12 min-w-0 cursor-pointer items-start gap-3 rounded-[var(--radius-brand-sm)] border border-[var(--app-border)] p-3 transition-colors hover:bg-[var(--app-surface-muted)] has-[:checked]:border-[var(--brand-primary)] has-[:checked]:bg-[var(--brand-primary-subtle)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-[var(--brand-primary)]"
+              >
+                <input
+                  type="radio"
+                  name="unitType"
+                  class="mt-0.5 h-4 w-4 shrink-0 accent-[var(--brand-primary)] focus:outline-none"
+                  [value]="level"
+                  [checked]="unitType() === level"
+                  (change)="selectLevel(level)"
+                />
+                <span class="min-w-0">
+                  <span class="block text-sm font-semibold text-[var(--text-primary)]">{{ typeLabel(level) }}</span>
+                  <span class="mt-0.5 block text-xs leading-5 text-[var(--text-secondary)]">{{ t('hospitalOrg.levelHelp.' + level) }}</span>
+                </span>
+              </label>
+            }
+          </div>
+        </fieldset>
+      }
+
+      @if (unitType() === 'SERVICE') {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="service-catalog">{{ t('hospitalOrg.fields.serviceCatalog') }}</label>
+          <select
+            id="service-catalog"
+            class="ui-select mt-1.5 w-full min-w-0"
+            name="serviceCatalogCode"
+            required
+            [attr.aria-invalid]="submitted() && !!catalogError()"
+            [attr.aria-describedby]="submitted() && catalogError() ? 'service-catalog-error' : null"
+            [ngModel]="serviceCatalogCode()"
+            (ngModelChange)="serviceCatalogCode.set($event)"
+          >
+            <option value="" disabled>{{ t('hospitalOrg.fields.serviceCatalogPlaceholder') }}</option>
+            @for (entry of serviceCatalog(); track entry.code) {
+              <option [value]="entry.code">{{ serviceLabel(entry) }}</option>
+            }
+          </select>
+          @if (submitted() && catalogError()) {
+            <p id="service-catalog-error" class="mt-1.5 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(catalogError()) }}</p>
+          }
+        </div>
+      }
+
+      <div class="min-w-0">
+        <label class="text-sm font-semibold text-[var(--text-primary)]" for="org-unit-name">
+          {{ t(unitType() === 'SERVICE' ? 'hospitalOrg.fields.serviceName' : 'hospitalOrg.fields.name') }}
+        </label>
+        <input
+          id="org-unit-name"
+          class="ui-input mt-1.5 w-full min-w-0"
+          name="name"
+          maxlength="120"
+          autocomplete="off"
+          [required]="unitType() !== 'SERVICE'"
+          [placeholder]="unitType() === 'SERVICE' ? selectedServiceLabel() : ''"
+          [attr.aria-invalid]="submitted() && !!nameError()"
+          [attr.aria-describedby]="submitted() && nameError() ? 'org-unit-name-error' : (unitType() === 'SERVICE' ? 'org-unit-name-hint' : null)"
+          [ngModel]="name()"
+          (ngModelChange)="name.set($event)"
+        />
+        @if (submitted() && nameError()) {
+          <p id="org-unit-name-error" class="mt-1.5 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(nameError()) }}</p>
+        } @else if (unitType() === 'SERVICE') {
+          <p id="org-unit-name-hint" class="mt-1.5 text-xs leading-5 text-[var(--text-muted)]">{{ t('hospitalOrg.fields.serviceNameHint') }}</p>
+        }
+      </div>
+
+      @if (showParentField()) {
+        <div class="min-w-0">
+          <label class="text-sm font-semibold text-[var(--text-primary)]" for="org-parent">{{ t('hospitalOrg.fields.parent') }}</label>
+          <select
+            id="org-parent"
+            class="ui-select mt-1.5 w-full min-w-0"
+            name="parentId"
+            [disabled]="parentRequired() && parentOptions().length === 0"
+            [attr.aria-invalid]="submitted() && !!parentError()"
+            [attr.aria-describedby]="submitted() && parentError() ? 'org-parent-error' : null"
+            [ngModel]="parentId()"
+            (ngModelChange)="parentId.set($event)"
+          >
+            @if (parentRequired()) {
+              <option [ngValue]="null" disabled>{{ t('hospitalOrg.fields.parentPlaceholder') }}</option>
+            } @else {
+              <option [ngValue]="null">{{ t('hospitalOrg.fields.root') }}</option>
+            }
+            @for (unit of parentOptions(); track unit.id) {
+              <option [ngValue]="unit.id">{{ unitLabel(unit) }} · {{ typeLabel(unit.unitType) }}</option>
+            }
+          </select>
+          @if (submitted() && parentError()) {
+            <p id="org-parent-error" class="mt-1.5 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(parentError()) }}</p>
+          } @else if (parentRequired() && parentOptions().length === 0) {
+            <p class="mt-1.5 text-xs font-semibold text-[var(--brand-warning-text)]">{{ t('hospitalOrg.validation.noServiceYet') }}</p>
+          }
+        </div>
+      }
+
+      <div class="min-w-0">
+        <label class="text-sm font-semibold text-[var(--text-primary)]" for="org-unit-code">{{ t('hospitalOrg.fields.code') }}</label>
+        <input
+          id="org-unit-code"
+          class="ui-input mt-1.5 w-full min-w-0 font-mono text-sm uppercase"
+          name="code"
+          maxlength="64"
+          autocomplete="off"
+          spellcheck="false"
+          required
+          [attr.aria-invalid]="codeErrorVisible()"
+          [attr.aria-describedby]="codeErrorVisible() ? 'org-unit-code-error' : 'org-unit-code-hint'"
+          [ngModel]="code()"
+          (ngModelChange)="editCode($event)"
+        />
+        @if (codeErrorVisible()) {
+          <p id="org-unit-code-error" class="mt-1.5 text-xs font-semibold text-[var(--brand-danger-text)]">{{ t(codeError()) }}</p>
+        } @else {
+          <p id="org-unit-code-hint" class="mt-1.5 text-xs leading-5 text-[var(--text-muted)]">{{ t('hospitalOrg.fields.codeHint') }}</p>
+        }
+      </div>
+
+      @if (error()) {
+        <p class="break-words rounded-[var(--radius-brand-sm)] border border-[var(--brand-danger-border)] bg-[var(--brand-danger-subtle)] p-3 text-sm font-semibold text-[var(--brand-danger-text)]" role="alert">
+          {{ error() }}
+        </p>
+      }
+    </div>
+
+    <footer class="flex min-w-0 flex-col-reverse gap-2 border-t border-[var(--app-border)] px-4 py-4 sm:flex-row sm:items-center sm:px-5">
+      @if (editedUnit(); as unit) {
+        @if (unit.active) {
+          <button type="button" class="ui-button ui-button-danger w-full sm:w-auto" [disabled]="busy()" (click)="deactivate.emit(unit)">
+            {{ t('hospitalOrg.actions.deactivateUnit') }}
+          </button>
+        }
+      }
+      <div class="flex min-w-0 flex-col-reverse gap-2 sm:ml-auto sm:flex-row">
+        <button type="button" class="ui-button ui-button-secondary w-full sm:w-auto" [disabled]="busy()" (click)="close()">
+          {{ t('common.cancel') }}
+        </button>
+        <button type="submit" class="ui-button ui-button-primary w-full sm:w-auto" [disabled]="busy()">
+          @if (busy()) { {{ t('common.saving') }} } @else { {{ t(editedUnit() ? 'common.save' : 'hospitalOrg.actions.create') }} }
+        </button>
+      </div>
+    </footer>
+  </form>
+</div>

@@ -4,6 +4,8 @@
 
 ## Statut global
 
+Intervention 2026-11-05 — UX-20261105-HOSPITAL-ORGANIZATION-CLARITY : READY_FOR_REVIEW. L'écran « Organisation hospitalière » devient lisible : arbre imbriqué pôle › département › service › unité de soins, légende des niveaux, actions nommées, référentiels repliés, fenêtre de saisie guidée (niveaux expliqués, code proposé, erreurs dans la fenêtre). Angular uniquement, aucune API modifiée. Web 775 tests verts, build OK. Recette Maestro `.maestro/web/hospital-organization.yaml` écrite, non exécutée (backend et MailDev arrêtés). Ticket : `docs/ai/tickets/UX-20261105-HOSPITAL-ORGANIZATION-CLARITY.md`.
+
 Intervention 2026-11-05 — HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION (production) : après un OTP valide, l'écran de connexion revenait en silence à l'étape du code, puis le second clic échouait (code déjà consommé). La production tourne sur `e5114415` (18/10). Correctif front sur `hotfix/login-post-otp-navigation`, fusionné dans `main` : chargement maintenu jusqu'à l'ouverture de la page, message clair et nouvel essai sans renvoi du code, rechargement unique si un fichier JS est introuvable. Déploiement fait par le porteur du projet. Cause exacte chez l'utilisateur non prouvée (onglet antérieur au déploiement le plus probable).
 
 Intervention 2026-11-05 — relecture clinique AUDIT-20261104 : RC-01 à RC-06 corrigés. Interprétation de biologie jamais présumée normale ; posologie visible par le pharmacien. Flows Maestro web ajoutés. Fusionné dans `main` en local. Ouvert : validation par le médecin référent (Q-R1 à Q-R6), **changement du mot de passe exposé**, stories EPIC-0030 (travail partiel des agents non intégré).

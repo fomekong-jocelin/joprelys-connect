@@ -193,3 +193,6 @@ video_build/
 login_success_dashboard.png
 
 
+
+# Cache local du détecteur de design Impeccable (la config .impeccable/config.json reste versionnée)
+**/.impeccable/hook.cache.json
