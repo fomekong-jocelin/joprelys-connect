@@ -1,7 +1,9 @@
-import { Component, computed, inject, signal, effect } from '@angular/core';
-import { ActivatedRoute, Router, RouterLink } from '@angular/router';
+import { Component, computed, inject, signal, effect, untracked } from '@angular/core';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { AuthApiService } from './auth-api.service';
+import { AuthSession } from './auth.models';
 import { AuthTokenStorageService } from './auth-token-storage.service';
+import { PostLoginNavigationService } from './post-login-navigation.service';
 import { PatientPortalService } from '../patient/portal/services/patient-portal.service';
 import { I18nService } from '../core/i18n/i18n.service';
 import { AppLocale } from '../core/config/app-brand.config';
@@ -39,7 +41,7 @@ export class LoginComponent {
   private readonly authApi = inject(AuthApiService);
   private readonly tokenStorage = inject(AuthTokenStorageService);
   private readonly portalService = inject(PatientPortalService);
-  private readonly router = inject(Router);
+  private readonly postLoginNavigation = inject(PostLoginNavigationService);
   private readonly route = inject(ActivatedRoute, { optional: true });
   private readonly i18n = inject(I18nService);
   private readonly themeService = inject(ThemeService);
@@ -75,17 +77,13 @@ export class LoginComponent {
   constructor() {
     effect(() => {
       const s = this.session();
-      const mode = this.mode();
-      if (!s) return;
-
-      const patientSession = this.tokenStorage.isPatientSession(s);
       // The login surface can intentionally be opened in the opposite identity
       // context in the same tab. Do not bounce the user back to the currently
       // stored identity before they complete the explicit switch.
-      if ((mode === 'patient' && !patientSession) || (mode === 'staff' && patientSession)) {
-        return;
+      if (s && this.matchesMode(s, this.mode())) {
+        // Seuls la session et le mode déclenchent cet effet, jamais l'état interne du routeur.
+        untracked(() => this.completeLogin(s.role));
       }
-      this.router.navigateByUrl(this.destinationAfterLogin(s.role));
     });
   }
 
@@ -133,11 +131,11 @@ export class LoginComponent {
       next: (res) => {
         this.password.set('');
         this.showPassword.set(false);
-        this.loading.set(false);
         if (res.requiresOtp) {
+          this.loading.set(false);
           this.staffStep.set(2);
         } else {
-          this.router.navigateByUrl(this.destinationAfterLogin(res.role || ''));
+          this.completeLogin(res.role || '');
         }
       },
       error: (err: HttpErrorLike) => {
@@ -148,15 +146,12 @@ export class LoginComponent {
   }
 
   verifyStaffOtp(): void {
-    if (this.loading() || this.staffOtpCode().length !== 6) return;
+    if (this.loading() || this.retryOpeningEstablishedSession()) return;
+    if (this.staffOtpCode().length !== 6) return;
     this.loading.set(true);
     this.error.set(null);
     this.authApi.verifyStaffOtp(this.email(), this.staffOtpCode()).subscribe({
-      next: () => {
-        this.loading.set(false);
-        const s = this.session();
-        this.router.navigateByUrl(this.destinationAfterLogin(s?.role || ''));
-      },
+      next: () => this.completeLogin(this.session()?.role || ''),
       error: (err: HttpErrorLike) => {
         this.loading.set(false);
         this.error.set(this.staffOtpError(err));
@@ -175,6 +170,44 @@ export class LoginComponent {
       return this.t(`login.error.otp.${code}`);
     }
     return err.error?.error?.message ?? err.error?.detail ?? err.error?.message ?? this.t('login.error.invalidOtp');
+  }
+
+  /**
+   * Ouvre la destination une fois authentifié. Le bouton reste en chargement jusqu'à l'ouverture de la page :
+   * le code déjà consommé ne doit pas pouvoir être renvoyé pendant la navigation, ni après son échec.
+   */
+  private completeLogin(role: string): void {
+    this.loading.set(true);
+    void this.postLoginNavigation.open(this.destinationAfterLogin(role)).then((opened) => {
+      if (opened) return;
+      this.loading.set(false);
+      if (this.session()) {
+        this.error.set(this.t('login.error.navigationFailed'));
+        return;
+      }
+      this.resetToFirstStep();
+      this.error.set(this.t('login.error.sessionNotEstablished'));
+    });
+  }
+
+  /** Session déjà ouverte dans ce mode (code consommé, page non ouverte) : réessayer d'ouvrir la page, sans renvoyer le code. */
+  private retryOpeningEstablishedSession(): boolean {
+    const s = this.session();
+    if (!s || !this.matchesMode(s, this.mode())) return false;
+    this.error.set(null);
+    this.completeLogin(s.role);
+    return true;
+  }
+
+  private matchesMode(session: AuthSession, mode: LoginMode): boolean {
+    return this.tokenStorage.isPatientSession(session) === (mode === 'patient');
+  }
+
+  private resetToFirstStep(): void {
+    this.staffStep.set(1);
+    this.staffOtpCode.set('');
+    this.patientStep.set(1);
+    this.otpCode.set('');
   }
 
   logout(): void {
@@ -211,17 +244,15 @@ export class LoginComponent {
   }
 
   verifyOtp(): void {
-    if (this.loading() || this.otpCode().length !== 6) return;
+    if (this.loading() || this.retryOpeningEstablishedSession()) return;
+    if (this.otpCode().length !== 6) return;
     this.loading.set(true);
     this.error.set(null);
     this.portalService.verifyOtp({
       globalPatientNumber: this.patientNumber().trim().toUpperCase(),
       otpCode: this.otpCode().trim()
     }).subscribe({
-      next: () => {
-        this.loading.set(false);
-        this.router.navigate(['/patient/dashboard']);
-      },
+      next: () => this.completeLogin('PATIENT'),
       error: (err) => {
         this.loading.set(false);
         this.error.set(err.error?.detail || this.t('login.error.invalidOtp'));

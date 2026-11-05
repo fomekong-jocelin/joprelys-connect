@@ -1264,6 +1264,8 @@
   "login.error.otp.OTP_EXPIRED": "Ce code a expiré (validité 5 minutes). Revenez à l'étape précédente pour recevoir un nouveau code.",
   "login.error.otp.OTP_TOO_MANY_ATTEMPTS": "Trop de tentatives : ce code est annulé. Revenez à l'étape précédente pour recevoir un nouveau code.",
   "login.error.otp.OTP_NO_ACTIVE_REQUEST": "Aucun code valide en cours (code déjà annulé ou serveur redémarré). Revenez à l'étape précédente pour recevoir un nouveau code.",
+  "login.error.navigationFailed": "Vous êtes bien connecté, mais la page n'a pas pu s'ouvrir. Vérifiez votre connexion internet puis réessayez : aucun nouveau code n'est nécessaire.",
+  "login.error.sessionNotEstablished": "La connexion n'a pas pu être finalisée. Saisissez de nouveau vos identifiants pour recevoir un nouveau code.",
   "dashboard.admin.title": "Administration du Système",
   "dashboard.admin.clinics.title": "Cliniques Pilotes",
   "dashboard.admin.clinics.desc": "Créer et configurer les cliniques pilotes (organisations), modifier leur statut d'activité.",

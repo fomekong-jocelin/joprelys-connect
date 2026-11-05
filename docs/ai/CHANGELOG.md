@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION — Connexion : plus de retour silencieux à l'écran du code** (Fixed) :
+  - Après un code valide, le bouton reste en chargement jusqu'à l'ouverture de la page ; un échec de navigation affiche un message clair, et un nouveau clic réessaie d'ouvrir la page sans renvoyer le code déjà consommé.
+  - Un fichier JavaScript devenu introuvable après un déploiement provoque un unique rechargement de la page cible (`withNavigationErrorHandler`), sans boucle.
+  - Front uniquement, aucun changement d'API. Ticket : `docs/ai/tickets/HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION.md`.
+
 - **FEAT-20261018-UI-DIALOG-AND-NOTIFICATION-SYSTEM — Système unifié de dialogues et notifications (suppression des fenêtres JavaScript natives)** :
   - Éradication de la totalité des boîtes de dialogue et popups natives du navigateur (`window.confirm()`, `window.alert()`, `window.prompt()`) dans l'application web Angular.
   - Création de `DialogService` (`providedIn: 'root'`) fournissant les méthodes programmatiques `confirm(options): Promise<boolean>` et `alert(options): Promise<void>`, avec gestion des tonalités (`primary`, `warning`, `danger`, `info`), titres et libellés de boutons personnalisables.
