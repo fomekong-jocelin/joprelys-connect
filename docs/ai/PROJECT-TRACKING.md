@@ -4,6 +4,8 @@
 
 ## Statut global
 
+Intervention 2026-11-05 — HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION (production) : après un OTP valide, l'écran de connexion revenait en silence à l'étape du code, puis le second clic échouait (code déjà consommé). La production tourne sur `e5114415` (18/10). Correctif front sur `hotfix/login-post-otp-navigation`, fusionné dans `main` : chargement maintenu jusqu'à l'ouverture de la page, message clair et nouvel essai sans renvoi du code, rechargement unique si un fichier JS est introuvable. Déploiement fait par le porteur du projet. Cause exacte chez l'utilisateur non prouvée (onglet antérieur au déploiement le plus probable).
+
 Intervention 2026-11-05 — relecture clinique AUDIT-20261104 : RC-01 à RC-06 corrigés. Interprétation de biologie jamais présumée normale ; posologie visible par le pharmacien. Flows Maestro web ajoutés. Fusionné dans `main` en local. Ouvert : validation par le médecin référent (Q-R1 à Q-R6), **changement du mot de passe exposé**, stories EPIC-0030 (travail partiel des agents non intégré).
 
 Intervention 2026-11-04 — AUDIT-20261104-FULL-SECURITY-CLINICAL-UX : READY_FOR_REVIEW. Audit complet en 4 volets (AppSec, sécurité clinique, web, mobile) et correctifs sur `fix/audit-20261104-security-clinical-ux`, non commités : actes médicaux réservés aux médecins, patient limité au validé, aucun soin après décès, PIN d'ordonnance durci (V121), secret JWT, audit des lectures, anti-escalade RBAC, OTP, journaux, erreurs ; web (allergies non vérifiées, triage, confirmations, 404, contrastes) ; mobile (session, dictée, verrou, `FLAG_SECURE`, purge). Reste : EPIC-0030 (173 SP).

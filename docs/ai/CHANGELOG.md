@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION — Connexion : plus de retour silencieux à l'écran du code** (Fixed) :
+  - Après un code valide, le bouton reste en chargement jusqu'à l'ouverture de la page ; un échec de navigation affiche un message clair, et un nouveau clic réessaie d'ouvrir la page sans renvoyer le code déjà consommé.
+  - Un fichier JavaScript devenu introuvable après un déploiement provoque un unique rechargement de la page cible (`withNavigationErrorHandler`), sans boucle.
+  - Front uniquement, aucun changement d'API. Ticket : `docs/ai/tickets/HOTFIX-20261105-LOGIN-POST-OTP-NAVIGATION.md`.
+
 - **Relecture clinique AUDIT-20261104 et premiers correctifs de recette** ([CLINICAL-REVIEW](../features/audit-20261104-full/CLINICAL-REVIEW.md), ADR-20261104 D-08) :
   - **Biologie.**
     - Une interprétation absente ou inconnue n'est plus jamais présentée comme normale : enum `LabInterpretation`, valeur `NOT_INTERPRETED`.

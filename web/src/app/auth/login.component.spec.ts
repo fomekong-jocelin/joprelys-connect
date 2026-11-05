@@ -27,8 +27,9 @@ describe('LoginComponent', () => {
       },
     };
     mockRouter = {
+      url: '/login',
       navigate: vi.fn(),
-      navigateByUrl: vi.fn(),
+      navigateByUrl: vi.fn().mockResolvedValue(true),
       parseUrl: vi.fn(),
     };
     mockI18n = {
@@ -267,6 +268,78 @@ describe('LoginComponent', () => {
     });
 
     expect(mockRouter.navigateByUrl).toHaveBeenCalledWith('/patient/dashboard');
+  });
+
+  describe('when the page cannot open after a valid OTP', () => {
+    const verifiedSession = {
+      accessToken: 'jwt-token',
+      tokenType: 'Bearer',
+      expiresAt: '2999-07-02T12:30:00Z',
+      email: 'admin@example.com',
+      name: 'Admin Test',
+      role: 'ADMIN_CLINIQUE',
+      requiresOtp: false,
+    };
+
+    function verifyOtpThenNavigate(navigation: Promise<boolean>) {
+      mockRouter.navigateByUrl.mockReturnValue(navigation);
+      const fixture = TestBed.createComponent(LoginComponent);
+      const component = fixture.componentInstance;
+      const httpTesting = TestBed.inject(HttpTestingController);
+      component.email.set('admin@example.com');
+      component.staffStep.set(2);
+      component.staffOtpCode.set('689223');
+      component.verifyStaffOtp();
+      httpTesting.expectOne('/api/auth/verify-otp').flush(verifiedSession);
+      return { component, httpTesting };
+    }
+
+    it('keeps the button busy until the destination opens', async () => {
+      let finishNavigation!: (opened: boolean) => void;
+      const { component } = verifyOtpThenNavigate(new Promise<boolean>((resolve) => { finishNavigation = resolve; }));
+
+      expect(component.loading()).toBe(true);
+      finishNavigation(true);
+      await Promise.resolve();
+      await Promise.resolve();
+
+      expect(component.error()).toBeNull();
+    });
+
+    it('explains the failure and retries the page instead of re-sending the consumed code', async () => {
+      const { component, httpTesting } = verifyOtpThenNavigate(Promise.resolve(false));
+      await vi.waitFor(() => expect(component.loading()).toBe(false));
+
+      expect(component.error()).toBe('login.error.navigationFailed');
+      expect(component.staffStep()).toBe(2);
+
+      mockRouter.navigateByUrl.mockResolvedValue(true);
+      component.verifyStaffOtp();
+
+      httpTesting.expectNone('/api/auth/verify-otp');
+      expect(mockRouter.navigateByUrl).toHaveBeenLastCalledWith('/dashboard');
+      expect(component.error()).toBeNull();
+    });
+
+    it('reports a navigation error the same way', async () => {
+      const { component } = verifyOtpThenNavigate(Promise.reject(new Error('Failed to fetch dynamically imported module')));
+      await vi.waitFor(() => expect(component.loading()).toBe(false));
+
+      expect(component.error()).toBe('login.error.navigationFailed');
+    });
+
+    it('restarts the sign-in when the session was lost during the navigation', async () => {
+      let finishNavigation!: (opened: boolean) => void;
+      const { component } = verifyOtpThenNavigate(new Promise<boolean>((resolve) => { finishNavigation = resolve; }));
+
+      TestBed.inject(AuthTokenStorageService).clear();
+      finishNavigation(false);
+      await vi.waitFor(() => expect(component.loading()).toBe(false));
+
+      expect(component.error()).toBe('login.error.sessionNotEstablished');
+      expect(component.staffStep()).toBe(1);
+      expect(component.staffOtpCode()).toBe('');
+    });
   });
 
   it('should keep the error generic when credentials are invalid', () => {
