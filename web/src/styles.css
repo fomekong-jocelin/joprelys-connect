@@ -641,6 +641,18 @@ body {
     background: var(--brand-warning-muted);
   }
 
+  /* Action tertiaire : actions répétées sur chaque ligne d'une liste, sans concurrencer l'action principale. */
+  .ui-button-ghost {
+    background: transparent;
+    border: 1px solid transparent;
+    color: var(--brand-primary);
+    padding: 0 0.75rem;
+  }
+
+  .ui-button-ghost:hover:not(:disabled) {
+    background: var(--brand-primary-subtle);
+  }
+
   /* ---- Links ---- */
   .ui-link {
     color: var(--brand-primary);

@@ -96,6 +96,16 @@ Ce catalogue est extensible par migration/application maîtrisée ; il n'est pas
 - focus visible ;
 - aucune chaîne visible hardcodée.
 
+### 7.1 Clarification de l'écran (UX-20261105)
+
+- Le sous-titre énonce le but : créer les services, éventuellement regroupés en pôles ou départements, qui servent ensuite à affecter personnel, chambres et patients hospitalisés.
+- L'arbre est réellement imbriqué (indentation + filet vertical), sur mobile comme sur desktop ; une légende « Pôle › Département › Service › Unité de soins » précise que seul le service est indispensable.
+- Une ligne porte au plus deux actions : ajouter l'enfant par défaut (service sous un pôle ou un département, unité de soins sous un service) et modifier. Une unité inactive propose « Réactiver ». La désactivation se fait depuis la fenêtre de modification.
+- Les référentiels (types de services, spécialités médicales) sont consultables dans une section repliée « Référentiels standard ».
+- Fenêtre de saisie, dans l'ordre : niveau (choix décrits, limités à ceux que le parent accepte), type de service, nom, rattachement, code interne. Le code est proposé à partir du nom (ou du type de service), unique parmi les unités affichées et modifiable ; le serveur reste l'autorité (RF-07, RF-14).
+- Les erreurs de saisie s'affichent après une tentative d'envoi ; les erreurs du serveur s'affichent dans la fenêtre, sans perdre la saisie.
+- État vide : une seule action principale, « Créer le premier service », et une action secondaire « Commencer par un pôle ».
+
 ## 8. Hors périmètre
 
 - géographie `Site/Bâtiment/Étage/Zone/Espace` : HOS-LOC-001-A ;

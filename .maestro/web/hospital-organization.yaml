@@ -1,0 +1,42 @@
+# Recette UX-20261105 : écran « Organisation hospitalière » compréhensible.
+# Vérifie l'arbre, la légende des niveaux, la fenêtre de saisie guidée et les référentiels repliés.
+# N'enregistre rien : la fenêtre est fermée avec « Annuler ».
+# Variables : BASE_URL, EMAIL (administrateur clinique avec ORGANIZATION_STRUCTURE_MANAGE), PASSWORD.
+# Prérequis : l'établissement du compte a au moins une unité configurée.
+url: ${BASE_URL}
+tags:
+  - recette
+  - hospital-organization
+---
+- runFlow:
+    file: subflows/login-staff.yaml
+    env:
+      EMAIL: ${EMAIL}
+- openLink: ${BASE_URL}/clinic/hospital-organization
+- extendedWaitUntil:
+    visible: "Structure de l'établissement"
+    timeout: 15000
+- assertVisible: "Seul le service est indispensable.*"
+- assertVisible: "Référentiels standard"
+- assertNotVisible: "Proposés à la création d'un service."
+
+# Fenêtre de saisie : niveaux expliqués, validation affichée après une tentative d'envoi.
+- tapOn:
+    css: "app-page-header button.ui-button-primary"
+- extendedWaitUntil:
+    visible: "Que voulez-vous créer.*"
+    timeout: 5000
+- assertVisible: "Une discipline.*"
+- assertVisible: "Une subdivision d'un service.*"
+- tapOn:
+    css: "#org-unit-name"
+- inputText: "Recette Maestro"
+- tapOn:
+    css: "form[role='dialog'] button[type='submit']"
+- assertVisible: "Choisissez un type de service."
+- tapOn: "Annuler"
+- assertNotVisible: "Que voulez-vous créer.*"
+
+# Référentiels : repliés par défaut, consultables à la demande.
+- tapOn: "Référentiels standard"
+- assertVisible: "Proposés à la création d'un service."
