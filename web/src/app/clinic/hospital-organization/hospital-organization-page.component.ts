@@ -8,6 +8,7 @@ import { I18nService } from '../../core/i18n/i18n.service';
 import { interpolate } from '../../core/i18n/interpolate';
 import { AppShellComponent } from '../../shared/layout/app-shell.component';
 import { IconComponent, UiIconName } from '../../shared/ui/icon.component';
+import { MenuButtonComponent, MenuButtonItem } from '../../shared/ui/menu-button.component';
 import { PageHeaderComponent } from '../../shared/ui/page-header.component';
 import { OrganizationApiService } from '../organizations/organization-api.service';
 import { Organization } from '../organizations/organizations.models';
@@ -39,6 +40,7 @@ const UNIT_ICONS: Readonly<Record<OrganizationalUnitType, UiIconName>> = {
     AppShellComponent,
     IconComponent,
     PageHeaderComponent,
+    MenuButtonComponent,
     OrgUnitEditorComponent,
   ],
   templateUrl: './hospital-organization-page.component.html',
@@ -68,6 +70,11 @@ export class HospitalOrganizationPageComponent implements OnInit {
   readonly scopeMissing = computed(() => this.platformAdministrator() && !this.selectedOrganizationId());
   readonly empty = computed(() => !this.scopeMissing() && !this.loading() && this.units().length === 0);
   readonly showHeaderAction = computed(() => !this.scopeMissing() && !this.empty());
+  readonly addMenuItems = computed<MenuButtonItem[]>(() => UNIT_LEVELS.map((level) => ({
+    id: level,
+    label: this.typeLabel(level),
+    description: this.t(`hospitalOrg.levelHelp.${level}`),
+  })));
   readonly catalogSummary = computed(() => interpolate(this.t('hospitalOrg.catalogs.summary'), {
     services: this.serviceCatalog().length,
     specialties: this.specialtyCatalog().length,
@@ -118,6 +125,11 @@ export class HospitalOrganizationPageComponent implements OnInit {
     this.editor.set({ mode: 'create', unitType, parentId });
   }
 
+  openCreateFromMenu(id: string): void {
+    const level = UNIT_LEVELS.find((candidate) => candidate === id);
+    if (level) this.openCreate(level);
+  }
+
   openEdit(unit: OrganizationalUnit): void {
     this.clearMessages();
     this.editor.set({ mode: 'edit', unit });
@@ -136,7 +148,7 @@ export class HospitalOrganizationPageComponent implements OnInit {
       ? this.api.updateUnit(id, payload, this.scopeOrganizationId())
       : this.api.createUnit(payload, this.scopeOrganizationId());
     request.subscribe({
-      next: () => this.afterMutation('hospitalOrg.feedback.saved'),
+      next: () => this.afterMutation(this.savedFeedbackKey(id, payload.unitType)),
       error: (error: HttpErrorResponse) => this.handleOperationError(error),
     });
   }
@@ -168,6 +180,14 @@ export class HospitalOrganizationPageComponent implements OnInit {
 
   catalogLabel(entry: HospitalServiceCatalogEntry | MedicalSpecialtyCatalogEntry): string {
     return this.i18n.locale() === 'en' ? entry.nameEn : entry.nameFr;
+  }
+
+  /** Après la création d'un regroupement, rappeler comment y ranger les services existants. */
+  private savedFeedbackKey(id: string | null, type: OrganizationalUnitType): string {
+    const isNewGroup = !id && (type === 'POLE' || type === 'DEPARTMENT');
+    return isNewGroup && this.units().some((unit) => unit.unitType === 'SERVICE')
+      ? 'hospitalOrg.feedback.groupCreated'
+      : 'hospitalOrg.feedback.saved';
   }
 
   private afterMutation(feedbackKey: string): void {

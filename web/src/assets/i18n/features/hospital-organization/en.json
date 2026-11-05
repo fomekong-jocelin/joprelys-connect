@@ -64,5 +64,7 @@
   "hospitalOrg.feedback.saved": "Unit saved.",
   "hospitalOrg.feedback.activated": "Unit reactivated.",
   "hospitalOrg.feedback.deactivated": "Unit deactivated.",
-  "hospitalOrg.feedback.error": "Unable to update the hospital organization."
+  "hospitalOrg.feedback.error": "Unable to update the hospital organization.",
+  "hospitalOrg.actions.addUnit": "Add a unit",
+  "hospitalOrg.feedback.groupCreated": "Unit saved. To move an existing service into it, select “Edit” on that service and choose it under “Belongs to”."
 }

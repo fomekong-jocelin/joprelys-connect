@@ -121,6 +121,35 @@ describe('HospitalOrganizationPageComponent', () => {
       expect(fixture.componentInstance.editor()).toEqual({ mode: 'create', unitType: 'CARE_UNIT', parentId: 'service-1' });
     });
 
+    it('still lets the user add any level once services exist', () => {
+      const trigger: HTMLButtonElement = fixture.nativeElement.querySelector('app-menu-button > button');
+      trigger.click();
+      fixture.detectChanges();
+
+      expect(trigger.getAttribute('aria-expanded')).toBe('true');
+      const choices = fixture.nativeElement.querySelectorAll('app-menu-button li button');
+      expect(choices).toHaveLength(4);
+      expect(choices[0].textContent).toContain('hospitalOrg.unitType.POLE');
+      expect(choices[0].textContent).toContain('hospitalOrg.levelHelp.POLE');
+
+      choices[0].click();
+      fixture.detectChanges();
+
+      expect(fixture.componentInstance.editor()).toEqual({ mode: 'create', unitType: 'POLE', parentId: null });
+      expect(fixture.nativeElement.querySelector('app-menu-button li')).toBeNull();
+    });
+
+    it('explains how to move existing services into a new pole', () => {
+      const component = fixture.componentInstance;
+      component.openCreate('POLE');
+
+      component.save({ id: null, payload: {
+        code: 'CHIRURGIE', unitType: 'POLE', parentId: null, name: 'Chirurgie', serviceCatalogCode: null,
+      } });
+
+      expect(component.successMessage()).toBe('hospitalOrg.feedback.groupCreated');
+    });
+
     it('keeps the reference catalogs folded away', () => {
       const details = fixture.nativeElement.querySelector('details');
       expect(details).not.toBeNull();

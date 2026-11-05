@@ -20,10 +20,11 @@
       </select>
     }
     @if (showHeaderAction()) {
-      <button type="button" class="ui-button ui-button-primary w-full sm:w-auto" (click)="openCreate('SERVICE')">
-        <app-ui-icon name="plus" aria-hidden="true" />
-        {{ t('hospitalOrg.actions.add.SERVICE') }}
-      </button>
+      <app-menu-button
+        [label]="t('hospitalOrg.actions.addUnit')"
+        [items]="addMenuItems()"
+        (selected)="openCreateFromMenu($event)"
+      />
     }
   </app-page-header>
 
