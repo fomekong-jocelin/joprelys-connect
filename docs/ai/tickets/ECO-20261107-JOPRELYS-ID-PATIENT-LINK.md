@@ -199,12 +199,14 @@ Tasks :
 | Données réelles en test | Fuite de données de santé | Utilisateurs et DPU fictifs uniquement (`DPU-TEST-…`) |
 | Webhook rejoué ou forgé | Révocation fantôme ou ignorée | Signature, fenêtre de 5 min, dédoublonnage `id` |
 | Docker indisponible localement | Tests Keycloak non exécutables | Signalé honnêtement ; tests unitaires couvrant la logique |
-| Mobile : redirection OAuth mal configurée | Flux bloqué | Schéma déclaré Android/iOS, test manuel documenté |
+| Mobile : redirection OAuth mal configurée | Flux bloqué | Schéma déclaré Android/iOS, test manuel documenté ; `taskAffinity=""` retiré (cause réelle trouvée au test sur appareil) |
+| Connexion Joprelys ID par identifiant + mot de passe | Faible adoption terrain (patients habitués au numéro + code WhatsApp/SMS) | **Reporté en fin de programme** par l'utilisateur : refonte « téléphone d'abord » (AllôPharma : email facultatif, numéro + code, Google optionnel ; Joprelys ID : authentificateur « numéro + code » adossé à l'OTP patient, preuve = numéro enregistré à la clinique) |
 
 ## 6. Suivi d'exécution
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
+| 2026-11-07 | IA (Claude) | 0,5 j | 80 % | S7, S8 | — | S6 testée de bout en bout sur Galaxy A56 (liaison réussie) ; correctif redirection et retours design appliqués (AllôPharma 46eb0056, 651b9d2c, 45782bee) ; refonte « téléphone d'abord » reportée en fin de programme |
 | 2026-11-07 | IA (Claude) | 0,5 j | 5 % | S1 à S8 | Validation du découpage | ADR et découpage rédigés |
 | 2026-11-07 | IA (Claude) | 1 j | 70 % | S6 à S8 | Docker absent (intégration PostgreSQL AllôPharma non exécutée) | S5 livrée côté AllôPharma : liaison, révocation, webhook signé, V64 ; 36 tests ajoutés |
 | 2026-11-07 | IA (Claude) | 1 j | 55 % | S5 à S8 | Docker absent | S4 livrée : outbox V124, webhooks signés, relais 24 h → DEAD, révocation portail émettant `consent.revoked` ; 22 tests ajoutés |
