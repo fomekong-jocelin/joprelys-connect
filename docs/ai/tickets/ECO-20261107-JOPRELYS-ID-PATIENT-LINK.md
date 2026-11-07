@@ -165,11 +165,13 @@ Résultat S5 (07/11/2026, PharmaLocate branche `feat/joprelys-id-patient-link`, 
 *En tant que patient, je veux comprendre ce que je partage avant de relier mon dossier, et pouvoir arrêter le partage.*
 
 Tasks :
-- [ ] T6.1 Dépendance OAuth natif (`flutter_appauth`, version vérifiée sur pub.dev) ; configuration centralisée (issuer, client id, redirect) par environnement, sans secret.
-- [ ] T6.2 Écran « Relier mon dossier Joprelys » : ce qui est partagé, ce qui ne l'est pas, pour quel profil (moi, enfant, adulte dépendant), bouton d'accord ; états chargement / erreur / succès / hors ligne.
-- [ ] T6.3 Écran d'état de la liaison + révocation avec confirmation.
-- [ ] T6.4 i18n `fr` / `en`, `Semantics(identifier: …)` sur chaque élément interactif, cibles ≥ 48 px, thèmes clair/sombre via le design system.
-- [ ] T6.5 Tests widget (états, révocation) ; flux Maestro si un émulateur est disponible (sinon signalé non exécuté).
+- [x] T6.1 Dépendance OAuth natif (`flutter_appauth`, version vérifiée sur pub.dev) ; configuration centralisée (issuer, client id, redirect) par environnement, sans secret.
+- [x] T6.2 Écran « Relier mon dossier Joprelys » : ce qui est partagé, ce qui ne l'est pas, pour quel profil (moi, enfant, adulte dépendant), bouton d'accord ; états chargement / erreur / succès / hors ligne.
+- [x] T6.3 Écran d'état de la liaison + révocation avec confirmation.
+- [x] T6.4 i18n `fr` / `en`, `Semantics(identifier: …)` sur chaque élément interactif, cibles ≥ 48 px, thèmes clair/sombre via le design system.
+- [x] T6.5 Tests widget (états, révocation) ; flux Maestro si un émulateur est disponible (sinon signalé non exécuté).
+
+Résultat S6 (07/11/2026, PharmaLocate branche `feat/joprelys-id-patient-link`, `TICKET-0118`) : maquette HTML validée par le porteur produit puis écran Flutter fidèle (consentement, connexion, erreur, hors ligne, liaison active, confirmation), `flutter_appauth` 12.1.0 PKCE, 24 tests widget/contrôleur verts, 12 captures clair/sombre. Non testé : Maestro et connexion Joprelys ID réelle (pas d'émulateur Android).
 
 ### S7 — Portail patient Joprelys : applications reliées · 3 SP
 
@@ -211,7 +213,7 @@ Tasks :
 
 ## 7. Statut
 
-Statut : IN_PROGRESS (S1 à S5 livrées ; S6 et S7 suivantes)
+Statut : IN_PROGRESS (S1 à S6 livrées ; S7 suivante)
 
 ## 8. Impact version / SemVer
 
