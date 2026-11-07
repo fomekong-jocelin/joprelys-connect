@@ -43,6 +43,13 @@ joprelys:
   seed:
     admin:
       enabled: false
+  eco:
+    # Pas de valeur par défaut en production : une variable oubliée doit empêcher le démarrage
+    # (échec fermé) plutôt que pointer vers le Keycloak local.
+    identity:
+      issuer-uri: ${JOPRELYS_ID_ISSUER_URI}
+      jwk-set-uri: ${JOPRELYS_ID_JWK_SET_URI}
+      audience: ${JOPRELYS_ID_AUDIENCE:joprelys-api}
   lab-integration:
     api-key: ${JOPRELYS_LAB_INTEGRATION_API_KEY}
 

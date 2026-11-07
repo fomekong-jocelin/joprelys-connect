@@ -39,7 +39,32 @@ public record EcoProperties(String sourceTenant, Identity identity, Map<String, 
         return Optional.ofNullable(clientId).map(applications::get);
     }
 
+    /** Joprelys ID : toutes les valeurs sont requises, en HTTPS hors poste local (échec au démarrage sinon). */
     public record Identity(String issuerUri, String jwkSetUri, String audience) {
+
+        public Identity {
+            if (isBlank(issuerUri) || isBlank(jwkSetUri) || isBlank(audience)) {
+                throw new IllegalStateException(
+                        "Configuration joprelys.eco.identity incomplète : issuer-uri, jwk-set-uri et audience sont requis");
+            }
+            requireSecureUrl("issuer-uri", issuerUri);
+            requireSecureUrl("jwk-set-uri", jwkSetUri);
+        }
+    }
+
+    private static boolean isBlank(String value) {
+        return value == null || value.isBlank();
+    }
+
+    private static boolean isLocal(URI uri) {
+        return uri.getHost() != null && LOCAL_HOSTS.contains(uri.getHost());
+    }
+
+    private static void requireSecureUrl(String name, String url) {
+        URI uri = URI.create(url);
+        if (!"https".equals(uri.getScheme()) && !isLocal(uri)) {
+            throw new IllegalStateException("joprelys.eco.identity." + name + " doit être en HTTPS hors poste local");
+        }
     }
 
     /**
@@ -76,8 +101,7 @@ public record EcoProperties(String sourceTenant, Identity identity, Map<String, 
                         + " (" + MIN_SECRET_LENGTH + " caractères minimum)");
             }
             URI uri = URI.create(url);
-            boolean local = uri.getHost() != null && LOCAL_HOSTS.contains(uri.getHost());
-            if (!"https".equals(uri.getScheme()) && !local) {
+            if (!"https".equals(uri.getScheme()) && !isLocal(uri)) {
                 throw new IllegalStateException("URL de webhook non HTTPS pour l'abonné " + application);
             }
         }

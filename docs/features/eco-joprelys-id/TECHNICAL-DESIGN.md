@@ -91,3 +91,14 @@ Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (
   - `EcoKeycloakLiveIT` : jetons émis par un vrai Keycloak, clés téléchargées par le vrai décodeur ; désactivé sans variables, lancé par `node infra/keycloak/run-live-eco-test.mjs`. Non exécuté en CI.
 - S4 : `EcoWebhookSignerTest` (vecteur calculé avec Python `hmac`), `EcoRetryPolicyTest`, `EcoPropertiesWebhooksTest`, `HttpEcoWebhookSenderTest` (serveur HTTP du JDK qui recalcule la signature), `EcoOutboxIntegrationTest` (10 tests : contrat, idempotence, contrôle de propriété, rollback, `MANDATORY`, abonné absent, relais livré / replanifié / DEAD).
 - Testcontainers Keycloak : reporté jusqu'à disponibilité de Docker.
+
+## S8 — Durcissement issu de la revue sécurité (07/11/2026)
+
+- **Une liaison active par profil (V125).** La colonne `active_external_profile_id` vaut `external_profile_id` tant que la liaison est `ACTIVE` et `NULL` une fois révoquée. Une contrainte CHECK garantit cette cohérence et l'index unique `(application, active_external_profile_id)` interdit deux liaisons actives sur un même profil. Ce marqueur est portable PostgreSQL/H2, sur le modèle de V76. `PatientLinkService` fait un `saveAndFlush` et traduit la violation d'index en `PROFILE_LINKED_ELSEWHERE` (409).
+- **Configuration Joprelys ID qui échoue fermé.** `EcoProperties.Identity` exige `issuer-uri`, `jwk-set-uri` et `audience`, en HTTPS hors `localhost`. `application-prod.yml` ne donne aucune valeur par défaut aux URL : une variable oubliée empêche le démarrage.
+- **Suites avant production** (suivies dans l'EPIC) :
+  - consentement granulaire (client scope par périmètre, `scopes demandés ⊆ jeton`) ;
+  - attestation du profil par `allopharma-server` ;
+  - opérations liées à l'`azp` ;
+  - `FOR UPDATE SKIP LOCKED` dans le relais d'outbox ;
+  - realm de production durci.

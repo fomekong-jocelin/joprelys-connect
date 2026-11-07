@@ -8,6 +8,14 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **ECO-20261107 S8 — Bout en bout, revue sécurité et clôture** (Security / Changed / Docs) :
+  - Migration **V125** : une seule liaison active par profil d'application, garantie par un index unique (marqueur portable PostgreSQL/H2). Une création concurrente renvoie `PROFILE_LINKED_ELSEWHERE` (409).
+  - Configuration Joprelys ID qui échoue fermé :
+    - `issuer-uri`, `jwk-set-uri` et `audience` sont requis, en HTTPS hors poste local ;
+    - aucune valeur par défaut en profil `prod` (`JOPRELYS_ID_ISSUER_URI` et `JOPRELYS_ID_JWK_SET_URI` deviennent obligatoires au déploiement).
+  - Scénario E2E reproductible `docs/features/eco-joprelys-id/E2E-SCENARIO.md`. La boucle réelle liaison → révocation portail → purge AllôPharma est verte.
+  - Revue appsec de la branche : aucune faille critique ni élevée. Les suites bloquantes avant production (consentement granulaire, attestation du profil) sont suivies dans l'EPIC.
+
 - **ECO-20261107 S7 — Portail patient : « Applications reliées »** (Added / Security) :
   - `GET /api/patient/linked-apps` et `DELETE /api/patient/linked-apps/{id}` (autorité `PATIENT_PORTAL_ACCESS`, patient déduit du jeton, 404 sur la liaison d'un autre patient) ; la révocation notifie l'application (`consent.revoked`).
   - Page Angular `/patient/linked-apps` (menu patient et « Confidentialité ») : logo et nom de l'application, données partagées, dates, révocation confirmée ; états chargement, erreur, vide ; FR/EN, clair/sombre.

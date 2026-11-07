@@ -21,13 +21,13 @@ Hors périmètre (noté, non traité ici) :
 - [x] `docker compose` démarre Keycloak 26 avec le realm `joprelys-id` importé (clients `allopharma-mobile` public PKCE, `allopharma-server` confidentiel, audience `joprelys-api`, utilisateurs fictifs).
 - [x] Le dépôt `eco-contracts` contient les JSON Schema `PatientLink`, `Consent` et `EventEnvelope` v1, des exemples fictifs valides et invalides, et une commande de validation.
 - [x] Joprelys expose `/api/eco/v1/patient-links` et `/api/eco/v1/consents/{id}/revoke`, protégés par des jetons Joprelys ID (scope + audience) ; les jetons maison y sont refusés et inversement.
-- [ ] Les webhooks entre serveurs respectent l'enveloppe § 2.2 : `Eco-Signature` HMAC-SHA256, `Idempotency-Key`, écart d'horloge ≤ 5 min, dédoublonnage sur `id`, outbox transactionnelle rejouée avec backoff exponentiel pendant 24 h puis file d'erreurs.
-- [ ] AllôPharma mobile : écran d'explication et de consentement, connexion Joprelys ID par PKCE, état de la liaison, révocation.
-- [ ] Portail patient Joprelys (Angular) : liste des applications reliées et révocation.
-- [ ] `consent.revoked` purge la copie chez le récepteur (test automatisé).
-- [ ] Données fictives uniquement, aucun secret versionné (gitleaks vert).
-- [ ] Tests verts dans chaque dépôt (Testcontainers Keycloak côté Joprelys), documentation, tickets, tracking et changelogs à jour.
-- [ ] Une branche par dépôt, prête à merger ; aucun merge ni push sans accord explicite.
+- [x] Les webhooks entre serveurs respectent l'enveloppe § 2.2 : `Eco-Signature` HMAC-SHA256, `Idempotency-Key`, écart d'horloge ≤ 5 min, dédoublonnage sur `id`, outbox transactionnelle rejouée avec backoff exponentiel pendant 24 h puis file d'erreurs.
+- [x] AllôPharma mobile : écran d'explication et de consentement, connexion Joprelys ID par PKCE, état de la liaison, révocation.
+- [x] Portail patient Joprelys (Angular) : liste des applications reliées et révocation.
+- [x] `consent.revoked` purge la copie chez le récepteur (test automatisé).
+- [x] Données fictives uniquement, aucun secret versionné (gitleaks vert).
+- [x] Tests verts dans chaque dépôt, documentation, tickets, tracking et changelogs à jour. Écart assumé : faute de Docker, Keycloak est testé en réel par `EcoKeycloakLiveIT` (archive officielle) au lieu de Testcontainers.
+- [x] Une branche par dépôt, prête à merger ; aucun merge ni push sans accord explicite.
 
 ## 3. Pilotage projet
 
@@ -188,10 +188,31 @@ Non testé : connexion réelle au portail par OTP ; lecteur d'écran réel (rôl
 ### S8 — Bout en bout en test, docs et clôture · 3 SP
 
 Tasks :
-- [ ] T8.1 Scénario pas à pas reproductible (compose + deux backends + mobile ou appel simulé) : liaison → révocation côté Joprelys → purge AllôPharma ; révocation côté AllôPharma → statut Joprelys.
-- [ ] T8.2 Mise à jour feuille de route (§ 3 ordre d'exécution), tickets, `PROJECT-TRACKING.md`, `CHANGELOG.md` des deux dépôts.
-- [ ] T8.3 Revue sécurité (skill appsec-review) du diff de chaque branche ; gitleaks.
-- [ ] T8.4 Proposition SemVer (MINOR dans les deux applis) ; branches prêtes, aucun merge ni push sans accord.
+- [x] T8.1 Scénario pas à pas reproductible (compose + deux backends + mobile ou appel simulé) : liaison → révocation côté Joprelys → purge AllôPharma ; révocation côté AllôPharma → statut Joprelys.
+- [x] T8.2 Mise à jour feuille de route (§ 3 ordre d'exécution), tickets, `PROJECT-TRACKING.md`, `CHANGELOG.md` des deux dépôts.
+- [x] T8.3 Revue sécurité (skill appsec-review) du diff de chaque branche ; gitleaks.
+- [x] T8.4 Proposition SemVer (MINOR dans les deux applis) ; branches prêtes, aucun merge ni push sans accord.
+
+Résultat S8 (07/11/2026) :
+
+- **T8.1, boucle réelle** sur Galaxy A56, Keycloak 26.8.1, les deux backends et le portail en local, avec des données fictives.
+  - Liaison depuis le téléphone, puis révocation depuis le portail : 204, liaison et consentement `REVOKED` par `PATIENT`, outbox `DELIVERED` à la première tentative, copie AllôPharma révoquée avec le DPU effacé.
+  - Révocation depuis AllôPharma : le statut Joprelys passe à `REVOKED`.
+  - Scénario et script : `docs/features/eco-joprelys-id/E2E-SCENARIO.md` (ce dépôt), `docs/features/eco-patient-link/E2E-SCENARIO.md` et `scripts/e2e/eco_revocation_loop.py` (AllôPharma).
+- **T8.3, revue appsec des deux branches.** Aucune faille critique ni élevée. gitleaks est vert sur les deux branches, sur `eco-contracts` et sur les modifications non commitées.
+  - Corrigé dans S8 :
+    - Joprelys : index unique « une liaison active par profil » (V125) et 409 en cas de course ; configuration Joprelys ID qui échoue fermé (valeurs requises, HTTPS hors poste local, aucune valeur par défaut en prod).
+    - AllôPharma : corps du webhook lu de façon bornée (413 avant chargement) ; `JOPRELYS_TOKEN_REJECTED` passe de 401 à 403, pour que le jeton Joprelys ne soit jamais renvoyé une seconde fois.
+  - Reste à faire **avant toute ouverture hors dev** (tickets de suite, voir § 5) :
+    - consentement granulaire, avec un client scope Keycloak par périmètre et `scopes demandés ⊆ scopes du jeton` ;
+    - preuve que le profil AllôPharma appartient à l'utilisateur (attestation par `allopharma-server` ou token exchange) ;
+    - lier chaque opération à son client (`azp`) ;
+    - purge de `eco_inbound_event` ;
+    - DPU masqué ou chiffré côté AllôPharma ;
+    - redirection mobile par App Link HTTPS ;
+    - `FOR UPDATE SKIP LOCKED` dans l'outbox ;
+    - realm de production (`sslRequired: all`, politique de mot de passe, événements).
+- **T8.4, SemVer :** voir § 8.
 
 ## 5. Risques et impacts
 
@@ -203,12 +224,15 @@ Tasks :
 | Webhook rejoué ou forgé | Révocation fantôme ou ignorée | Signature, fenêtre de 5 min, dédoublonnage `id` |
 | Docker indisponible localement | Tests Keycloak non exécutables | Signalé honnêtement ; tests unitaires couvrant la logique |
 | Mobile : redirection OAuth mal configurée | Flux bloqué | Schéma déclaré Android/iOS, test manuel documenté ; `taskAffinity=""` retiré (cause réelle trouvée au test sur appareil) |
+| Consentement non granulaire : les périmètres viennent du corps de requête, l'écran Keycloak est générique | Partage de données de santé non vu par le patient | **Bloquant avant production** : un client scope par périmètre affiché au consentement, et vérification serveur `scopes ⊆ jeton` |
+| `allopharmaProfileId` non attesté par AllôPharma | Liaison d'un profil tiers, profil légitime bloqué | **Bloquant avant production** : attestation signée par `allopharma-server` ou token exchange RFC 8693 |
 | Connexion Joprelys ID par identifiant + mot de passe | Faible adoption terrain (patients habitués au numéro + code WhatsApp/SMS) | **Reporté en fin de programme** par l'utilisateur : refonte « téléphone d'abord » (AllôPharma : email facultatif, numéro + code, Google optionnel ; Joprelys ID : authentificateur « numéro + code » adossé à l'OTP patient, preuve = numéro enregistré à la clinique) |
 
 ## 6. Suivi d'exécution
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
+| 2026-11-07 | IA (Claude) | 1 j | 100 % | Merge et push après accord ; suites sécurité avant production | — | S8 : boucle E2E réelle verte (script reproductible), revue appsec des 2 branches, correctifs (V125, configuration fail-closed, webhook borné, 403), gitleaks vert sur les 3 dépôts |
 | 2026-11-07 | IA (Claude) | 1 j | 90 % | S8 | — | S7 livrée : endpoints portail liste/révocation, page Angular « Applications reliées », révocation portail → webhook livré à AllôPharma vérifié en local |
 | 2026-11-07 | IA (Claude) | 0,5 j | 80 % | S7, S8 | — | S6 testée de bout en bout sur Galaxy A56 (liaison réussie) ; correctif redirection et retours design appliqués (AllôPharma 46eb0056, 651b9d2c, 45782bee) ; refonte « téléphone d'abord » reportée en fin de programme |
 | 2026-11-07 | IA (Claude) | 0,5 j | 5 % | S1 à S8 | Validation du découpage | ADR et découpage rédigés |
@@ -219,7 +243,7 @@ Tasks :
 
 ## 7. Statut
 
-Statut : IN_PROGRESS (S1 à S7 livrées ; S8 suivante)
+Statut : READY_FOR_REVIEW (S1 à S8 livrées ; branches prêtes, en attente d'accord pour merge et push ; suites sécurité à traiter avant toute ouverture hors dev)
 
 ## 8. Impact version / SemVer
 
@@ -233,3 +257,13 @@ Statut : IN_PROGRESS (S1 à S7 livrées ; S8 suivante)
 | Impact Angular | Oui (S7) |
 | Impact Flutter | Oui (S6, AllôPharma) |
 | Changelog requis | Oui |
+
+Proposition SemVer S8 (aucun tag créé, aucun push) :
+
+| Dépôt | Actuel | Proposé | Justification |
+|---|---|---|---|
+| Joprelys backend | `0.0.1-SNAPSHOT`, aucun tag | `backend-v0.1.0` | Fonctionnalités ajoutées : API éco, outbox, endpoints du portail ; migrations V123 à V125 additives |
+| Joprelys web | `0.0.0` | `web-v0.1.0` | Page « Applications reliées » |
+| AllôPharma (API + mobile) | `v0.9.0` ; mobile `1.2.0+21` | `v0.10.0` ; mobile `1.3.0+22` | Liaison du dossier Joprelys, webhooks éco, V64 ; aucune rupture d'API |
+
+**Prérequis de déploiement Joprelys (prod) :** `JOPRELYS_ID_ISSUER_URI` et `JOPRELYS_ID_JWK_SET_URI` (HTTPS) deviennent obligatoires. Sans eux, le backend refuse de démarrer : c'est voulu (échec fermé). Il faut donc provisionner un Keycloak de production avant de déployer cette version. Les suites « bloquantes avant production » du § 5 restent à traiter avant d'ouvrir le flux à de vrais patients.

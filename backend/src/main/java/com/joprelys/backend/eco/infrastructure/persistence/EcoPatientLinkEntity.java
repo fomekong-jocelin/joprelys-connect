@@ -34,6 +34,10 @@ public class EcoPatientLinkEntity {
     @Column(name = "external_profile_id", nullable = false)
     private UUID externalProfileId;
 
+    /** Marqueur d'unicité (V125) : égal à {@code externalProfileId} tant que la liaison est active, nul ensuite. */
+    @Column(name = "active_external_profile_id")
+    private UUID activeExternalProfileId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "relationship", nullable = false, length = 20)
     private LinkRelationship relationship;
@@ -68,6 +72,7 @@ public class EcoPatientLinkEntity {
         this.issuer = issuer;
         this.application = application;
         this.externalProfileId = externalProfileId;
+        this.activeExternalProfileId = externalProfileId;
         this.relationship = relationship;
         this.identitySubject = identitySubject;
         this.clientId = clientId;
@@ -82,6 +87,7 @@ public class EcoPatientLinkEntity {
             return false;
         }
         status = EcoStatus.REVOKED;
+        activeExternalProfileId = null;
         revokedAt = when;
         versionId++;
         return true;

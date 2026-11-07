@@ -17,6 +17,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -69,7 +70,7 @@ public class PatientLinkService implements PatientLinkUseCase {
             return new PatientLinkView(existing, consent, false);
         }
 
-        EcoPatientLinkEntity link = linkRepository.save(new EcoPatientLinkEntity(
+        EcoPatientLinkEntity link = saveUniqueActiveLink(new EcoPatientLinkEntity(
                 patient.getId(), dpu, properties.source(), caller.application(), command.externalProfileId(),
                 command.relationship(), caller.subject(), caller.clientId(), now));
         EcoConsentEntity consent = consentRepository.save(new EcoConsentEntity(
@@ -77,6 +78,15 @@ public class PatientLinkService implements PatientLinkUseCase {
         auditService.logSuccess(null, patient.getOrganizationId(), patient.getId(), "ECO_PATIENT_LINK", link.getId(),
                 "CREATE", "application=" + caller.application() + " client=" + caller.clientId());
         return new PatientLinkView(link, consent, true);
+    }
+
+    /** Une création concurrente pour le même profil viole l'index V125 : même réponse que la vérification amont. */
+    private EcoPatientLinkEntity saveUniqueActiveLink(EcoPatientLinkEntity link) {
+        try {
+            return linkRepository.saveAndFlush(link);
+        } catch (DataIntegrityViolationException e) {
+            throw new EcoBusinessException(EcoError.PROFILE_LINKED_ELSEWHERE);
+        }
     }
 
     private static Instant resolvePeriodEnd(CreatePatientLinkCommand command, Instant now) {
