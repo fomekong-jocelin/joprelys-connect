@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **ECO-20261107 S1 — Joprelys ID en dev (Keycloak 26.8.1)** (Added, dev uniquement) :
+  - Services Compose `keycloak` et `keycloak-db` sous le profil `eco` (`docker compose --profile eco up -d keycloak`) ; `docker compose up` est inchangé.
+  - Realm `joprelys-id` importé au démarrage : client public `allopharma-mobile` (PKCE S256, consentement), client confidentiel `allopharma-server` (client credentials), audience `joprelys-api`, scopes `eco:patient-link` et `eco:consent.revoke`, comptes patients fictifs.
+  - Nouvelles variables dans `.env` (modèle `infra/keycloak/.env.example`) : `KEYCLOAK_DB_PASSWORD`, `KEYCLOAK_ADMIN_PASSWORD`, `ALLOPHARMA_SERVER_CLIENT_SECRET`, `JOPRELYS_ID_TEST_USER_PASSWORD`.
+  - Script `infra/keycloak/verify-realm.mjs` (23 vérifications). Décision : `ADR-20261107-JOPRELYS-ID-KEYCLOAK`. Ticket : `ECO-20261107-JOPRELYS-ID-PATIENT-LINK`.
+
 - **SEC-20261107 P1 — CSP, QR signé, gitleaks** (Security) :
   - Content-Security-Policy stricte sur l'API (`/api/**`) et CSP par hachage (`autoCsp`) sur l'application web de production.
   - QR d'accès patient signé (HMAC-SHA256). **Nouvelle variable obligatoire en production : `JOPRELYS_PATIENT_QR_KEY`**.

@@ -13,5 +13,48 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+  # Joprelys ID (Keycloak) : fournisseur d'identité de liaison de l'écosystème, en dev uniquement.
+  # ADR-20261107-JOPRELYS-ID-KEYCLOAK. Démarrage : docker compose --profile eco up -d keycloak
+  # Les valeurs sensibles viennent du fichier .env (modèle : .env.example), jamais versionné.
+  keycloak-db:
+    image: postgres:16-alpine
+    container_name: joprelys-keycloak-db
+    profiles: ["eco"]
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD manquant dans .env}
+    volumes:
+      - keycloak-pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.8.1
+    container_name: joprelys-keycloak
+    profiles: ["eco"]
+    command: ["start-dev", "--import-realm", "--http-port=8180"]
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:8180:8180"
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:?KEYCLOAK_DB_PASSWORD manquant dans .env}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:?KEYCLOAK_ADMIN_PASSWORD manquant dans .env}
+      KC_HEALTH_ENABLED: "true"
+      ALLOPHARMA_SERVER_CLIENT_SECRET: ${ALLOPHARMA_SERVER_CLIENT_SECRET:?ALLOPHARMA_SERVER_CLIENT_SECRET manquant dans .env}
+      JOPRELYS_ID_TEST_USER_PASSWORD: ${JOPRELYS_ID_TEST_USER_PASSWORD:?JOPRELYS_ID_TEST_USER_PASSWORD manquant dans .env}
+    volumes:
+      - ./infra/keycloak/import:/opt/keycloak/data/import:ro
+
 volumes:
   pgdata:
+  keycloak-pgdata:
