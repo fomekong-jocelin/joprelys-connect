@@ -11,6 +11,15 @@ spring:
     enabled: true
 
 joprelys:
+  eco:
+    source-tenant: clinique-demo
+    identity:
+      issuer-uri: https://joprelys-id.test/realms/joprelys-id
+      jwk-set-uri: https://joprelys-id.test/realms/joprelys-id/protocol/openid-connect/certs
+      audience: joprelys-api
+    applications:
+      "[allopharma-mobile]": allopharma
+      "[allopharma-server]": allopharma
   web:
     base-url: https://joprelys.com
   security:

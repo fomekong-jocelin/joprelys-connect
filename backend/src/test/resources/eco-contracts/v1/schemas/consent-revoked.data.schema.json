@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.eco.example/v1/consent-revoked.data.schema.json",
+  "title": "ConsentRevokedData",
+  "description": "Payload (data) of the consent.revoked event. The receiver purges its cached copy of the linked data.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["consentId", "patientLinkId", "revokedAt", "revokedBy"],
+  "properties": {
+    "consentId": { "type": "string", "format": "uuid" },
+    "patientLinkId": { "type": "string", "format": "uuid" },
+    "revokedAt": { "type": "string", "format": "date-time" },
+    "revokedBy": { "$ref": "https://contracts.eco.example/v1/consent.schema.json#/$defs/revokedBy" },
+    "reason": { "type": "string", "maxLength": 200 }
+  }
+}

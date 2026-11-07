@@ -41,6 +41,7 @@ Un patient qui utilise AllôPharma veut retrouver dans son carnet les informatio
 
 | Story | Statut |
 |---|---|
-| S1 Joprelys ID en dev (Keycloak) | En cours |
-| S2 Dépôt `eco-contracts` v1 | En cours |
-| S3 à S8 | À faire |
+| S1 Joprelys ID en dev (Keycloak) | Livrée |
+| S2 Dépôt `eco-contracts` v1 | Livrée |
+| S3 API éco Joprelys : liaison et consentement | Livrée (seule la relation « soi-même » est acceptée) |
+| S4 à S8 | À faire |

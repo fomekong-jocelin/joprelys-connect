@@ -33,11 +33,38 @@ Choix de configuration :
 - **Profil utilisateur déclaratif** : attributs non gérés désactivés ; `dpu` en lecture/écriture administrateur seulement, validé par motif.
 - **Durées** : jeton d'accès 5 min, session SSO 15 min d'inactivité / 1 h max, *refresh token* à usage unique.
 
-## 3. Stories suivantes
+## 3. S3 — API éco Joprelys (livré dans cette branche)
 
-Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (S3 resource server et API éco, S4 outbox et webhooks signés, S7 portail patient).
+Contrat : [API-CONTRACT.md](API-CONTRACT.md). Paquet `com.joprelys.backend.eco` :
 
-## 4. Tests
+| Couche | Classes |
+|---|---|
+| `config` | `EcoSecurityConfig` (chaîne `/api/eco/**` en tête, resource server JWT, `denyAll` par défaut), `EcoJwtValidators` (expiration, émetteur, audience), `EcoProperties` |
+| `api` | `EcoPatientLinkController`, `EcoConsentController` (aucune logique métier), `EcoCallerResolver` (`azp` → application déclarée), `EcoResourceMapper`, `EcoDtos`, `EcoExceptionHandler` (ProblemDetail + `code`) |
+| `application` | `PatientLinkUseCase` / `PatientLinkService`, `ConsentRevocationUseCase` / `ConsentRevocationService`, `EcoBusinessException` (codes typés) |
+| `domain` | `EcoStatus`, `LinkRelationship`, `ConsentScope`, `RevokedBy`, `GranteeType` |
+| `infrastructure` | `EcoPatientLinkEntity`, `EcoConsentEntity` (révocation idempotente, `versionId`), dépôts JPA |
 
-- S1 : démarrage et vérifications manuelles du README (jeton client credentials, refus du *password grant*, refus sans PKCE).
-- S3 : tests d'intégration Testcontainers qui chargent ce même fichier de realm, de sorte qu'une régression de configuration casse la CI.
+Données : migration `V123__eco_patient_links_and_consents.sql` (tables `eco_patient_links`, `eco_consents`, contraintes de statut et de cohérence de révocation). La liaison stocke le DPU, l'application, l'identifiant opaque du profil externe, le sujet et le client Joprelys ID : aucune donnée d'identité.
+
+Points de conception :
+
+- **Filtres maison** : `JwtAuthenticationFilter` et `ApiKeyAuthenticationFilter` sont des `@Component`, donc enregistrés pour toutes les requêtes ; ils s'abstiennent désormais sur `/api/eco/**` (`shouldNotFilter`), sinon ils refuseraient un jeton Keycloak avant la chaîne éco.
+- **Décodeur paresseux** (`withJwkSetUri`) : pas d'appel à Keycloak au démarrage.
+- **Contrôle d'accès par ressource** : une application ne révoque que les consentements dont elle est bénéficiaire ; sinon `404`.
+- **Idempotence** : liaison rejouée → `200` avec la liaison existante ; révocation rejouée → état inchangé.
+- **Relation** : seule `self` est acceptée tant que la preuve de tutelle n'existe pas.
+- **Audit** : création et révocation journalisées (`ECO_PATIENT_LINK`, `ECO_CONSENT`), sans contenu santé.
+
+## 4. Stories suivantes
+
+Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (S4 outbox et webhooks signés, S7 portail patient).
+
+## 5. Tests
+
+- S1 : `node infra/keycloak/verify-realm.mjs` (23 vérifications) contre un Keycloak démarré.
+- S3, sans Docker (décision du 07/11/2026) :
+  - `EcoApiIntegrationTest` (20 tests) : contexte Spring complet, H2 + Flyway, **vrais jetons RS256** signés par une clé de test et validés par les mêmes validateurs qu'en production (`EcoTestTokens`, `EcoTestSecurityConfiguration`) ; réponses validées contre les schémas `eco-contracts` (`EcoContractSchemas`) ;
+  - `EcoContractChecksumTest` : la copie des schémas correspond à `SHA256SUMS` ;
+  - `EcoKeycloakLiveIT` : jetons émis par un vrai Keycloak, clés téléchargées par le vrai décodeur ; désactivé sans variables, lancé par `node infra/keycloak/run-live-eco-test.mjs`. Non exécuté en CI.
+- Testcontainers Keycloak : reporté jusqu'à disponibilité de Docker.

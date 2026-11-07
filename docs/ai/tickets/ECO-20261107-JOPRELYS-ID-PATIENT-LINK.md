@@ -20,7 +20,7 @@ Hors périmètre (noté, non traité ici) :
 
 - [x] `docker compose` démarre Keycloak 26 avec le realm `joprelys-id` importé (clients `allopharma-mobile` public PKCE, `allopharma-server` confidentiel, audience `joprelys-api`, utilisateurs fictifs).
 - [x] Le dépôt `eco-contracts` contient les JSON Schema `PatientLink`, `Consent` et `EventEnvelope` v1, des exemples fictifs valides et invalides, et une commande de validation.
-- [ ] Joprelys expose `/api/eco/v1/patient-links` et `/api/eco/v1/consents/{id}/revoke`, protégés par des jetons Joprelys ID (scope + audience) ; les jetons maison y sont refusés et inversement.
+- [x] Joprelys expose `/api/eco/v1/patient-links` et `/api/eco/v1/consents/{id}/revoke`, protégés par des jetons Joprelys ID (scope + audience) ; les jetons maison y sont refusés et inversement.
 - [ ] Les webhooks entre serveurs respectent l'enveloppe § 2.2 : `Eco-Signature` HMAC-SHA256, `Idempotency-Key`, écart d'horloge ≤ 5 min, dédoublonnage sur `id`, outbox transactionnelle rejouée avec backoff exponentiel pendant 24 h puis file d'erreurs.
 - [ ] AllôPharma mobile : écran d'explication et de consentement, connexion Joprelys ID par PKCE, état de la liaison, révocation.
 - [ ] Portail patient Joprelys (Angular) : liste des applications reliées et révocation.
@@ -96,7 +96,7 @@ Tasks :
 - [x] T2.1 Dépôt git local `eco-contracts` : `README`, `v1/schemas/{event-envelope,patient-link,consent}.schema.json` (JSON Schema 2020-12, calqués sur FHIR R4 restreint, `meta.source` / `meta.versionId`).
 - [x] T2.2 `v1/examples/valid/*.json` et `v1/examples/invalid/*.json`, données fictives uniquement (UUID v7, `DPU-TEST-…`).
 - [x] T2.3 Validation automatisée (`npm test` avec Ajv 2020) ; `CHANGELOG.md` et règle de versionnement (champ ajouté = compatible, champ retiré = `v2`).
-- [ ] T2.4 Consommation par les backends : copie versionnée dans `src/test/resources/eco-contracts/v1/` avec script de synchronisation et empreinte SHA-256 vérifiée en test (sous-module git quand un remote existera).
+- [x] T2.4 Consommation par les backends : copie versionnée dans `src/test/resources/eco-contracts/v1/` avec script de synchronisation et empreinte SHA-256 vérifiée en test (sous-module git quand un remote existera).
 
 Critères d'acceptation : chaque exemple valide passe, chaque exemple invalide échoue avec le bon motif ; aucun champ d'identité (nom, téléphone) dans `PatientLink`.
 Tests : `npm test` vert ; tests de contrat dans S3 et S5.
@@ -108,13 +108,21 @@ Résultat S2 : `C:\MES-APPLICATIONS\eco-contracts`, commit `07e416d`. `npm test`
 *En tant que patient connecté à Joprelys ID, je veux que mon profil AllôPharma soit relié à mon DPU avec un consentement explicite et révocable.*
 
 Tasks :
-- [ ] T3.1 Dépendance `spring-boot-starter-oauth2-resource-server` ; seconde `SecurityFilterChain` ordonnée, `securityMatcher("/api/eco/v1/**")`, validation issuer + audience `joprelys-api` + scopes ; la chaîne maison refuse les jetons Joprelys ID.
-- [ ] T3.2 Migration Flyway : tables `eco_patient_links`, `eco_consents` (statut, scopes, période, `grantee`, `revoked_at`, motif), index et contraintes.
-- [ ] T3.3 Use cases (interfaces + implémentations) : créer une liaison depuis le jeton patient (DPU lu dans la claim `dpu`, `azp` = client) ; révoquer un consentement (scope `eco:consent.revoke`, compte de service) ; lister/révoquer depuis le portail patient.
-- [ ] T3.4 Contrôleurs `/api/eco/v1/patient-links` (POST, GET par id) et `/api/eco/v1/consents/{id}/revoke` (POST, idempotent), DTO validés, erreurs typées, journal d'audit.
-- [ ] T3.5 Tests : unitaires des use cases ; intégration Testcontainers (PostgreSQL + Keycloak, realm S1) : jeton valide → 201, sans scope → 403, mauvaise audience → 401, jeton maison → 401, révocation double → 200 idempotent ; tests de contrat contre `eco-contracts`.
+- [x] T3.1 Dépendance `spring-boot-starter-oauth2-resource-server` ; seconde `SecurityFilterChain` ordonnée, `securityMatcher("/api/eco/v1/**")`, validation issuer + audience `joprelys-api` + scopes ; la chaîne maison refuse les jetons Joprelys ID.
+- [x] T3.2 Migration Flyway : tables `eco_patient_links`, `eco_consents` (statut, scopes, période, `grantee`, `revoked_at`, motif), index et contraintes.
+- [x] T3.3 Use cases (interfaces + implémentations) : créer une liaison depuis le jeton patient (DPU lu dans la claim `dpu`, `azp` = client) ; révoquer un consentement (scope `eco:consent.revoke`, compte de service) ; lister/révoquer depuis le portail patient.
+- [x] T3.4 Contrôleurs `/api/eco/v1/patient-links` (POST, GET par id) et `/api/eco/v1/consents/{id}/revoke` (POST, idempotent), DTO validés, erreurs typées, journal d'audit.
+- [x] T3.5 Tests : unitaires des use cases ; intégration Testcontainers (PostgreSQL + Keycloak, realm S1) : jeton valide → 201, sans scope → 403, mauvaise audience → 401, jeton maison → 401, révocation double → 200 idempotent ; tests de contrat contre `eco-contracts`.
 
 Critères d'acceptation : aucune copie d'identité côté AllôPharma dans la réponse ; un DPU inconnu → erreur métier claire ; contrôle d'accès côté serveur par ressource.
+
+Résultat S3 (décision utilisateur du 07/11/2026 : **sans Docker**) :
+- `EcoApiIntegrationTest` 20/20 : vrais jetons RS256 (clé de test, mêmes validateurs qu'en production), H2 + Flyway V123, réponses validées contre `eco-contracts` ; cas couverts : création 201, rejeu 200, profil relié ailleurs 409, DPU inconnu 404, jeton sans DPU 403, client non déclaré 403, `child` 422, corps invalide 400, période > 2 ans 422, sans jeton 401, scope manquant 403, mauvaise audience / mauvais émetteur / expiré / clé inconnue 401, jeton maison HS256 refusé, jeton éco refusé sur `/api/patients`, route éco non déclarée 403, révocation idempotente (versionId 2 une seule fois), recréation après révocation, consentement d'une autre application 404, jeton patient sur la révocation 403, `revokedBy=system` refusé.
+- Test de mutation manuel : sans le contrôle d'audience, le test d'audience échoue (201 au lieu de 401).
+- `EcoContractChecksumTest` 2/2 (copie des schémas = `SHA256SUMS`, T2.4 via `scripts/sync-eco-contracts.mjs`).
+- `EcoKeycloakLiveIT` 1/1 contre **Keycloak 26.8.1 réel** (jeton patient PKCE avec consentement, jeton serveur client credentials, clés téléchargées par le vrai décodeur) via `node infra/keycloak/run-live-eco-test.mjs` ; ignoré sans variables, non exécuté en CI.
+- Écarts au plan : pas de `GET /patient-links/{id}` (aucun consommateur, ajouté quand un besoin existera) ; Testcontainers Keycloak reporté faute de Docker ; `@PreAuthorize` ajouté en plus de la chaîne de filtres (politique permission-first).
+- Changement transverse : `JwtAuthenticationFilter` et `ApiKeyAuthenticationFilter` s'abstiennent sur `/api/eco/**`.
 
 ### S4 — Webhooks éco Joprelys : outbox, signature, `consent.revoked` · 5 SP
 
@@ -187,11 +195,12 @@ Tasks :
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-11-07 | IA (Claude) | 0,5 j | 5 % | S1 à S8 | Validation du découpage | ADR et découpage rédigés |
+| 2026-11-07 | IA (Claude) | 1 j | 40 % | S4 à S8 | Docker absent (Testcontainers reporté) | S3 livrée : API éco, V123, tests 23 verts dont 1 contre Keycloak réel |
 | 2026-11-07 | IA (Claude) | 0,5 j | 20 % | S3 à S8, T2.4 | Docker absent du poste | Découpage validé par l'utilisateur. S1 : realm vérifié 23/23 sur Keycloak 26.8.1 lancé depuis l'archive officielle (sha1 vérifié), faute de Docker ; le service Compose lui-même n'a pas été démarré. S2 : dépôt local `eco-contracts`, commit `07e416d`, `npm test` 13/13, gitleaks propre. T2.4 (copie dans les backends) reportée en S3/S5 |
 
 ## 7. Statut
 
-Statut : IN_PROGRESS (S1 et S2 livrées ; S3 suivante)
+Statut : IN_PROGRESS (S1, S2, S3 livrées ; S4 suivante)
 
 ## 8. Impact version / SemVer
 

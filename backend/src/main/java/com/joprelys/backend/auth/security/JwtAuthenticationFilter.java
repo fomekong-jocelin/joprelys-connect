@@ -3,6 +3,7 @@ package com.joprelys.backend.auth.security;
 import com.joprelys.backend.auth.rbac.RbacAuthorityService;
 import com.joprelys.backend.auth.rbac.RbacCatalog;
 import com.joprelys.backend.auth.session.application.AccessTokenSessionValidator;
+import com.joprelys.backend.eco.api.EcoApiPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -36,6 +37,12 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         this.jwtService = jwtService;
         this.accessTokenSessionValidator = accessTokenSessionValidator;
         this.rbacAuthorityService = rbacAuthorityService;
+    }
+
+    /** L'API écosystème n'accepte que les jetons Joprelys ID (EcoSecurityConfig) : ce filtre s'abstient. */
+    @Override
+    protected boolean shouldNotFilter(HttpServletRequest request) {
+        return EcoApiPaths.isEcoRequest(request);
     }
 
     @Override

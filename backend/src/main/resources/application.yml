@@ -140,6 +140,17 @@ joprelys:
     patient-cancel-deadline-hours: ${JOPRELYS_APPOINTMENTS_PATIENT_CANCEL_DEADLINE_HOURS:24}
     reminder-hours-before: ${JOPRELYS_APPOINTMENTS_REMINDER_HOURS_BEFORE:24}
     timezone: ${JOPRELYS_APPOINTMENTS_TIMEZONE:Africa/Douala}
+  # Écosystème (ECO-20261107) : API /api/eco/v1, jetons Joprelys ID (Keycloak).
+  eco:
+    source-tenant: ${JOPRELYS_ECO_SOURCE_TENANT:clinique-demo}
+    identity:
+      issuer-uri: ${JOPRELYS_ID_ISSUER_URI:http://localhost:8180/realms/joprelys-id}
+      jwk-set-uri: ${JOPRELYS_ID_JWK_SET_URI:http://localhost:8180/realms/joprelys-id/protocol/openid-connect/certs}
+      audience: ${JOPRELYS_ID_AUDIENCE:joprelys-api}
+    # Client OAuth (azp) → application de l'écosystème autorisée.
+    applications:
+      "[allopharma-mobile]": allopharma
+      "[allopharma-server]": allopharma
 
 springdoc:
   api-docs:

@@ -8,6 +8,12 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **ECO-20261107 S3 — API écosystème v1 : liaison patient ↔ DPU et consentement** (Added / Security) :
+  - `POST /api/eco/v1/patient-links` (jeton patient Joprelys ID, scope `eco:patient-link`) et `POST /api/eco/v1/consents/{id}/revoke` (compte de service, scope `eco:consent.revoke`), au format `eco-contracts` v1.
+  - Chaîne de sécurité dédiée `/api/eco/**` (resource server JWT, émetteur + audience `joprelys-api`) ; les filtres JWT maison et clé API s'abstiennent sur ces chemins ; un jeton Joprelys ID reste refusé sur le reste de l'API.
+  - Migration **V123** : tables `eco_patient_links`, `eco_consents` (aucune donnée d'identité copiée).
+  - Nouvelles variables (facultatives en dev) : `JOPRELYS_ECO_SOURCE_TENANT`, `JOPRELYS_ID_ISSUER_URI`, `JOPRELYS_ID_JWK_SET_URI`, `JOPRELYS_ID_AUDIENCE`. Dépendance ajoutée : `spring-boot-starter-security-oauth2-resource-server`.
+
 - **ECO-20261107 S1 — Joprelys ID en dev (Keycloak 26.8.1)** (Added, dev uniquement) :
   - Services Compose `keycloak` et `keycloak-db` sous le profil `eco` (`docker compose --profile eco up -d keycloak`) ; `docker compose up` est inchangé.
   - Realm `joprelys-id` importé au démarrage : client public `allopharma-mobile` (PKCE S256, consentement), client confidentiel `allopharma-server` (client credentials), audience `joprelys-api`, scopes `eco:patient-link` et `eco:consent.revoke`, comptes patients fictifs.

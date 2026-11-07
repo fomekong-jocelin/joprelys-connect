@@ -46,6 +46,16 @@ curl -s -X POST http://localhost:8180/realms/joprelys-id/protocol/openid-connect
 
 Une demande d'autorisation de `allopharma-mobile` sans `code_challenge` est refusée (`Missing parameter: code_challenge_method`).
 
+## Test d'intégration réel avec l'API éco
+
+Keycloak démarré, puis depuis la racine du dépôt (mêmes variables que ci-dessus) :
+
+```bash
+node infra/keycloak/run-live-eco-test.mjs
+```
+
+Le script obtient un jeton patient (PKCE, consentement accepté pour `patient.demo1`) et un jeton serveur, puis lance `EcoKeycloakLiveIT` : liaison, révocation et refus de scope avec de vrais jetons. Les jetons ne sont jamais affichés.
+
 ## Placeholders
 
 Le fichier de realm utilise `${VARIABLE}` : Keycloak les remplace par les variables d'environnement à l'import. Ne jamais y écrire de valeur réelle ; ne pas ajouter de placeholder dont le nom existe déjà dans l'environnement Windows (`USERNAME`…).
