@@ -149,14 +149,16 @@ Résultat S4 (07/11/2026, branche `feat/joprelys-id-keycloak`) :
 *En tant que patient AllôPharma, je veux relier et délier mon dossier Joprelys, et que la révocation faite côté Joprelys soit appliquée chez AllôPharma.*
 
 Tasks :
-- [ ] T5.1 Ticket AllôPharma `TICKET-0118` + docs `docs/features/eco-patient-link/`.
-- [ ] T5.2 Migration Flyway : `eco_patient_links` (profil AllôPharma, DPU, émetteur, consentement, statut) et `eco_inbound_events` (dédoublonnage).
-- [ ] T5.3 `POST /api/v1/eco/joprelys-links` : reçoit le jeton Joprelys ID du mobile, appelle Joprelys, enregistre la liaison, ne conserve pas le jeton.
-- [ ] T5.4 `DELETE /api/v1/eco/joprelys-links/{id}` : jeton *client credentials* `allopharma-server`, appel de révocation Joprelys, purge locale.
-- [ ] T5.5 `POST /api/eco/v1/webhooks` : vérification `Eco-Signature` (temps constant), écart d'horloge ≤ 5 min, dédoublonnage `id`, `2xx` rapide puis traitement asynchrone ; `consent.revoked` → statut `revoked` + purge de la copie en cache.
-- [ ] T5.6 Tests : unitaires (vérifieur de signature, purge) ; intégration (Testcontainers PostgreSQL, Joprelys simulé par serveur HTTP) ; contrat `eco-contracts`.
+- [x] T5.1 Ticket AllôPharma `TICKET-0118` + docs `docs/features/eco-patient-link/`.
+- [x] T5.2 Migration Flyway : `eco_patient_links` (profil AllôPharma, DPU, émetteur, consentement, statut) et `eco_inbound_events` (dédoublonnage).
+- [x] T5.3 `POST /api/v1/patient/eco/joprelys-links` : reçoit le jeton Joprelys ID du mobile, appelle Joprelys, enregistre la liaison, ne conserve pas le jeton.
+- [x] T5.4 `DELETE /api/v1/patient/eco/joprelys-links/{id}` : jeton *client credentials* `allopharma-server`, appel de révocation Joprelys, purge locale.
+- [x] T5.5 `POST /api/v1/webhooks/eco` : vérification `Eco-Signature` (temps constant), écart d'horloge ≤ 5 min, dédoublonnage `id`, `2xx` rapide puis traitement asynchrone ; `consent.revoked` → statut `revoked` + purge de la copie en cache.
+- [x] T5.6 Tests : unitaires (vérifieur de signature, purge) ; intégration (Testcontainers PostgreSQL, Joprelys simulé par serveur HTTP) ; contrat `eco-contracts`.
 
 Critères d'acceptation : un patient ne peut agir que sur ses propres profils (y compris profils familiaux dont il est le tuteur) ; signature invalide → 401 sans traitement ; rejeu du même `id` → `2xx` sans double effet.
+
+Résultat S5 (07/11/2026, PharmaLocate branche `feat/joprelys-id-patient-link`, `TICKET-0118`) : 36 tests nouveaux verts, suite AllôPharma verte. Routes alignées sur AllôPharma (`/api/v1/patient/eco/…`, `/api/v1/webhooks/eco`). Tutelle hors périmètre (pas de profil à charge côté AllôPharma, `self` seul côté Joprelys). Non testé : intégration PostgreSQL (Testcontainers, faute de Docker), échange réel Joprelys ↔ AllôPharma (S8).
 
 ### S6 — AllôPharma mobile : consentement, PKCE, révocation · 5 SP
 
@@ -202,13 +204,14 @@ Tasks :
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-11-07 | IA (Claude) | 0,5 j | 5 % | S1 à S8 | Validation du découpage | ADR et découpage rédigés |
+| 2026-11-07 | IA (Claude) | 1 j | 70 % | S6 à S8 | Docker absent (intégration PostgreSQL AllôPharma non exécutée) | S5 livrée côté AllôPharma : liaison, révocation, webhook signé, V64 ; 36 tests ajoutés |
 | 2026-11-07 | IA (Claude) | 1 j | 55 % | S5 à S8 | Docker absent | S4 livrée : outbox V124, webhooks signés, relais 24 h → DEAD, révocation portail émettant `consent.revoked` ; 22 tests ajoutés |
 | 2026-11-07 | IA (Claude) | 1 j | 40 % | S4 à S8 | Docker absent (Testcontainers reporté) | S3 livrée : API éco, V123, tests 23 verts dont 1 contre Keycloak réel |
 | 2026-11-07 | IA (Claude) | 0,5 j | 20 % | S3 à S8, T2.4 | Docker absent du poste | Découpage validé par l'utilisateur. S1 : realm vérifié 23/23 sur Keycloak 26.8.1 lancé depuis l'archive officielle (sha1 vérifié), faute de Docker ; le service Compose lui-même n'a pas été démarré. S2 : dépôt local `eco-contracts`, commit `07e416d`, `npm test` 13/13, gitleaks propre. T2.4 (copie dans les backends) reportée en S3/S5 |
 
 ## 7. Statut
 
-Statut : IN_PROGRESS (S1, S2, S3, S4 livrées ; S5 suivante)
+Statut : IN_PROGRESS (S1 à S5 livrées ; S6 et S7 suivantes)
 
 ## 8. Impact version / SemVer
 

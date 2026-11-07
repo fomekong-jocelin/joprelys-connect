@@ -65,7 +65,7 @@ Les clés de signature sont téléchargées au premier jeton : si Joprelys ID es
 
 ## Webhooks sortants (S4)
 
-Joprelys → abonné : `POST <url de l'abonné>` (AllôPharma : `/api/eco/v1/webhooks`, livré en S5).
+Joprelys → abonné : `POST <url de l'abonné>` (AllôPharma : `/api/v1/webhooks/eco`, livré en S5).
 
 - En-têtes : `Content-Type: application/json`, `Eco-Signature: t=<secondes unix>,v1=<hex HMAC-SHA256(secret, t + "." + corps)>`, `Idempotency-Key: <id de l'événement>`.
 - Corps : enveloppe CloudEvents 1.0 (`eco-contracts` `event-envelope.schema.json`) ; pour `consent.revoked`, `data` est conforme à `consent-revoked.data.schema.json` et `subject` vaut `Consent/<consentId>`.
