@@ -1,6 +1,7 @@
 package com.joprelys.backend.patient.api;
 
 import com.joprelys.backend.patient.application.PatientAccessGuardService;
+import com.joprelys.backend.patient.application.PatientAccessQrSigner;
 import com.joprelys.backend.patient.infrastructure.persistence.PatientEntity;
 import com.joprelys.backend.visit.application.QrCodeGeneratorService;
 import java.time.Clock;
@@ -19,7 +20,8 @@ import org.springframework.web.bind.annotation.RestController;
 
 /**
  * QR d'accès du patient, généré côté serveur : l'identifiant patient n'est plus envoyé
- * à un service tiers et la date de validité est fixée par le serveur, pas par le navigateur.
+ * à un service tiers, la date de validité est fixée par le serveur et le contenu est signé (HMAC) pour être
+ * vérifiable à la lecture.
  */
 @RestController
 @RequestMapping("/api/patient")
@@ -32,19 +34,23 @@ public class PatientAccessQrController {
 
     private final PatientAccessGuardService patientAccessGuardService;
     private final QrCodeGeneratorService qrCodeGeneratorService;
+    private final PatientAccessQrSigner signer;
     private final Clock clock;
 
     @Autowired
     public PatientAccessQrController(
             PatientAccessGuardService patientAccessGuardService,
-            QrCodeGeneratorService qrCodeGeneratorService) {
-        this(patientAccessGuardService, qrCodeGeneratorService, Clock.systemUTC());
+            QrCodeGeneratorService qrCodeGeneratorService,
+            PatientAccessQrSigner signer) {
+        this(patientAccessGuardService, qrCodeGeneratorService, signer, Clock.systemUTC());
     }
 
     PatientAccessQrController(
             PatientAccessGuardService patientAccessGuardService,
             QrCodeGeneratorService qrCodeGeneratorService,
+            PatientAccessQrSigner signer,
             Clock clock) {
+        this.signer = signer;
         this.patientAccessGuardService = patientAccessGuardService;
         this.qrCodeGeneratorService = qrCodeGeneratorService;
         this.clock = clock;
@@ -54,8 +60,7 @@ public class PatientAccessQrController {
     public ResponseEntity<byte[]> getAccessQr(Authentication authentication) {
         PatientEntity patient = patientAccessGuardService.resolve(authentication);
         Instant validUntil = Instant.now(clock).plus(VALIDITY).truncatedTo(ChronoUnit.SECONDS);
-        String payload = "{\"type\":\"JOPRELYS_PATIENT_ACCESS\",\"globalPatientNumber\":\""
-                + patient.getGlobalPatientNumber() + "\",\"validUntil\":\"" + validUntil + "\"}";
+        String payload = signer.payload(patient.getGlobalPatientNumber(), validUntil);
 
         return ResponseEntity.ok()
                 .cacheControl(CacheControl.noStore())

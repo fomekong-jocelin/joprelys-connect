@@ -27,6 +27,7 @@ joprelys:
       enabled: ${JOPRELYS_RXNORM_ENABLED:true}
   security:
     prescription-pin-key: ${JOPRELYS_PRESCRIPTION_PIN_KEY}
+    patient-qr-key: ${JOPRELYS_PATIENT_QR_KEY}
     jwt:
       secret: ${JOPRELYS_JWT_SECRET}
       ttl-minutes: 15

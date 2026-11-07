@@ -112,6 +112,8 @@ joprelys:
   security:
     # Clé de chiffrement des PIN d'ordonnance (AES-256-GCM). Aucune valeur par défaut : démarrage refusé sans elle.
     prescription-pin-key: ${JOPRELYS_PRESCRIPTION_PIN_KEY:}
+    # Clé de signature du QR d'accès patient (HMAC-SHA256). Aucune valeur par défaut : démarrage refusé sans elle.
+    patient-qr-key: ${JOPRELYS_PATIENT_QR_KEY:}
     jwt:
       issuer: ${JOPRELYS_JWT_ISSUER:joprelys-connect}
       audience: ${JOPRELYS_JWT_AUDIENCE:joprelys-clinic}

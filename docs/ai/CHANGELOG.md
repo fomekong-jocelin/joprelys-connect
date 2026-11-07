@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **SEC-20261107 P1 — CSP, QR signé, gitleaks** (Security) :
+  - Content-Security-Policy stricte sur l'API (`/api/**`) et CSP par hachage (`autoCsp`) sur l'application web de production.
+  - QR d'accès patient signé (HMAC-SHA256). **Nouvelle variable obligatoire en production : `JOPRELYS_PATIENT_QR_KEY`**.
+  - Détection de secrets : gitleaks en CI et hook pre-commit (`git config core.hooksPath .githooks`).
 - **SEC-20261107 — PIN d'ordonnance chiffré et QR patient sans tiers** (Security) :
   - Le PIN d'ordonnance est chiffré au repos (AES-256-GCM, colonne `pin_ciphertext`, migration V122) ; les anciens PIN en clair sont chiffrés puis effacés au démarrage. **Nouvelle variable obligatoire en production : `JOPRELYS_PRESCRIPTION_PIN_KEY`** (32 caractères minimum, à conserver dans un coffre).
   - Le QR d'accès patient est généré par Joprelys (`GET /api/patient/access-qr`) au lieu d'`api.qrserver.com` ; sa validité est fixée par le serveur.

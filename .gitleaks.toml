@@ -1,0 +1,32 @@
+# Configuration gitleaks : règles par défaut + faux positifs vérifiés (SEC P1, 07/11/2026).
+# Lancer localement : gitleaks dir . --redact
+# Hook local, une fois par clone : git config core.hooksPath .githooks
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Faux positifs vérifiés"
+# Les expressions ci-dessous portent sur la ligne entière, pas seulement sur la valeur détectée.
+regexTarget = "line"
+regexes = [
+  # Alphabets de génération de mots de passe temporaires (pas des secrets).
+  '''PASSWORD_ALPHABET\s*=''',
+  # Secrets de test de la CI, préfixés ci-test-, sans valeur en production.
+  '''ci-test-[a-z0-9-]+''',
+]
+paths = [
+  # Fixtures de test : jetons et clés fictifs.
+  '''^backend/src/test/''',
+  # Documentation : exemples de requêtes et de schémas (aucune valeur réelle).
+  '''^docs/''',
+  # Textes juridiques et traductions : le mot « clé » y déclenche la règle générique.
+  '''^web/src/app/legal/legal-documents\.ts''',
+  '''^web/src/assets/i18n/''',
+  # Dossiers générés ou locaux (non suivis).
+  '''(^|/)node_modules/''',
+  '''(^|/)target/''',
+  '''(^|/)dist/''',
+  '''^\.ai-tmp/''',
+  '''^\.idea/''',
+  '''^\.claude/''',
+]
