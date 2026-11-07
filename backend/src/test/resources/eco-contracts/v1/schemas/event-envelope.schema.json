@@ -1,0 +1,22 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.eco.example/v1/event-envelope.schema.json",
+  "title": "EventEnvelope",
+  "description": "CloudEvents 1.0 envelope for signed server-to-server webhooks. The data payload is validated against the schema referenced by dataschema.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["specversion", "id", "type", "source", "time", "dataschema", "data"],
+  "properties": {
+    "specversion": { "const": "1.0" },
+    "id": { "type": "string", "format": "uuid" },
+    "type": {
+      "type": "string",
+      "pattern": "^[a-z]+(-[a-z]+)*(\\.[a-z]+(-[a-z]+)*)+$"
+    },
+    "source": { "$ref": "https://contracts.eco.example/v1/meta.schema.json#/$defs/systemSource" },
+    "time": { "type": "string", "format": "date-time" },
+    "subject": { "type": "string", "pattern": "^[A-Za-z]+/[A-Za-z0-9-]+$" },
+    "dataschema": { "type": "string", "format": "uri" },
+    "data": { "type": "object" }
+  }
+}

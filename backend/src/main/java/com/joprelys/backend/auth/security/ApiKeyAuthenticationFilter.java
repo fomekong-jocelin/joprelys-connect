@@ -4,6 +4,7 @@ import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationApiKey
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationApiKeyRepository;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationEntity;
 import com.joprelys.backend.clinic.infrastructure.persistence.OrganizationRepository;
+import com.joprelys.backend.eco.api.EcoApiPaths;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -30,6 +31,12 @@ public class ApiKeyAuthenticationFilter extends OncePerRequestFilter {
 			OrganizationRepository organizationRepository) {
 		this.apiKeyRepository = apiKeyRepository;
 		this.organizationRepository = organizationRepository;
+	}
+
+	/** Les clés API ne donnent jamais accès à l'API écosystème (client credentials Joprelys ID seulement). */
+	@Override
+	protected boolean shouldNotFilter(HttpServletRequest request) {
+		return EcoApiPaths.isEcoRequest(request);
 	}
 
 	@Override

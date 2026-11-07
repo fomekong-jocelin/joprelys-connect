@@ -13,6 +13,8 @@ regexes = [
   '''PASSWORD_ALPHABET\s*=''',
   # Secrets de test de la CI, préfixés ci-test-, sans valeur en production.
   '''ci-test-[a-z0-9-]+''',
+  # URL JDBC sans identifiants (hôte:port/base) : « keycloak » déclenche la règle générique.
+  '''^\s*[A-Z_]+:\s*jdbc:postgresql://[a-z0-9.-]+:[0-9]+/[a-z0-9_]+\s*$''',
 ]
 paths = [
   # Fixtures de test : jetons et clés fictifs.

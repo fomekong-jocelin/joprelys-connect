@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.eco.example/v1/patient-link.schema.json",
+  "title": "PatientLink",
+  "description": "Link between an AllôPharma profile and a Joprelys DPU, without any copy of identity data (no name, phone or birth date: additionalProperties is false).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "resourceType", "id", "meta", "allopharmaProfileId", "dpu", "issuer",
+    "relationship", "consent", "status", "created"
+  ],
+  "properties": {
+    "resourceType": { "const": "PatientLink" },
+    "id": { "type": "string", "format": "uuid" },
+    "meta": { "$ref": "https://contracts.eco.example/v1/meta.schema.json" },
+    "allopharmaProfileId": { "type": "string", "format": "uuid" },
+    "dpu": { "type": "string", "pattern": "^DPU-[A-Z0-9-]+$", "maxLength": 64 },
+    "issuer": { "type": "string", "pattern": "^joprelys:[a-z0-9-]+$" },
+    "relationship": { "enum": ["self", "child", "dependent-adult"] },
+    "guardian": { "type": "string", "pattern": "^allopharma:compte/[0-9a-f-]+$" },
+    "consent": { "type": "string", "pattern": "^Consent/[0-9a-f-]{36}$" },
+    "status": { "enum": ["active", "revoked"] },
+    "created": { "type": "string", "format": "date-time" }
+  },
+  "if": { "properties": { "relationship": { "const": "self" } } },
+  "then": { "not": { "required": ["guardian"] } },
+  "else": { "required": ["guardian"] }
+}

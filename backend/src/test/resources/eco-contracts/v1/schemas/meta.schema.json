@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://contracts.eco.example/v1/meta.schema.json",
+  "title": "Meta",
+  "description": "FHIR R4 restricted Meta: emitting system and monotonic version of a resource. versionId is an integer (FHIR uses a string id; the ecosystem requires an increasing integer).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["source", "versionId"],
+  "properties": {
+    "source": { "$ref": "#/$defs/systemSource" },
+    "versionId": { "type": "integer", "minimum": 1 },
+    "lastUpdated": { "type": "string", "format": "date-time" }
+  },
+  "$defs": {
+    "systemSource": {
+      "description": "Emitting system: dictalys, allopharma or joprelys:<tenant>.",
+      "type": "string",
+      "pattern": "^(dictalys|allopharma|joprelys:[a-z0-9-]+)$"
+    }
+  }
+}

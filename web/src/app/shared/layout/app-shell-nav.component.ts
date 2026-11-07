@@ -264,6 +264,7 @@ export class AppShellNavComponent implements OnInit, OnDestroy {
       this.item('/patient/qr-code', 'menu.patientQrCode', 'information-circle'),
       this.item('/patient/consents', 'menu.patientConsents', 'shield-check'),
       this.item('/patient/privacy', 'menu.patientPrivacy', 'shield-check'),
+      this.item('/patient/linked-apps', 'menu.patientLinkedApps', 'handshake'),
       this.item('/patient/audit', 'menu.patientAudit', 'clipboard-document-list'),
       this.item('/patient/requests', 'menu.patientRequests', 'document-text'),
       {

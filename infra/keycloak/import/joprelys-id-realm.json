@@ -1,0 +1,231 @@
+{
+  "realm": "joprelys-id",
+  "displayName": "Joprelys ID",
+  "enabled": true,
+  "sslRequired": "external",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "editUsernameAllowed": false,
+  "loginWithEmailAllowed": true,
+  "duplicateEmailsAllowed": false,
+  "bruteForceProtected": true,
+  "failureFactor": 5,
+  "permanentLockout": false,
+  "accessTokenLifespan": 300,
+  "ssoSessionIdleTimeout": 900,
+  "ssoSessionMaxLifespan": 3600,
+  "revokeRefreshToken": true,
+  "refreshTokenMaxReuse": 0,
+  "internationalizationEnabled": true,
+  "supportedLocales": ["fr", "en"],
+  "defaultLocale": "fr",
+  "defaultDefaultClientScopes": ["basic"],
+  "defaultOptionalClientScopes": [],
+  "clientScopes": [
+    {
+      "name": "basic",
+      "description": "Sujet du jeton (sub), sans donnée d'identité",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "false",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "sub",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-sub-mapper",
+          "consentRequired": false,
+          "config": {
+            "access.token.claim": "true",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eco:patient-link",
+      "description": "Relier un profil AllôPharma au DPU Joprelys du patient",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "Relier votre profil AllôPharma à votre dossier patient Joprelys (DPU). Vous pourrez arrêter ce partage à tout moment."
+      },
+      "protocolMappers": [
+        {
+          "name": "dpu",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "dpu",
+            "claim.name": "dpu",
+            "jsonType.label": "String",
+            "multivalued": "false",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "userinfo.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        },
+        {
+          "name": "audience-joprelys-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "joprelys-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "name": "eco:consent.revoke",
+      "description": "Révoquer un consentement de l'écosystème (serveur à serveur)",
+      "protocol": "openid-connect",
+      "attributes": {
+        "include.in.token.scope": "true",
+        "display.on.consent.screen": "false"
+      },
+      "protocolMappers": [
+        {
+          "name": "audience-joprelys-api",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "consentRequired": false,
+          "config": {
+            "included.client.audience": "joprelys-api",
+            "access.token.claim": "true",
+            "id.token.claim": "false",
+            "introspection.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "clients": [
+    {
+      "clientId": "joprelys-api",
+      "name": "API éco Joprelys (audience)",
+      "description": "Ressource visée par les jetons ; aucun flux de connexion",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "fullScopeAllowed": false,
+      "protocol": "openid-connect",
+      "defaultClientScopes": [],
+      "optionalClientScopes": []
+    },
+    {
+      "clientId": "allopharma-mobile",
+      "name": "AllôPharma",
+      "description": "Application mobile AllôPharma : client public, authorization code + PKCE S256",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "consentRequired": true,
+      "fullScopeAllowed": false,
+      "protocol": "openid-connect",
+      "redirectUris": ["cm.allopharma.app:/oauth2redirect"],
+      "webOrigins": [],
+      "attributes": {
+        "pkce.code.challenge.method": "S256",
+        "post.logout.redirect.uris": "cm.allopharma.app:/oauth2redirect",
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false",
+        "display.on.consent.screen": "true",
+        "consent.screen.text": "AllôPharma"
+      },
+      "defaultClientScopes": ["basic"],
+      "optionalClientScopes": ["eco:patient-link"]
+    },
+    {
+      "clientId": "allopharma-server",
+      "name": "Serveur AllôPharma",
+      "description": "Compte de service AllôPharma : client credentials uniquement",
+      "enabled": true,
+      "publicClient": false,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "${ALLOPHARMA_SERVER_CLIENT_SECRET}",
+      "standardFlowEnabled": false,
+      "implicitFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "fullScopeAllowed": false,
+      "protocol": "openid-connect",
+      "attributes": {
+        "oauth2.device.authorization.grant.enabled": "false",
+        "oidc.ciba.grant.enabled": "false"
+      },
+      "defaultClientScopes": ["basic", "eco:consent.revoke"],
+      "optionalClientScopes": []
+    }
+  ],
+  "users": [
+    {
+      "username": "service-account-allopharma-server",
+      "enabled": true,
+      "serviceAccountClientId": "allopharma-server"
+    },
+    {
+      "username": "patient.demo1",
+      "email": "patient.demo1@example.test",
+      "emailVerified": true,
+      "firstName": "Patient",
+      "lastName": "Demo Un",
+      "enabled": true,
+      "attributes": {
+        "dpu": ["DPU-TEST-000123"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${JOPRELYS_ID_TEST_USER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    },
+    {
+      "username": "patient.demo2",
+      "email": "patient.demo2@example.test",
+      "emailVerified": true,
+      "firstName": "Patient",
+      "lastName": "Demo Deux",
+      "enabled": true,
+      "attributes": {
+        "dpu": ["DPU-TEST-000456"]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "${JOPRELYS_ID_TEST_USER_PASSWORD}",
+          "temporary": false
+        }
+      ]
+    }
+  ],
+  "components": {
+    "org.keycloak.userprofile.UserProfileProvider": [
+      {
+        "providerId": "declarative-user-profile",
+        "subComponents": {},
+        "config": {
+          "kc.user.profile.config": [
+            "{\"attributes\":[{\"name\":\"username\",\"displayName\":\"Identifiant\",\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\"]},\"validations\":{\"length\":{\"min\":3,\"max\":255},\"username-prohibited-characters\":{},\"up-username-not-idn-homograph\":{}},\"multivalued\":false},{\"name\":\"email\",\"displayName\":\"E-mail\",\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"validations\":{\"email\":{},\"length\":{\"max\":255}},\"multivalued\":false},{\"name\":\"firstName\",\"displayName\":\"Prénom\",\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"multivalued\":false},{\"name\":\"lastName\",\"displayName\":\"Nom\",\"required\":{\"roles\":[\"user\"]},\"permissions\":{\"view\":[\"admin\",\"user\"],\"edit\":[\"admin\",\"user\"]},\"validations\":{\"length\":{\"max\":255},\"person-name-prohibited-characters\":{}},\"multivalued\":false},{\"name\":\"dpu\",\"displayName\":\"DPU\",\"permissions\":{\"view\":[\"admin\"],\"edit\":[\"admin\"]},\"validations\":{\"length\":{\"max\":64},\"pattern\":{\"pattern\":\"^DPU-[A-Z0-9-]+$\",\"error-message\":\"Format DPU invalide\"}},\"multivalued\":false}],\"groups\":[]}"
+          ]
+        }
+      }
+    ]
+  }
+}

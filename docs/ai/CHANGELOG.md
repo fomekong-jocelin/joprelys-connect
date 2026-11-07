@@ -8,6 +8,35 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **ECO-20261107 S8 — Bout en bout, revue sécurité et clôture** (Security / Changed / Docs) :
+  - Migration **V125** : une seule liaison active par profil d'application, garantie par un index unique (marqueur portable PostgreSQL/H2). Une création concurrente renvoie `PROFILE_LINKED_ELSEWHERE` (409).
+  - Configuration Joprelys ID qui échoue fermé :
+    - `issuer-uri`, `jwk-set-uri` et `audience` sont requis, en HTTPS hors poste local ;
+    - aucune valeur par défaut en profil `prod` (`JOPRELYS_ID_ISSUER_URI` et `JOPRELYS_ID_JWK_SET_URI` deviennent obligatoires au déploiement).
+  - Scénario E2E reproductible `docs/features/eco-joprelys-id/E2E-SCENARIO.md`. La boucle réelle liaison → révocation portail → purge AllôPharma est verte.
+  - Revue appsec de la branche : aucune faille critique ni élevée. Les suites bloquantes avant production (consentement granulaire, attestation du profil) sont suivies dans l'EPIC.
+
+- **ECO-20261107 S7 — Portail patient : « Applications reliées »** (Added / Security) :
+  - `GET /api/patient/linked-apps` et `DELETE /api/patient/linked-apps/{id}` (autorité `PATIENT_PORTAL_ACCESS`, patient déduit du jeton, 404 sur la liaison d'un autre patient) ; la révocation notifie l'application (`consent.revoked`).
+  - Page Angular `/patient/linked-apps` (menu patient et « Confidentialité ») : logo et nom de l'application, données partagées, dates, révocation confirmée ; états chargement, erreur, vide ; FR/EN, clair/sombre.
+
+- **ECO-20261107 S4 — Webhooks écosystème signés et outbox transactionnelle** (Added / Security) :
+  - Migration **V124** `eco_outbox` ; événement `consent.revoked` (CloudEvents 1.0, `eco-contracts` v1) écrit dans la transaction de la révocation par le patient.
+  - Envoi signé `Eco-Signature` (HMAC-SHA256) + `Idempotency-Key`, rejeu exponentiel pendant 24 h puis file d'erreurs `DEAD` journalisée sans contenu santé.
+  - Nouvelles variables : `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_URL`, `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_SECRET` (32 caractères minimum), `JOPRELYS_ECO_OUTBOX_RELAY_ENABLED`, `JOPRELYS_ECO_OUTBOX_POLL_INTERVAL`.
+
+- **ECO-20261107 S3 — API écosystème v1 : liaison patient ↔ DPU et consentement** (Added / Security) :
+  - `POST /api/eco/v1/patient-links` (jeton patient Joprelys ID, scope `eco:patient-link`) et `POST /api/eco/v1/consents/{id}/revoke` (compte de service, scope `eco:consent.revoke`), au format `eco-contracts` v1.
+  - Chaîne de sécurité dédiée `/api/eco/**` (resource server JWT, émetteur + audience `joprelys-api`) ; les filtres JWT maison et clé API s'abstiennent sur ces chemins ; un jeton Joprelys ID reste refusé sur le reste de l'API.
+  - Migration **V123** : tables `eco_patient_links`, `eco_consents` (aucune donnée d'identité copiée).
+  - Nouvelles variables (facultatives en dev) : `JOPRELYS_ECO_SOURCE_TENANT`, `JOPRELYS_ID_ISSUER_URI`, `JOPRELYS_ID_JWK_SET_URI`, `JOPRELYS_ID_AUDIENCE`. Dépendance ajoutée : `spring-boot-starter-security-oauth2-resource-server`.
+
+- **ECO-20261107 S1 — Joprelys ID en dev (Keycloak 26.8.1)** (Added, dev uniquement) :
+  - Services Compose `keycloak` et `keycloak-db` sous le profil `eco` (`docker compose --profile eco up -d keycloak`) ; `docker compose up` est inchangé.
+  - Realm `joprelys-id` importé au démarrage : client public `allopharma-mobile` (PKCE S256, consentement), client confidentiel `allopharma-server` (client credentials), audience `joprelys-api`, scopes `eco:patient-link` et `eco:consent.revoke`, comptes patients fictifs.
+  - Nouvelles variables dans `.env` (modèle `infra/keycloak/.env.example`) : `KEYCLOAK_DB_PASSWORD`, `KEYCLOAK_ADMIN_PASSWORD`, `ALLOPHARMA_SERVER_CLIENT_SECRET`, `JOPRELYS_ID_TEST_USER_PASSWORD`.
+  - Script `infra/keycloak/verify-realm.mjs` (23 vérifications). Décision : `ADR-20261107-JOPRELYS-ID-KEYCLOAK`. Ticket : `ECO-20261107-JOPRELYS-ID-PATIENT-LINK`.
+
 - **SEC-20261107 P1 — CSP, QR signé, gitleaks** (Security) :
   - Content-Security-Policy stricte sur l'API (`/api/**`) et CSP par hachage (`autoCsp`) sur l'application web de production.
   - QR d'accès patient signé (HMAC-SHA256). **Nouvelle variable obligatoire en production : `JOPRELYS_PATIENT_QR_KEY`**.
