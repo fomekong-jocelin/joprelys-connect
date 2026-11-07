@@ -131,6 +131,42 @@ public class PharmacyControllerTest {
 	}
 
 	@Test
+	void pinIsStoredEncryptedAndNeverInClear() {
+		var row = jdbcTemplate.queryForMap(
+				"SELECT pin_code, pin_ciphertext FROM prescriptions WHERE prescription_number = ?",
+				"ORD-20260703-000001");
+
+		org.assertj.core.api.Assertions.assertThat(row.get("PIN_CODE")).isNull();
+		org.assertj.core.api.Assertions.assertThat((String) row.get("PIN_CIPHERTEXT"))
+				.startsWith("v1:")
+				.doesNotContain("1234");
+	}
+
+	@Autowired
+	private com.joprelys.backend.prescription.application.PrescriptionPinEncryptionBackfill pinBackfill;
+
+	@Test
+	void legacyPlainPinIsEncryptedThenErasedByBackfill() throws Exception {
+		jdbcTemplate.update(
+				"UPDATE prescriptions SET pin_code = '5678', pin_ciphertext = NULL WHERE prescription_number = ?",
+				"ORD-20260703-000001");
+
+		pinBackfill.run(null);
+
+		var row = jdbcTemplate.queryForMap(
+				"SELECT pin_code, pin_ciphertext FROM prescriptions WHERE prescription_number = ?",
+				"ORD-20260703-000001");
+		org.assertj.core.api.Assertions.assertThat(row.get("PIN_CODE")).isNull();
+		org.assertj.core.api.Assertions.assertThat((String) row.get("PIN_CIPHERTEXT")).startsWith("v1:");
+		mockMvc.perform(post("/api/public/pharmacy/prescriptions/verify")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{"prescriptionNumber": "ORD-20260703-000001", "pinCode": "5678"}
+								"""))
+				.andExpect(status().isOk());
+	}
+
+	@Test
 	void testVerifyPrescriptionSuccess() throws Exception {
 		String body = """
 				{

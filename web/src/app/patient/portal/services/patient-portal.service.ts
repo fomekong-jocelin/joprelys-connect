@@ -1,5 +1,5 @@
 import { Injectable, inject } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable, tap, map } from 'rxjs';
 import { AuthTokenStorageService } from '../../../auth/auth-token-storage.service';
 import { LoginResponse } from '../../../auth/auth.models';
@@ -83,6 +83,11 @@ export class PatientPortalService {
 
   getMe(): Observable<PatientPortalMeResponse> {
     return this.http.get<PatientPortalMeResponse>('/api/patient/me');
+  }
+
+  /** QR d'accès généré par le serveur (PNG). La date de validité est dans l'en-tête X-Qr-Valid-Until. */
+  getAccessQr(): Observable<HttpResponse<Blob>> {
+    return this.http.get('/api/patient/access-qr', { responseType: 'blob', observe: 'response' });
   }
 
   downloadDocument(visitId: string): Observable<Blob> {

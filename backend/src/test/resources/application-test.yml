@@ -16,6 +16,7 @@ spring:
 
 joprelys:
   security:
+    prescription-pin-key: test-prescription-pin-key-at-least-32-chars
     expose-otp-to-frontend: true
     jwt:
       issuer: joprelys-test

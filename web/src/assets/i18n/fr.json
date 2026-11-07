@@ -801,6 +801,7 @@
   "patient.qrCode.securityNotice": "Sécurité",
   "patient.qrCode.securityText": "Ce QR code expire automatiquement. Ne le partagez qu'avec un professionnel de santé de confiance.",
   "patient.qrCode.loadError": "Impossible de charger vos informations.",
+  "patient.qrCode.qrError": "Le QR code n'a pas pu être généré. Vérifiez votre connexion puis réessayez.",
   "patient.privacy.title": "Paramètres de confidentialité",
   "patient.privacy.subtitle": "Contrôlez qui peut accéder à vos données de santé.",
   "patient.privacy.shortcuts": "Raccourcis",

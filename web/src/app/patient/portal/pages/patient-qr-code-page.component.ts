@@ -1,4 +1,4 @@
-import { Component, inject, OnInit, signal } from '@angular/core';
+import { Component, DestroyRef, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { AppShellComponent } from '../../../shared/layout/app-shell.component';
 import { PageHeaderComponent } from '../../../shared/ui/page-header.component';
@@ -35,11 +35,18 @@ import { AppDatePipe } from '../../../shared/formatting/app-date.pipe';
               </p>
 
               <div class="my-8 inline-block border p-2" style="border-color: var(--app-border); border-radius: var(--radius-brand-md)">
-                <img
-                  [src]="qrCodeUrl(p.globalPatientNumber)"
-                  [alt]="t('patient.qrCode.alt')"
-                  class="w-56 h-56"
-                />
+                @if (qrCodeUrl(); as url) {
+                  <img [src]="url" [alt]="t('patient.qrCode.alt')" class="w-56 h-56" />
+                } @else if (qrError()) {
+                  <div class="w-56 h-56 flex flex-col items-center justify-center gap-3 p-3" role="alert">
+                    <p class="text-sm" style="color: var(--text-secondary)">{{ t('patient.qrCode.qrError') }}</p>
+                    <button type="button" class="ui-button ui-button-secondary" (click)="loadQrCode()">
+                      {{ t('common.retry') }}
+                    </button>
+                  </div>
+                } @else {
+                  <div class="w-56 h-56 animate-pulse rounded" style="background: var(--app-border)" aria-hidden="true"></div>
+                }
               </div>
 
               <div class="space-y-2 text-sm">
@@ -74,9 +81,42 @@ export class PatientQrCodePageComponent implements OnInit {
   readonly isLoading = signal(false);
   readonly error = signal('');
   readonly validUntil = signal<Date>(this.computeValidUntil());
+  readonly qrCodeUrl = signal<string | null>(null);
+  readonly qrError = signal(false);
+
+  constructor() {
+    inject(DestroyRef).onDestroy(() => this.releaseQrCodeUrl());
+  }
 
   ngOnInit(): void {
     this.loadProfile();
+    this.loadQrCode();
+  }
+
+  /** Le QR est généré par le serveur Joprelys : aucun identifiant patient n'est envoyé à un service tiers. */
+  loadQrCode(): void {
+    this.qrError.set(false);
+    this.releaseQrCodeUrl();
+    this.portalService.getAccessQr().subscribe({
+      next: (response) => {
+        if (!response.body) {
+          this.qrError.set(true);
+          return;
+        }
+        const serverValidUntil = response.headers.get('X-Qr-Valid-Until');
+        this.validUntil.set(serverValidUntil ? new Date(serverValidUntil) : this.computeValidUntil());
+        this.qrCodeUrl.set(URL.createObjectURL(response.body));
+      },
+      error: () => this.qrError.set(true),
+    });
+  }
+
+  private releaseQrCodeUrl(): void {
+    const url = this.qrCodeUrl();
+    if (url) {
+      URL.revokeObjectURL(url);
+      this.qrCodeUrl.set(null);
+    }
   }
 
   private loadProfile(): void {
@@ -92,15 +132,6 @@ export class PatientQrCodePageComponent implements OnInit {
         this.error.set(err.error?.detail || this.t('patient.qrCode.loadError'));
       },
     });
-  }
-
-  qrCodeUrl(globalPatientNumber: string): string {
-    const payload = JSON.stringify({
-      type: 'JOPRELYS_PATIENT_ACCESS',
-      globalPatientNumber,
-      validUntil: this.validUntil().toISOString(),
-    });
-    return `https://api.qrserver.com/v1/create-qr-code/?size=224x224&data=${encodeURIComponent(payload)}`;
   }
 
   private computeValidUntil(): Date {

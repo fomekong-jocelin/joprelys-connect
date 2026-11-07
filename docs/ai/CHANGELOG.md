@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **SEC-20261107 — PIN d'ordonnance chiffré et QR patient sans tiers** (Security) :
+  - Le PIN d'ordonnance est chiffré au repos (AES-256-GCM, colonne `pin_ciphertext`, migration V122) ; les anciens PIN en clair sont chiffrés puis effacés au démarrage. **Nouvelle variable obligatoire en production : `JOPRELYS_PRESCRIPTION_PIN_KEY`** (32 caractères minimum, à conserver dans un coffre).
+  - Le QR d'accès patient est généré par Joprelys (`GET /api/patient/access-qr`) au lieu d'`api.qrserver.com` ; sa validité est fixée par le serveur.
+
 - **UX-20261105-B — Écrans d'administration clinique compréhensibles** (Added / Changed) :
   - Organisation hospitalière : « Ajouter une unité » propose toujours les 4 niveaux (pôle, département, service, unité de soins), même quand des services existent.
   - Suivi des lits : une seule page montre toutes les chambres et leurs lits, avec une synthèse « N lits libres sur M ouverts · occupation X % », un état lisible par lit, des filtres par état et des actions nommées. Nouvel endpoint en lecture seule `GET /api/spatial/inpatient-occupancy` (`HOSPITALIZATION_READ`, isolé par établissement, 3 requêtes au lieu d'une par chambre).

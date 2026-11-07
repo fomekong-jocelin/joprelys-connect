@@ -14,6 +14,7 @@ joprelys:
   web:
     base-url: https://joprelys.com
   security:
+    prescription-pin-key: test-prescription-pin-key-at-least-32-chars
     jwt:
       secret: test-jwt-secret-for-joprelys-connect-32
       issuer: joprelys-connect-test
