@@ -15,6 +15,8 @@ spring:
 
 joprelys:
   security:
+    # Développement local uniquement (données fictives) : clé stable pour relire les PIN après un redémarrage.
+    prescription-pin-key: ${JOPRELYS_PRESCRIPTION_PIN_KEY:dev-only-insecure-prescription-pin-key-not-for-prod}
     jwt:
       # Développement local uniquement : sans JOPRELYS_JWT_SECRET, un secret aléatoire (256 bits) est tiré à chaque
       # démarrage. Aucun secret n'est versionné ; les jetons d'accès deviennent invalides au redémarrage et le

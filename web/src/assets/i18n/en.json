@@ -799,6 +799,7 @@
   "patient.qrCode.securityNotice": "Security",
   "patient.qrCode.securityText": "This QR code expires automatically. Only share it with a trusted healthcare professional.",
   "patient.qrCode.loadError": "Unable to load your information.",
+  "patient.qrCode.qrError": "The QR code could not be generated. Check your connection and try again.",
   "patient.privacy.title": "Privacy settings",
   "patient.privacy.subtitle": "Control who can access your health data.",
   "patient.privacy.shortcuts": "Shortcuts",
