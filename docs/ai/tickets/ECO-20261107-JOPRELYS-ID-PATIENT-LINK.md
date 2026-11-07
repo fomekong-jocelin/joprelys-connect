@@ -129,13 +129,20 @@ Résultat S3 (décision utilisateur du 07/11/2026 : **sans Docker**) :
 *En tant que système récepteur, je veux être prévenu d'une révocation de façon fiable et vérifiable.*
 
 Tasks :
-- [ ] T4.1 Table `eco_outbox` (Flyway) écrite dans la même transaction que la révocation.
-- [ ] T4.2 Signataire `Eco-Signature: t=…,v1=HMAC-SHA256(secret, t + "." + corps)` + `Idempotency-Key` ; secret par abonné en variable d'environnement.
-- [ ] T4.3 Relais planifié : envoi, backoff exponentiel pendant 24 h, puis statut `DEAD` + alerte journalisée (sans contenu santé).
-- [ ] T4.4 Émission de `consent.revoked` (enveloppe § 2.2) quand la révocation vient du portail patient Joprelys.
-- [ ] T4.5 Tests : signature (vecteurs connus), transaction (rollback = pas d'outbox), relais (succès, 5xx → replanifié, expiration → DEAD) avec serveur HTTP simulé.
+- [x] T4.1 Table `eco_outbox` (Flyway) écrite dans la même transaction que la révocation.
+- [x] T4.2 Signataire `Eco-Signature: t=…,v1=HMAC-SHA256(secret, t + "." + corps)` + `Idempotency-Key` ; secret par abonné en variable d'environnement.
+- [x] T4.3 Relais planifié : envoi, backoff exponentiel pendant 24 h, puis statut `DEAD` + alerte journalisée (sans contenu santé).
+- [x] T4.4 Émission de `consent.revoked` (enveloppe § 2.2) quand la révocation vient du portail patient Joprelys.
+- [x] T4.5 Tests : signature (vecteurs connus), transaction (rollback = pas d'outbox), relais (succès, 5xx → replanifié, expiration → DEAD) avec serveur HTTP simulé.
 
 Note : `WebhookService` existant (abonnements par organisation) n'a ni signature ni outbox ; il n'est pas modifié dans cette story pour ne pas changer son contrat.
+
+Résultat S4 (07/11/2026, branche `feat/joprelys-id-keycloak`) :
+- Migration **V124** `eco_outbox` (une ligne par événement et par abonné, `UNIQUE (event_id, subscriber)`) ; `OutboxEcoEventPublisher` en `Propagation.MANDATORY` : aucun événement hors transaction métier.
+- `EcoWebhookSigner` (`t=<unix>,v1=<hex HMAC-SHA256(secret, t + "." + corps)>`), `HttpEcoWebhookSender` (RestClient, délais 5 s / 10 s, `Idempotency-Key` = id de l'événement). Secret par abonné : `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_SECRET` (32 caractères minimum, sinon arrêt au démarrage) ; URL HTTPS obligatoire hors localhost.
+- `EcoOutboxRelay` + `EcoOutboxScheduler` (toutes les 15 s, désactivable) : envoi hors transaction, backoff 30 s doublé à chaque échec et plafonné à 1 h, `DEAD` au-delà de 24 h avec `log.error` sans contenu (identifiants techniques seulement). Livraison au moins une fois : le récepteur déduplique.
+- `PatientPortalRevocationService` (cas d'usage `revokeByPatient`, contrôle de propriété → 404) émet `consent.revoked` ; `ConsentRevoker` est partagé avec la révocation par l'API. Le motif libre n'est pas transmis (minimisation). La révocation demandée par l'application elle-même n'émet pas d'événement (elle en est l'auteur). L'endpoint du portail arrive en S7.
+- Tests : 22 nouveaux, verts. Signature (vecteur calculé indépendamment), politique de rejeu, configuration (secret court, HTTP distant), envoi réel sur serveur HTTP du JDK (signature recalculée, 503, récepteur injoignable), intégration (enveloppe et données validées contre `eco-contracts`, idempotence, liaison d'un autre patient 404, rollback = aucune ligne, publication hors transaction refusée, abonné absent, relais livré / 503 replanifié / plus de 24 h → DEAD).
 
 ### S5 — AllôPharma API : liaison, révocation, réception · 5 SP
 
@@ -195,12 +202,13 @@ Tasks :
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
 | 2026-11-07 | IA (Claude) | 0,5 j | 5 % | S1 à S8 | Validation du découpage | ADR et découpage rédigés |
+| 2026-11-07 | IA (Claude) | 1 j | 55 % | S5 à S8 | Docker absent | S4 livrée : outbox V124, webhooks signés, relais 24 h → DEAD, révocation portail émettant `consent.revoked` ; 22 tests ajoutés |
 | 2026-11-07 | IA (Claude) | 1 j | 40 % | S4 à S8 | Docker absent (Testcontainers reporté) | S3 livrée : API éco, V123, tests 23 verts dont 1 contre Keycloak réel |
 | 2026-11-07 | IA (Claude) | 0,5 j | 20 % | S3 à S8, T2.4 | Docker absent du poste | Découpage validé par l'utilisateur. S1 : realm vérifié 23/23 sur Keycloak 26.8.1 lancé depuis l'archive officielle (sha1 vérifié), faute de Docker ; le service Compose lui-même n'a pas été démarré. S2 : dépôt local `eco-contracts`, commit `07e416d`, `npm test` 13/13, gitleaks propre. T2.4 (copie dans les backends) reportée en S3/S5 |
 
 ## 7. Statut
 
-Statut : IN_PROGRESS (S1, S2, S3 livrées ; S4 suivante)
+Statut : IN_PROGRESS (S1, S2, S3, S4 livrées ; S5 suivante)
 
 ## 8. Impact version / SemVer
 

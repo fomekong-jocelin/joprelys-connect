@@ -20,6 +20,13 @@ joprelys:
     applications:
       "[allopharma-mobile]": allopharma
       "[allopharma-server]": allopharma
+    webhooks:
+      subscribers:
+        allopharma:
+          url: http://localhost:9/api/eco/v1/webhooks
+          secret: ci-test-eco-webhook-secret-not-for-production
+      outbox:
+        relay-enabled: false
   web:
     base-url: https://joprelys.com
   security:

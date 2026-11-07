@@ -8,6 +8,11 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **ECO-20261107 S4 — Webhooks écosystème signés et outbox transactionnelle** (Added / Security) :
+  - Migration **V124** `eco_outbox` ; événement `consent.revoked` (CloudEvents 1.0, `eco-contracts` v1) écrit dans la transaction de la révocation par le patient.
+  - Envoi signé `Eco-Signature` (HMAC-SHA256) + `Idempotency-Key`, rejeu exponentiel pendant 24 h puis file d'erreurs `DEAD` journalisée sans contenu santé.
+  - Nouvelles variables : `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_URL`, `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_SECRET` (32 caractères minimum), `JOPRELYS_ECO_OUTBOX_RELAY_ENABLED`, `JOPRELYS_ECO_OUTBOX_POLL_INTERVAL`.
+
 - **ECO-20261107 S3 — API écosystème v1 : liaison patient ↔ DPU et consentement** (Added / Security) :
   - `POST /api/eco/v1/patient-links` (jeton patient Joprelys ID, scope `eco:patient-link`) et `POST /api/eco/v1/consents/{id}/revoke` (compte de service, scope `eco:consent.revoke`), au format `eco-contracts` v1.
   - Chaîne de sécurité dédiée `/api/eco/**` (resource server JWT, émetteur + audience `joprelys-api`) ; les filtres JWT maison et clé API s'abstiennent sur ces chemins ; un jeton Joprelys ID reste refusé sur le reste de l'API.

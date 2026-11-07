@@ -56,9 +56,21 @@ Points de conception :
 - **Relation** : seule `self` est acceptée tant que la preuve de tutelle n'existe pas.
 - **Audit** : création et révocation journalisées (`ECO_PATIENT_LINK`, `ECO_CONSENT`), sans contenu santé.
 
-## 4. Stories suivantes
+## 4. S4 — Webhooks éco signés (livré dans cette branche)
 
-Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (S4 outbox et webhooks signés, S7 portail patient).
+Flux : révocation (transaction métier) → `EcoEventPublisher` écrit l'enveloppe CloudEvents dans `eco_outbox` (même transaction, `Propagation.MANDATORY`) → `EcoOutboxScheduler` (15 s) → `EcoOutboxRelay` lit un lot d'événements dus, envoie **hors transaction** et enregistre le résultat ligne par ligne.
+
+- **Paquet** `eco.infrastructure.webhook` : `OutboxEcoEventPublisher`, `EcoEventEnvelope`, `EcoWebhookSigner`, `EcoWebhookSender` / `HttpEcoWebhookSender`, `EcoRetryPolicy`, `EcoOutboxRelay`, `EcoOutboxScheduler`. Côté application : `ConsentRevokedEvent`, `EcoEventPublisher`, `ConsentRevoker` (révocation et audit partagés), `PatientPortalRevocationService`.
+- **Corps signé = corps stocké** : l'enveloppe est sérialisée une seule fois à l'écriture ; le relais envoie ces octets tels quels.
+- **Signature** : `Eco-Signature: t=<secondes unix>,v1=<hex HMAC-SHA256(secret, t + "." + corps)>`, `t` = heure d'envoi (chaque essai est re-signé). Le secret n'est jamais en base : il vient de la configuration au moment de l'envoi (rotation sans migration).
+- **Rejeu** : 30 s doublé à chaque échec, plafonné à 1 h ; si le prochain essai dépasse `created_at + 24 h`, statut `DEAD` et `log.error` avec identifiants techniques seulement. `last_error` ne contient qu'un statut (`HTTP 503`, `transport: …`).
+- **Au moins une fois** : plusieurs instances peuvent envoyer le même événement ; le récepteur déduplique sur `Idempotency-Key`.
+- **Abonné absent** : aucun événement mis en file et `log.warn` (une révocation non notifiée est un défaut de configuration visible).
+- **Minimisation** : `data` = `consentId`, `patientLinkId`, `revokedAt`, `revokedBy` ; ni DPU, ni motif libre.
+
+## 4 bis. Stories suivantes
+
+Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (S5 réception AllôPharma, S7 endpoint et écran du portail patient).
 
 ## 5. Tests
 
@@ -67,4 +79,5 @@ Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (
   - `EcoApiIntegrationTest` (20 tests) : contexte Spring complet, H2 + Flyway, **vrais jetons RS256** signés par une clé de test et validés par les mêmes validateurs qu'en production (`EcoTestTokens`, `EcoTestSecurityConfiguration`) ; réponses validées contre les schémas `eco-contracts` (`EcoContractSchemas`) ;
   - `EcoContractChecksumTest` : la copie des schémas correspond à `SHA256SUMS` ;
   - `EcoKeycloakLiveIT` : jetons émis par un vrai Keycloak, clés téléchargées par le vrai décodeur ; désactivé sans variables, lancé par `node infra/keycloak/run-live-eco-test.mjs`. Non exécuté en CI.
+- S4 : `EcoWebhookSignerTest` (vecteur calculé avec Python `hmac`), `EcoRetryPolicyTest`, `EcoPropertiesWebhooksTest`, `HttpEcoWebhookSenderTest` (serveur HTTP du JDK qui recalcule la signature), `EcoOutboxIntegrationTest` (10 tests : contrat, idempotence, contrôle de propriété, rollback, `MANDATORY`, abonné absent, relais livré / replanifié / DEAD).
 - Testcontainers Keycloak : reporté jusqu'à disponibilité de Docker.

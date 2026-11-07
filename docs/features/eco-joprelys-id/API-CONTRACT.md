@@ -1,4 +1,4 @@
-# API-CONTRACT — API écosystème v1 (ECO-20261107 S3)
+# API-CONTRACT — API écosystème v1 (ECO-20261107 S3-S4)
 
 Base : `/api/eco/v1`. Authentification : **jetons Joprelys ID uniquement** (RS256, émetteur `joprelys.eco.identity.issuer-uri`, audience `joprelys-api`). Les jetons maison et les clés API y sont refusés ; les jetons Joprelys ID sont refusés sur le reste de l'API.
 
@@ -56,4 +56,19 @@ Révocation par l'application bénéficiaire. Idempotente.
 | `joprelys.eco.identity.audience` | `JOPRELYS_ID_AUDIENCE` | `joprelys-api` |
 | `joprelys.eco.applications` | — | `allopharma-mobile`, `allopharma-server` → `allopharma` |
 
+| `joprelys.eco.webhooks.subscribers.allopharma.url` | `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_URL` | vide (aucun envoi) |
+| `joprelys.eco.webhooks.subscribers.allopharma.secret` | `JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_SECRET` | vide ; 32 caractères minimum si renseigné |
+| `joprelys.eco.webhooks.outbox.relay-enabled` | `JOPRELYS_ECO_OUTBOX_RELAY_ENABLED` | `true` |
+| `joprelys.eco.webhooks.outbox.poll-interval` | `JOPRELYS_ECO_OUTBOX_POLL_INTERVAL` | `PT15S` |
+
 Les clés de signature sont téléchargées au premier jeton : si Joprelys ID est injoignable, l'API éco répond `401` et le reste de Joprelys fonctionne normalement.
+
+## Webhooks sortants (S4)
+
+Joprelys → abonné : `POST <url de l'abonné>` (AllôPharma : `/api/eco/v1/webhooks`, livré en S5).
+
+- En-têtes : `Content-Type: application/json`, `Eco-Signature: t=<secondes unix>,v1=<hex HMAC-SHA256(secret, t + "." + corps)>`, `Idempotency-Key: <id de l'événement>`.
+- Corps : enveloppe CloudEvents 1.0 (`eco-contracts` `event-envelope.schema.json`) ; pour `consent.revoked`, `data` est conforme à `consent-revoked.data.schema.json` et `subject` vaut `Consent/<consentId>`.
+- Le récepteur vérifie la signature en temps constant sur le corps brut, refuse un `t` décalé de plus de 5 minutes, déduplique sur `Idempotency-Key` et répond `2xx`, y compris pour un doublon.
+- Toute autre réponse, ou une erreur réseau, est rejouée : 30 s, 1 min, 2 min… plafonné à 1 h, pendant 24 h ; ensuite l'événement passe en `DEAD`.
+- Émis aujourd'hui : `consent.revoked` quand le patient révoque depuis le portail Joprelys.

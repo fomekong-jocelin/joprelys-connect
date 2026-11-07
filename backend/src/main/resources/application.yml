@@ -151,6 +151,18 @@ joprelys:
     applications:
       "[allopharma-mobile]": allopharma
       "[allopharma-server]": allopharma
+    webhooks:
+      subscribers:
+        allopharma:
+          url: ${JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_URL:}
+          secret: ${JOPRELYS_ECO_WEBHOOK_ALLOPHARMA_SECRET:}
+      outbox:
+        relay-enabled: ${JOPRELYS_ECO_OUTBOX_RELAY_ENABLED:true}
+        poll-interval: ${JOPRELYS_ECO_OUTBOX_POLL_INTERVAL:PT15S}
+        initial-delay: PT30S
+        max-delay: PT1H
+        max-age: PT24H
+        batch-size: 50
 
 springdoc:
   api-docs:

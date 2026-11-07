@@ -1,6 +1,5 @@
 package com.joprelys.backend.eco.application;
 
-import com.joprelys.backend.audit.application.AuditService;
 import com.joprelys.backend.eco.application.EcoBusinessException.EcoError;
 import com.joprelys.backend.eco.infrastructure.persistence.EcoConsentEntity;
 import com.joprelys.backend.eco.infrastructure.persistence.EcoConsentRepository;
@@ -17,14 +16,14 @@ public class ConsentRevocationService implements ConsentRevocationUseCase {
 
     private final EcoConsentRepository consentRepository;
     private final EcoPatientLinkRepository linkRepository;
-    private final AuditService auditService;
+    private final ConsentRevoker revoker;
     private final Clock clock;
 
     public ConsentRevocationService(EcoConsentRepository consentRepository, EcoPatientLinkRepository linkRepository,
-                                    AuditService auditService, Clock clock) {
+                                    ConsentRevoker revoker, Clock clock) {
         this.consentRepository = consentRepository;
         this.linkRepository = linkRepository;
-        this.auditService = auditService;
+        this.revoker = revoker;
         this.clock = clock;
     }
 
@@ -40,12 +39,7 @@ public class ConsentRevocationService implements ConsentRevocationUseCase {
                 .orElseThrow(() -> new IllegalStateException("Consentement sans liaison : " + consent.getId()));
 
         Instant now = clock.instant().truncatedTo(ChronoUnit.SECONDS);
-        boolean changed = consent.revoke(now, command.revokedBy(), command.reason().orElse(null));
-        link.revoke(now);
-        if (changed) {
-            auditService.logSuccess(null, null, link.getPatientId(), "ECO_CONSENT", consent.getId(), "REVOKE",
-                    "application=" + command.caller().application() + " revokedBy=" + command.revokedBy().contractValue());
-        }
+        revoker.revoke(consent, link, command.revokedBy(), command.reason().orElse(null), now, "api");
         return new PatientLinkView(link, consent, false);
     }
 }

@@ -24,7 +24,8 @@ public final class EcoBusinessException extends RuntimeException {
                 "Seule la liaison de son propre dossier est prise en charge pour le moment"),
         INVALID_PERIOD(HttpStatus.UNPROCESSABLE_CONTENT, "Période de consentement invalide"),
         PROFILE_LINKED_ELSEWHERE(HttpStatus.CONFLICT, "Ce profil est déjà relié à un autre dossier"),
-        CONSENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Consentement introuvable");
+        CONSENT_NOT_FOUND(HttpStatus.NOT_FOUND, "Consentement introuvable"),
+        PATIENT_LINK_NOT_FOUND(HttpStatus.NOT_FOUND, "Application reliée introuvable");
 
         private final HttpStatus status;
         private final String message;
