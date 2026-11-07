@@ -44,6 +44,16 @@ import { I18nService } from '../../../core/i18n/i18n.service';
                     </svg>
                   </a>
                   <a
+                    routerLink="/patient/linked-apps"
+                    class="flex items-center justify-between p-3 text-sm font-semibold no-underline transition-colors hover:bg-[var(--app-surface-muted)]"
+                    style="border-radius: var(--radius-brand-sm); color: var(--text-primary); border: 1px solid var(--app-border)"
+                  >
+                    {{ t('patient.privacy.linkedApps') }}
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4" style="color: var(--text-muted)" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+                    </svg>
+                  </a>
+                  <a
                     routerLink="/patient/requests"
                     class="flex items-center justify-between p-3 text-sm font-semibold no-underline transition-colors hover:bg-[var(--app-surface-muted)]"
                     style="border-radius: var(--radius-brand-sm); color: var(--text-primary); border: 1px solid var(--app-border)"

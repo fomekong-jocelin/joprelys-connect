@@ -31,6 +31,17 @@ Un patient qui utilise AllôPharma veut retrouver dans son carnet les informatio
 - Un tuteur ne peut relier que les profils dont il a la charge.
 - En test, seuls des comptes et DPU fictifs (`DPU-TEST-…`) sont utilisés.
 
+## 4 bis. Portail patient : « Applications reliées » (S7)
+
+Page `/patient/linked-apps`, accessible depuis « Confidentialité » du portail patient (connexion patient existante : DPU, téléphone, date de naissance, code).
+
+- Liste des applications **actuellement** reliées au dossier : nom et logo de l'application, données partagées (ordonnances, résultats d'analyses…), date de liaison, date de fin de validité.
+- Action « Révoquer l'accès » sur chaque application, avec confirmation explicite qui rappelle les conséquences (l'application ne lit plus aucune donnée et supprime sa copie ; une nouvelle liaison reste possible depuis l'application).
+- Après révocation : l'application disparaît de la liste, un message confirme ; Joprelys notifie l'application (`consent.revoked`).
+- États : chargement (squelette), erreur avec « Réessayer », vide (« Aucune application n'accède à votre dossier »), échec de révocation (l'application reste listée, message clair).
+- Une liaison appartenant à un autre patient est introuvable (404), jamais révélée.
+- FR/EN, thème clair et sombre, navigation clavier et focus visible, cibles ≥ 44 px.
+
 ## 5. Hors périmètre de l'EPIC
 
 - Preuve d'identité qui rattache un compte Joprelys ID à un vrai DPU (story ultérieure).
@@ -44,4 +55,8 @@ Un patient qui utilise AllôPharma veut retrouver dans son carnet les informatio
 | S1 Joprelys ID en dev (Keycloak) | Livrée |
 | S2 Dépôt `eco-contracts` v1 | Livrée |
 | S3 API éco Joprelys : liaison et consentement | Livrée (seule la relation « soi-même » est acceptée) |
-| S4 à S8 | À faire |
+| S4 Webhooks signés | Livrée |
+| S5 Réception AllôPharma | Livrée (dépôt AllôPharma) |
+| S6 Écran mobile AllôPharma | Livrée, testée sur appareil |
+| S7 Portail « Applications reliées » | Livrée |
+| S8 Bout en bout, revue sécurité, clôture | À faire |

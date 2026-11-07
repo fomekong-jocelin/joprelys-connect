@@ -178,9 +178,12 @@ Résultat S6 (07/11/2026, PharmaLocate branche `feat/joprelys-id-patient-link`, 
 *En tant que patient du portail Joprelys, je veux voir quelles applications accèdent à mon dossier et pouvoir révoquer.*
 
 Tasks :
-- [ ] T7.1 Endpoint portail (authentification patient existante) : liste et révocation des liaisons du patient connecté.
-- [ ] T7.2 Composant Angular « Applications reliées » (Tailwind v4, design system interne, i18n FR/EN, états, focus visible, confirmation).
-- [ ] T7.3 Tests unitaires Angular + test d'intégration backend ; capture navigateur.
+- [x] T7.1 Endpoint portail (authentification patient existante) : liste et révocation des liaisons du patient connecté.
+- [x] T7.2 Composant Angular « Applications reliées » (Tailwind v4, design system interne, i18n FR/EN, états, focus visible, confirmation).
+- [x] T7.3 Tests unitaires Angular + test d'intégration backend ; capture navigateur.
+
+Résultat S7 (07/11/2026) : `PatientLinkedAppsControllerTest` 5/5 (liste limitée au patient, révocation + événement, idempotence, 404 sur la liaison d'un autre patient, 401 anonyme) ; suite backend complète **1 099 tests, 0 échec** ; Angular 8 tests nouveaux, suite complète **849/849**. Capture navigateur sur les serveurs locaux réels (`docs/features/eco-joprelys-id/captures/s7-*.png`, clair, sombre, mobile 390 px, confirmation, après révocation) : la révocation depuis le portail a été **livrée à AllôPharma** par webhook signé (outbox `DELIVERED`, 1er essai). Session patient de test signée localement (connexion portail par code e-mail non disponible en local) ; liaisons de capture fictives insérées en base e2e puis révoquées.
+Non testé : connexion réelle au portail par OTP ; lecteur d'écran réel (rôles et libellés vérifiés par tests).
 
 ### S8 — Bout en bout en test, docs et clôture · 3 SP
 
@@ -206,6 +209,7 @@ Tasks :
 
 | Date | Développeur | Temps passé | Avancement | Reste à faire | Blocage | Commentaire |
 |---|---|---:|---:|---:|---|---|
+| 2026-11-07 | IA (Claude) | 1 j | 90 % | S8 | — | S7 livrée : endpoints portail liste/révocation, page Angular « Applications reliées », révocation portail → webhook livré à AllôPharma vérifié en local |
 | 2026-11-07 | IA (Claude) | 0,5 j | 80 % | S7, S8 | — | S6 testée de bout en bout sur Galaxy A56 (liaison réussie) ; correctif redirection et retours design appliqués (AllôPharma 46eb0056, 651b9d2c, 45782bee) ; refonte « téléphone d'abord » reportée en fin de programme |
 | 2026-11-07 | IA (Claude) | 0,5 j | 5 % | S1 à S8 | Validation du découpage | ADR et découpage rédigés |
 | 2026-11-07 | IA (Claude) | 1 j | 70 % | S6 à S8 | Docker absent (intégration PostgreSQL AllôPharma non exécutée) | S5 livrée côté AllôPharma : liaison, révocation, webhook signé, V64 ; 36 tests ajoutés |
@@ -215,7 +219,7 @@ Tasks :
 
 ## 7. Statut
 
-Statut : IN_PROGRESS (S1 à S6 livrées ; S7 suivante)
+Statut : IN_PROGRESS (S1 à S7 livrées ; S8 suivante)
 
 ## 8. Impact version / SemVer
 

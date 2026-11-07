@@ -304,6 +304,12 @@ export const routes: Routes = [
     data: { expectedRoles: ['PATIENT'], title: 'title.patient.consents' },
   },
   {
+    path: 'patient/linked-apps',
+    loadComponent: () => import('./patient/portal/linked-apps/patient-linked-apps-page.component').then(m => m.PatientLinkedAppsPageComponent),
+    canActivate: [roleGuard],
+    data: { expectedRoles: ['PATIENT'], title: 'title.patient.linkedApps' },
+  },
+  {
     path: 'patient/privacy',
     loadComponent: () => import('./patient/portal/pages/patient-privacy-page.component').then(m => m.PatientPrivacyPageComponent),
     canActivate: [roleGuard],

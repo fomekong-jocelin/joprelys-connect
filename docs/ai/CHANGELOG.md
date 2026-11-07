@@ -8,6 +8,10 @@ Le format suit l'esprit de Keep a Changelog et le versioning suit Semantic Versi
 
 ## [Unreleased]
 
+- **ECO-20261107 S7 — Portail patient : « Applications reliées »** (Added / Security) :
+  - `GET /api/patient/linked-apps` et `DELETE /api/patient/linked-apps/{id}` (autorité `PATIENT_PORTAL_ACCESS`, patient déduit du jeton, 404 sur la liaison d'un autre patient) ; la révocation notifie l'application (`consent.revoked`).
+  - Page Angular `/patient/linked-apps` (menu patient et « Confidentialité ») : logo et nom de l'application, données partagées, dates, révocation confirmée ; états chargement, erreur, vide ; FR/EN, clair/sombre.
+
 - **ECO-20261107 S4 — Webhooks écosystème signés et outbox transactionnelle** (Added / Security) :
   - Migration **V124** `eco_outbox` ; événement `consent.revoked` (CloudEvents 1.0, `eco-contracts` v1) écrit dans la transaction de la révocation par le patient.
   - Envoi signé `Eco-Signature` (HMAC-SHA256) + `Idempotency-Key`, rejeu exponentiel pendant 24 h puis file d'erreurs `DEAD` journalisée sans contenu santé.

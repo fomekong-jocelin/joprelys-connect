@@ -9,4 +9,6 @@ public interface EcoPatientLinkRepository extends JpaRepository<EcoPatientLinkEn
 
     List<EcoPatientLinkEntity> findByApplicationAndExternalProfileIdAndStatus(
             String application, UUID externalProfileId, EcoStatus status);
+
+    List<EcoPatientLinkEntity> findByPatientIdAndStatusOrderByCreatedAtDesc(UUID patientId, EcoStatus status);
 }

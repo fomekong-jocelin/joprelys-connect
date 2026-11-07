@@ -68,6 +68,16 @@ Flux : révocation (transaction métier) → `EcoEventPublisher` écrit l'envelo
 - **Abonné absent** : aucun événement mis en file et `log.warn` (une révocation non notifiée est un défaut de configuration visible).
 - **Minimisation** : `data` = `consentId`, `patientLinkId`, `revokedAt`, `revokedBy` ; ni DPU, ni motif libre.
 
+## 4 ter. S7 — Portail patient : applications reliées
+
+- **API (chaîne de sécurité maison, autorité `PATIENT_PORTAL_ACCESS`)**, `eco.api.PatientLinkedAppsController` :
+  - `GET /api/patient/linked-apps` → `[{ id, application, scopes[], linkedAt, validUntil }]` (liaisons `ACTIVE` du patient connecté, plus récentes d'abord ; `scopes` en valeurs de contrat `prescriptions`, `lab-results`…) ;
+  - `DELETE /api/patient/linked-apps/{id}` → 204, idempotent ; 404 `PATIENT_LINK_NOT_FOUND` si la liaison n'appartient pas au patient.
+- Le patient vient toujours du jeton (`PatientAccessGuardService.resolve`), jamais d'un paramètre.
+- **Cas d'usage** : `PatientLinkedAppsQuery` / `PatientLinkedAppsService` (lecture : liaisons actives + consentement actif, deux requêtes, pas de N+1) ; révocation déléguée à `PatientConsentRevocationUseCase` (S4 : audit, événement `consent.revoked` dans l'outbox).
+- Le contrôleur ne touche à aucun repository ; erreurs en `ProblemDetail` via `EcoExceptionHandler`.
+- **Angular** (`web/src/app/patient/portal/linked-apps/`) : `PatientLinkedAppsApiService` (appels relatifs), page `PatientLinkedAppsPageComponent`, carte `LinkedAppCardComponent`, catalogue des applications connues `linked-app-catalog.ts` (nom, logo ; code inconnu → libellé générique), dictionnaire `assets/i18n/features/linked-apps/{fr,en}.json`. Confirmation via `DialogService` (ton `danger`), retour via `ToastService`.
+
 ## 4 bis. Stories suivantes
 
 Voir le ticket EPIC `docs/ai/tickets/ECO-20261107-JOPRELYS-ID-PATIENT-LINK.md` (S5 réception AllôPharma, S7 endpoint et écran du portail patient).
