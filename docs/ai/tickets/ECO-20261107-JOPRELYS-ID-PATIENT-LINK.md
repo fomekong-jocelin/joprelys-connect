@@ -258,12 +258,13 @@ Statut : READY_FOR_REVIEW (S1 à S8 livrées ; branches prêtes, en attente d'ac
 | Impact Flutter | Oui (S6, AllôPharma) |
 | Changelog requis | Oui |
 
-Proposition SemVer S8 (aucun tag créé, aucun push) :
+Versions livrées (fusion dans `main` et tags poussés le 08/11/2026) :
 
-| Dépôt | Actuel | Proposé | Justification |
+| Dépôt | Tag précédent | Tag livré | Justification |
 |---|---|---|---|
-| Joprelys backend | `0.0.1-SNAPSHOT`, aucun tag | `backend-v0.1.0` | Fonctionnalités ajoutées : API éco, outbox, endpoints du portail ; migrations V123 à V125 additives |
-| Joprelys web | `0.0.0` | `web-v0.1.0` | Page « Applications reliées » |
-| AllôPharma (API + mobile) | `v0.9.0` ; mobile `1.2.0+21` | `v0.10.0` ; mobile `1.3.0+22` | Liaison du dossier Joprelys, webhooks éco, V64 ; aucune rupture d'API |
+| Joprelys (backend + web) | `v0.9.0` | `v0.10.0` sur `84261c7a` | API éco, outbox, endpoints et page « Applications reliées » du portail ; migrations V123 à V125 additives |
+| AllôPharma (API + mobile) | aucun | `v0.10.0` sur `4006f1be` ; mobile `1.3.0+22` | Liaison du dossier Joprelys, webhooks éco, V64 ; aucune rupture d'API |
+
+Les numéros de build internes (`pom.xml` `0.0.1-SNAPSHOT`, `package.json` `0.0.0`) ne suivent pas les tags et restent inchangés.
 
 **Prérequis de déploiement Joprelys (prod) :** `JOPRELYS_ID_ISSUER_URI` et `JOPRELYS_ID_JWK_SET_URI` (HTTPS) deviennent obligatoires. Sans eux, le backend refuse de démarrer : c'est voulu (échec fermé). Il faut donc provisionner un Keycloak de production avant de déployer cette version. Les suites « bloquantes avant production » du § 5 restent à traiter avant d'ouvrir le flux à de vrais patients.
